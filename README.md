@@ -36,8 +36,7 @@ Quellen
 [5] http://www.cis.upenn.edu/~bcpierce/sf/current/toc.html (Kapitel 1 - 6)  
 [6] http://osa1.net/posts/2014-07-12-fun-coq-exercises.html  
 
-## 3. Phase: Anlesen der Repräsentation von Curry-Programmen und
-Repräsentation dieser in Coq
+## 3. Phase: Anlesen der Repräsentation von Curry-Programmen und Repräsentation dieser in Coq
 
 Curry-Programme werden in den gängigen Compilern in eine simplere
   (flache) Zwischensprache namens Flatcurry transformiert, die als
