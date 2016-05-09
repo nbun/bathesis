@@ -49,14 +49,22 @@ Curry-Programme werden in den gängigen Compilern in eine simplere
 FlatCurry-Programme
 * Implementierung der benötigten Datenstruktur in Coq
 
-[7] https://www.informatik.uni-kiel.de/~mh/papers/GanzingerFestschrift.pdf (Kapitel 2, gerne das ganze Kapitel, am wichtigsten ist aber 2.5)
-[8] http://www-ps.informatik.uni-kiel.de/kics2/lib/FlatCurry.Types.html (Implementierung von FlatCurry in Curry)
-[9] https://www-ps.informatik.uni-kiel.de/kics2/Manual.pdf (Abstract A1)
+[7]
+https://www.informatik.uni-kiel.de/~mh/papers/GanzingerFestschrift.pdf
+(Kapitel 2, gerne das ganze Kapitel, am wichtigsten ist aber 2.5)  
+[8]
+http://www-ps.informatik.uni-kiel.de/kics2/lib/FlatCurry.Types.html
+(Implementierung von FlatCurry in Curry)  
+[9] https://www-ps.informatik.uni-kiel.de/kics2/Manual.pdf (Abstract
+A1)  
 
 ## 4. Phase: Formalisierung der Typung von FlatCurry-Programmen in Coq
 
 * Einarbeitung in Thematik durch Lesen des entsprechenden Kapitels in
 "Software Foundations"
 
-[10] http://www.cis.upenn.edu/~bcpierce/sf/current/Imp.html (Ähnliche Vorgehensweise wie angestrebt, nur anhand einer fiktiven imperativen Sprache "Imp")
-[11] http://www.cis.upenn.edu/~bcpierce/sf/current/toc.html (Kapitel 7 - 9 können als Vorbereitung zu dem obigen Link gelesen werden)
+[10] http://www.cis.upenn.edu/~bcpierce/sf/current/Imp.html (Ähnliche
+Vorgehensweise wie angestrebt, nur anhand einer fiktiven imperativen
+Sprache "Imp")  
+[11] http://www.cis.upenn.edu/~bcpierce/sf/current/toc.html (Kapitel
+7 - 9 können als Vorbereitung zu dem obigen Link gelesen werden)  
