@@ -66,5 +66,5 @@ A1)
 Vorgehensweise wie angestrebt, nur anhand einer fiktiven imperativen
 Sprache "Imp")  
 [11] http://www.cis.upenn.edu/~bcpierce/sf/current/toc.html (Kapitel
-7 - 9 können als Vorbereitung zu dem obigen Link gelesen werden) 
-[12] http://www.janis-voigtlaender.eu/MSSV14.html (CuMin + Typregeln)
+7 - 9 können als Vorbereitung zu dem obigen Link gelesen werden)  
+[12] http://www.janis-voigtlaender.eu/MSSV14.html (CuMin + Typregeln)  
