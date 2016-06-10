@@ -68,3 +68,4 @@ Sprache "Imp")
 [11] http://www.cis.upenn.edu/~bcpierce/sf/current/toc.html (Kapitel
 7 - 9 können als Vorbereitung zu dem obigen Link gelesen werden)  
 [12] http://www.janis-voigtlaender.eu/MSSV14.html (CuMin + Typregeln)  
+[13] http://www.cis.upenn.edu/~bcpierce/sf/current/Stlc.html#lab568 (Typregeln für "STLC")  
