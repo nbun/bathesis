@@ -76,8 +76,7 @@ Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
 
 Inductive has_type : context -> tm -> ty -> Prop :=
   | T_Var :    forall Gamma x T,
-               Gamma x = Some T ->
-               Gamma |- tvar x \in T
+               (update Gamma x T) |- tvar x \in T
   | T_True :   forall Gamma, 
                Gamma |- ttrue \in TBool
   | T_False :  forall Gamma,
@@ -95,8 +94,7 @@ Inductive has_type : context -> tm -> ty -> Prop :=
                Gamma |- (tapp e1 e2) \in T2
   | T_Let :    forall Gamma e1 e2 x T1 T2,
                Gamma |- e1 \in T1 ->
-               Gamma x = Some T1 ->
-               Gamma |- e2 \in T2 ->
+               (update Gamma x T1) |- e2 \in T2 ->
                Gamma |- (tlet (tvar x) e1 e2) \in T2
 (*| T_Fun*)
   | T_Add :    forall Gamma e1 e2,
@@ -115,20 +113,22 @@ Inductive has_type : context -> tm -> ty -> Prop :=
                Gamma |- e1 \in T ->
                Gamma |- e2 \in (TList T) -> 
                Gamma |- (tcons e1 e2) \in (TList T)
-  | T_CaseL :  forall Gamma e e1 e2 h t T T',
-               Gamma h = Some T' ->
-               Gamma t = Some (TList T') ->
+  | T_CaseLC : forall Gamma e e1 e2 h t T T',
+               Gamma |- e \in (TList T') ->
+               Gamma |- e1 \in T ->
+               (update (update Gamma h T') t (TList T')) |- e2 \in T ->
+               e = (tcons (tvar h) (tvar t)) ->
+               Gamma |- (tcasel e e1 e2) \in T
+  | T_CaseLN : forall Gamma e e1 e2 T T',
                Gamma |- e \in (TList T') ->
                Gamma |- e1 \in T ->
                Gamma |- e2 \in T ->
-               e = (tcons (tvar h) (tvar t)) -> (*?*)
+               e = tnil ->
                Gamma |- (tcasel e e1 e2) \in T
   | T_CaseP :  forall Gamma e e1 l r T T1 T2,
-               Gamma l = Some T1 ->
-               Gamma r = Some T2 ->
                Gamma |- e \in (TPair T1 T2) ->
                e = (tpair (tvar l) (tvar r)) ->
-               Gamma |- e1 \in T ->
+               (update (update Gamma l T1) r T2) |- e1 \in T ->
                Gamma |- (tcasep e e1) \in T
   | T_CaseB :  forall Gamma e e1 e2 T,
                Gamma |- e \in TBool ->
@@ -148,22 +148,36 @@ where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
 Example t1 : empty |- ttrue \in TBool.
 Proof. apply T_True. Qed.
 
-Definition con (i : id) := 
-  match i with
-    | (Id 5) => (Some TNat)
-    | _ => None
-end.
-Example t2 : con |- (tvar (Id 5)) \in TNat.
-Proof. apply T_Var. reflexivity. Qed.
+Definition con := (update empty (Id 5) TNat).
 
-Example t3 : con |- (tlet (tvar (Id 5)) tzero (tadd (tsucc tzero) (tvar (Id 5)))) \in TNat.
-Proof. apply T_Let with (T1:=TNat).
+Example t2 : con |- (tvar (Id 5)) \in TNat.
+Proof. apply T_Var. Qed.
+
+Example t3 : empty |- (tlet (tvar (Id 5)) tzero (tadd (tsucc tzero) (tvar (Id 5)))) \in TNat.
+Proof. apply T_Let with (T1 := TNat).
   apply T_Zero.
-  reflexivity.
   apply T_Add.
   apply T_Succ. apply T_Zero.
-  apply T_Var. reflexivity.
+  apply T_Var.
 Qed.
 
+Example t4 : empty |- (tcasel tnil tnil (tcons (tsucc tzero) tnil)) \in (TList TNat).
+Proof. apply T_CaseLN with (T' := TNat).
+  apply T_Nil.
+  apply T_Nil.
+  apply T_Cons.
+    apply T_Succ. apply T_Zero.
+    apply T_Nil.
+  reflexivity.
+Qed.
 
-(* anything -> Data type rules? *)
+(* Doesn't work... *)
+Example t5 : (update empty (Id 5) TBool) |- (tcasel (tcons ttrue tnil) tfalse (tvar (Id 5))) \in TBool.
+Proof. apply T_CaseLC.
+  apply T_Nil.
+  apply T_Nil.
+  apply T_Cons.
+    apply T_Succ. apply T_Zero.
+    apply T_Nil.
+  reflexivity.
+Qed.
