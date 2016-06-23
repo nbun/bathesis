@@ -1,0 +1,15 @@
+1. Introduction
+
+2. Preliminaries
+ 2.1 Curry
+ 2.2 FlatCurry
+ 2.3 Coq
+
+3. Theory
+
+4. Implementation
+ 4.1 Terms
+ 4.2 Types
+ 4.3 Evaluation
+
+5. Conclusion
