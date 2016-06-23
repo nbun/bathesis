@@ -68,4 +68,13 @@ Sprache "Imp")
 [11] http://www.cis.upenn.edu/~bcpierce/sf/current/toc.html (Kapitel
 7 - 9 können als Vorbereitung zu dem obigen Link gelesen werden)  
 [12] http://www.janis-voigtlaender.eu/MSSV14.html (CuMin + Typregeln)  
-[13] http://www.cis.upenn.edu/~bcpierce/sf/current/Stlc.html#lab568 (Typregeln für "STLC")  
+[13] http://www.cis.upenn.edu/~bcpierce/sf/current/Stlc.html#lab568 (Typregeln für "STLC") 
+
+## 5. Phase: Erstmal etwas schreiben
+
+* erste Stichpunkte und Ausformulierung zu Coq
+* Latex-Vorlage [16] und Code-Highlighting [14][15]
+
+[14] https://de.sharelatex.com/learn/Code_Highlighting_with_minted  
+[15] http://pygments.org/languages/  
+[16] https://www.informatik.uni-kiel.de/~mh/lehre/seminare/hinweise.html  
