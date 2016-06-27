@@ -1,0 +1,94 @@
+% LaTeX-Muster Seminararbeit
+\documentclass{scrreprt}
+
+\usepackage[T1]{fontenc}        % T1-Fonts
+\usepackage[utf8]{inputenc}     % Enkodierung
+\usepackage[ngerman]{babel}     % neue deutsche Rechtschreibung
+
+% Kapitelüberschrift in der Kopfzeile
+\usepackage[automark]{scrpage2} % Schickerer Satzspiegel mit KOMA-Script
+\pagestyle{scrheadings}
+
+% Minted
+\usepackage{minted}
+
+% Für schönere Tabellen (optional)
+% \usepackage{booktabs}           % Netteres Tabellenlayout
+% \usepackage{multicol}           % Mehrspaltige Bereiche
+% \usepackage{tabularx}           % Tabellen mit fester Breite
+
+% Für Listings
+% \usepackage{listings}
+
+% Eine kleine Hilfe für offene Lücken
+\newcommand{\todo}[1]{\marginpar{\textbf{TODO:} #1}}
+
+\begin{document}
+
+\pagenumbering{roman} % römische Seitenzahlen
+
+% Titelseite - ganz einfach
+\titlehead{\large Christian-Albrechts-Universität zu Kiel}
+\subject{Bachelor Thesis}
+\title{Title: TBD}
+\date{SS~2016}
+\author{Niels Bunkenburg}
+\maketitle
+
+
+% oder auch manuell
+
+% Verzeichnisse
+\renewcommand{\contentsname}{Contents}
+\tableofcontents   % Inhaltsverzeichnis
+% \listoffigures     % Abbildungsverzeichnis
+% \listoftables      % Tabellenverzeichnis
+% \lstlistoflistings % Abbildungsverzeichnis
+
+\newpage               % Expliziter Umbruch für Seitenzahlen
+\pagenumbering{arabic} % arabische Seitenzahlen
+
+% Inhalt
+
+% Entweder ausgegliedert in Dateien:
+%   \include{chapter/introduction}
+%   \include{chapter/fundamentals}
+% oder direkt:
+
+
+\chapter{Preliminaries}
+\section{Coq}
+The formalization of Curry programs requires a language that allows us to express the code itself and the propositions we intend to prove. Coq\footnote{https://coq.inria.fr/} is an interactive proof management system that meets these requirements, thus it will be the main tool used in the following chapters.
+\todo{Kommasetzung?}
+\par
+Coq's predefined definitions, contrary to e.g. Haskell's Prelude, are very limited. However, being a functional language, there is a powerful mechanism for defining new data types. A definition of polymorphic lists could look like this:
+\begin{minted}{coq}
+Inductive list {X:Type} : Type :=
+| nil  : list
+| cons : X -> list -> list.
+\end{minted}
+We defined a type named 'list' with two members: the constant nil, which represents an empty list, and a binary constructor cons that takes an element and a list of the same type as arguments. Note that X is a type variable and enclosed in curly brackets, which declares X as an implicit argument. Coq's type inference system deduces the type of list automatically when writing expressions:
+\begin{minted}{coq}
+Check (cons 1 (cons 2 nil)).
+(* Evaluates to cons 1 (cons 2 nil) : list *)
+Check (cons 1 (cons nil nil)). 
+(* Error: The term "cons nil nil" has type "@list (@list ?X0)"
+while it is expected to have type "@list nat". *)
+\end{minted}
+Based on this, we can write a function that determines if a list is empty:
+\begin{minted}{coq}
+
+\end{minted}
+
+
+% Anhang
+\appendix
+%\chapter{Syntax von Haskell}
+
+%\todo{Fehlt noch!}
+
+% Literatur
+\bibliographystyle{alphadin}
+\bibliography{seminar} % Datei: seminar.bib
+
+\end{document}
