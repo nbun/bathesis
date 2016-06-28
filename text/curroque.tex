@@ -60,26 +60,64 @@
 \section{Coq}
 The formalization of Curry programs requires a language that allows us to express the code itself and the propositions we intend to prove. Coq\footnote{https://coq.inria.fr/} is an interactive proof management system that meets these requirements, thus it will be the main tool used in the following chapters.
 \todo{Kommasetzung?}
-\par
+\subsection{Data types and functions}
 Coq's predefined definitions, contrary to e.g. Haskell's Prelude, are very limited. However, being a functional language, there is a powerful mechanism for defining new data types. A definition of polymorphic lists could look like this:
 \begin{minted}{coq}
-Inductive list {X:Type} : Type :=
-| nil  : list
-| cons : X -> list -> list.
+Inductive list (X:Type) : Type :=
+| nil  : list X
+| cons : X -> list X -> list X.
 \end{minted}
-We defined a type named 'list' with two members: the constant nil, which represents an empty list, and a binary constructor cons that takes an element and a list of the same type as arguments. Note that X is a type variable and enclosed in curly brackets, which declares X as an implicit argument. Coq's type inference system deduces the type of list automatically when writing expressions:
+We defined a type named 'list' with two members: the constant nil, which represents an empty list, and a binary constructor cons that takes an element and a list of the same type as arguments. In fact, nil and cons have one additional argument, a type X. This is required, because we want polymorphic lists -- but we don't want to explicitly state the type. Fortunately, Coq allows us to declare type arguments as implicit by enclosing them in curly brackets:
 \begin{minted}{coq}
-Check (cons 1 (cons 2 nil)).
-(* Evaluates to cons 1 (cons 2 nil) : list *)
-Check (cons 1 (cons nil nil)). 
-(* Error: The term "cons nil nil" has type "@list (@list ?X0)"
-while it is expected to have type "@list nat". *)
+Check (cons nat 8 (nil nat)). (*cons nat 8 (nil nat) : list nat*)
+Arguments nil {X}.
+Arguments cons {X} _ _.
 \end{minted}
-Based on this, we can write a function that determines if a list is empty:
+Coq's type inference system deduces the type of a list automatically now.
 \begin{minted}{coq}
+Check (cons 2 (cons 4 nil)). (* cons 2 (cons 4 nil) : list nat *)
+Check (cons 2 (cons nil nil)). 
+(* Error: The term "cons nil nil" has type "list (list ?X0)"
+while it is expected to have type "list nat". *)
+\end{minted}
+Based on this we can write a function that determines if a list is empty:
+\begin{minted}{coq}
+Definition isEmpty {X : Type} (l : list X) : bool := 
+match l with
+| nil      => true
+| cons _ _ => false
+end.
+\end{minted}
+Function definitions begin with the keyword 'Definition'. isEmpty takes an (implicit) type and a list and returns a boolean value.
+To distinguish empty from non-empty lists, pattern matching can be used on $n$ arguments by writing 'match $x_{0}...x_{n-1}$ with | $p_{0} \rightarrow e_{0}$ | ... | $p_{m-1} \rightarrow e_{m-1}$' for $m$ pattern $p$, consisting of a sub-pattern for every $x_{i}$, and expressions $e$.
 
+The definition of recursive functions requires that the function is called with a smaller structure than before in each iteration, which ensures that the function eventually terminates. A recursive function is indicated by using 'Fixpoint' instead of 'Definition'.
+\begin{minted}{coq}
+Fixpoint app {X : Type} (l1 l2 : list X) : (list X) :=
+match l1 with
+| nil => l2
+| cons h t => cons h (app t l2)
+end.
+\end{minted}
+In this case $l_{1}$ gets shorter with every iteration, thus the function terminates after a finite amount of recursions. 
+
+Coq allows us to define notations for functions and constructor by using the keyword 'Notation', followed by the desired syntax and the expression. 
+\begin{minted}{coq}
+Notation "x :: y" := (cons x y) (at level 60, right associativity).
+Notation "[ ]" := nil.
+Notation "[ x ; .. ; y ]" := (cons x .. (cons y []) ..).
+Notation "x ++ y" := (app x y) (at level 60, right associativity).
 \end{minted}
 
+\subsection{Propositions and proofs}
+Every claim that we state or prove has the type 'Prop'. Propositions can be any statement, regardless of its truth. A few examples:
+\begin{minted}{coq}
+Check 1 + 1 = 2. (* : Prop *)
+Check forall (X : Type) (l : list X), l ++ [] = l. (* : Prop *)
+Check forall (n : nat), n > 0 -> n * n > 0. (* : Prop *)
+\end{minted}
+The first Proposition is a simple equation, while the second one contains an all-quantifier. This allows us to state propositions about every type of list or, in the third example, about every natural number that is greater than zero. The implication allows us to require specific properties that limit the all-quantifier. 
+ 
 
 % Anhang
 \appendix
