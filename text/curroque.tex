@@ -29,12 +29,11 @@
 
 % Titelseite - ganz einfach
 \titlehead{\large Christian-Albrechts-Universität zu Kiel}
-\subject{Bachelor Thesis}
+\subject{Bachelor Thesis\todo{Weitere Formalitäten...}}
 \title{Title: TBD}
 \date{SS~2016}
 \author{Niels Bunkenburg}
 \maketitle
-
 
 % oder auch manuell
 
@@ -116,7 +115,20 @@ Check 1 + 1 = 2. (* : Prop *)
 Check forall (X : Type) (l : list X), l ++ [] = l. (* : Prop *)
 Check forall (n : nat), n > 0 -> n * n > 0. (* : Prop *)
 \end{minted}
-The first Proposition is a simple equation, while the second one contains an all-quantifier. This allows us to state propositions about every type of list or, in the third example, about every natural number that is greater than zero. The implication allows us to require specific properties that limit the all-quantifier. 
+The first proposition is a simple equation, while the second one contains an universal quantifier. This allows us to state propositions about every type of list or, in the third example, about every natural number that is greater than zero. The implication allows us to require specific properties that limit the universal quantification.
+\par
+Now how do we prove these propositions? Proving an equation requires to show that both sides are equal, usually by simplifying one side until it looks exactly like the other. Coq allows us to do this by using tactics, which can perform a multitude of different operations.
+\begin{minted}{coq}
+Example e1 : 1+1=2.
+Proof. simpl. reflexivity. Qed. 
+\end{minted} 
+\todo{Highlighting für Proof und Qed}
+After naming the proposition as an example, theorem or lemma it appears in the interactive subgoal list that Coq provides. The simpl tactic performs basic simplification like adding two numbers in this case. The updated subgoal is now '2=2', which is obviously true. By using the reflexivity tactic we tell Coq to check both sides for equality, which succeeds and clears the subgoal list, followed by a 'Qed' to complete the proof.
+\begin{minted}{coq}
+Example e2 : forall (X : Type) (l : list X), [] ++ l = l.
+Proof. intros X l. reflexivity. Qed.
+\end{minted}
+Universal quantifiers allow us to introduce variables, the corresponding tactic is called intros. The new context contains a type X and a list l, with the remaining subgoal [ ] ++ l = l. Because we defined app to return the second argument if the first one is an empty list, reflexivity directly proves our goal. It's not just useful for obvious equations, it also simplifies and unfolds definitions until the flat terms match each other, if possible.
  
 
 % Anhang
