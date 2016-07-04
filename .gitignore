@@ -179,3 +179,10 @@ TSWLatexianTemp*
 
 # KBibTeX
 *~[0-9]*
+
+#Curry
+.curry
+
+#Coq
+*.glob
+*.vo

@@ -114,21 +114,13 @@ Inductive has_type : context -> tm -> ty -> Prop :=
                Gamma |- e1 \in T ->
                Gamma |- e2 \in (TList T) -> 
                Gamma |- (tcons e1 e2) \in (TList T)
-  | T_CaseLC : forall Gamma e e1 e2 h t T T',
+  | T_CaseL :  forall Gamma e e1 e2 h t T T',
                Gamma |- e \in (TList T') ->
                Gamma |- e1 \in T ->
                (update (update Gamma h T') t (TList T')) |- e2 \in T ->
-               e = (tcons (tvar h) (tvar t)) ->
-               Gamma |- (tcasel e e1 e2) \in T
-  | T_CaseLN : forall Gamma e e1 e2 T T',
-               Gamma |- e \in (TList T') ->
-               Gamma |- e1 \in T ->
-               Gamma |- e2 \in T ->
-               e = tnil ->
                Gamma |- (tcasel e e1 e2) \in T
   | T_CaseP :  forall Gamma e e1 l r T T1 T2,
                Gamma |- e \in (TPair T1 T2) ->
-               e = (tpair (tvar l) (tvar r)) ->
                (update (update Gamma l T1) r T2) |- e1 \in T ->
                Gamma |- (tcasep e e1) \in T
   | T_CaseB :  forall Gamma e e1 e2 T,
