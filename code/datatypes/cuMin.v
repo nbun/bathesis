@@ -28,33 +28,34 @@ Definition update {A:Type} (m : partial_map A)
                   (x : id) (v : A) :=
   t_update m x (Some v).
 
+Inductive ty : Type :=
+  | TVar  : ty
+  | TBool : ty
+  | TNat  : ty
+  | TList : ty -> ty
+  | TPair : ty -> ty -> ty
+  | TFun  : ty -> ty -> ty.
+  
 Inductive tm : Type :=
-  | tvar : id -> tm
-  | tapp : tm -> tm -> tm
-  | tfun : tm -> tm -> tm
-  | tlet : tm -> tm -> tm -> tm
-  | ttrue : tm
+  | tvar   : id -> tm
+  | tapp   : tm -> tm -> tm
+  | tfun   : tm -> tm -> tm
+  | tlet   : tm -> tm -> tm -> tm
+  | ttrue  : tm
   | tfalse : tm
-  | tfailure : tm
-  | tanything : tm
-  | tzero : tm
-  | tsucc : tm -> tm
-  | tadd : tm -> tm -> tm
-  | teqn : tm -> tm -> tm
-  | tpair : tm -> tm -> tm
-  | tnil : tm
-  | tcons : tm -> tm -> tm
+  | tfail  : ty -> tm
+  | tany   : ty -> tm
+  | tzero  : tm
+  | tsucc  : tm -> tm
+  | tadd   : tm -> tm -> tm
+  | teqn   : tm -> tm -> tm
+  | tpair  : tm -> tm -> tm
+  | tnil   : tm
+  | tcons  : tm -> tm -> tm
   | tcasep : tm -> tm -> tm
   | tcaseb : tm -> tm -> tm -> tm
   | tcasel : tm -> tm -> tm -> tm.
   
-Inductive ty : Type :=
-  | TVar : ty
-  | TBool : ty
-  | TNat : ty
-  | TList : ty -> ty
-  | TPair : ty -> ty -> ty
-  | TFun : ty -> ty -> ty.
 
 Definition context := partial_map ty.
 
@@ -96,7 +97,7 @@ Inductive has_type : context -> tm -> ty -> Prop :=
                Gamma |- e1 \in T1 ->
                (update Gamma x T1) |- e2 \in T2 ->
                Gamma |- (tlet (tvar x) e1 e2) \in T2
-(*| T_Fun*)
+  (*| T_Fun :    forall Gamma TV1 TV2 T1 T2 *)
   | T_Add :    forall Gamma e1 e2,
                Gamma |- e1 \in TNat ->
                Gamma |- e2 \in TNat ->
