@@ -57,7 +57,7 @@ http://www-ps.informatik.uni-kiel.de/kics2/lib/FlatCurry.Types.html
 [9] https://www-ps.informatik.uni-kiel.de/kics2/Manual.pdf (Abstract
 A1)  
 
-## 4. Phase: Formalisierung der Typung von FlatCurry-Programmen in Coq
+## 4. Phase: Formalisierung der Typung von CuMin-Programmen in Coq
 
 * Einarbeitung in Thematik durch Lesen des entsprechenden Kapitels in
 "Software Foundations"
