@@ -27,13 +27,16 @@ Definition emptymap {A:Type} : partial_map A :=
 Definition update {A:Type} (m : partial_map A)
                   (x : id) (v : A) :=
   t_update m x (Some v).
-  
+
+(* Star tagged variables can only be specialized to non-functional data types,
+   while the empty tag allows this *)
+
 Inductive tag : Type :=
  | tag_star  : tag
  | tag_empty : tag.
 
 Inductive ty : Type :=
-  | TVar  : ty
+  | TVar  : id -> ty
   | TBool : ty
   | TNat  : ty
   | TList : ty -> ty
@@ -84,7 +87,8 @@ Inductive tm : Type :=
 
 Reserved Notation "Gamma '|-' T '\in_data'" (at level 40).
 Inductive data : context -> ty -> Prop :=
-  | D_Var :  forall Gamma A, Gamma |- A \in_data (* insert tag context here... *)
+  | D_Var :  forall Gamma n,
+              (tag_update Gamma n tag_star) |- (TVar n) \in_data
   | D_Bool : forall Gamma, Gamma |- TBool \in_data
   | D_Nat :  forall Gamma, Gamma |- TNat \in_data
   | D_List : forall Gamma T,
@@ -100,63 +104,63 @@ Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
 
 Inductive has_type : context -> tm -> ty -> Prop :=
   | T_Var :    forall Gamma x T,
-               (type_update Gamma x T) |- tvar x \in T
+                 (typecon Gamma) x = Some T ->
+                 Gamma |- tvar x \in T
   | T_True :   forall Gamma, 
-               Gamma |- ttrue \in TBool
+                 Gamma |- ttrue \in TBool
   | T_False :  forall Gamma,
-               Gamma |- tfalse \in TBool
+                 Gamma |- tfalse \in TBool
   | T_Zero :   forall Gamma,
-               Gamma |- tzero \in TNat
+                 Gamma |- tzero \in TNat
   | T_Succ :   forall Gamma e,
-               Gamma |- e \in TNat -> 
-               Gamma |- (tsucc e) \in TNat
+                 Gamma |- e \in TNat -> 
+                 Gamma |- (tsucc e) \in TNat
   | T_Nil :    forall Gamma T, 
-               Gamma |- tnil \in (TList T)
+                 Gamma |- tnil \in (TList T)
   | T_App :    forall Gamma e1 e2 T1 T2,
-               Gamma |- e1 \in (TFun T1 T2) ->
-               Gamma |- e2 \in T1 ->
-               Gamma |- (tapp e1 e2) \in T2
+                 Gamma |- e1 \in (TFun T1 T2) ->
+                 Gamma |- e2 \in T1 ->
+                 Gamma |- (tapp e1 e2) \in T2
   | T_Let :    forall Gamma e1 e2 x T1 T2,
-               Gamma |- e1 \in T1 ->
-               (type_update Gamma x T1) |- e2 \in T2 ->
-               Gamma |- (tlet (tvar x) e1 e2) \in T2
+                 Gamma |- e1 \in T1 ->
+                 (type_update Gamma x T1) |- e2 \in T2 ->
+                 Gamma |- (tlet (tvar x) e1 e2) \in T2
   (*| T_Fun :    forall Gamma TV1 TV2 T1 T2 *)
   | T_Add :    forall Gamma e1 e2,
-               Gamma |- e1 \in TNat ->
-               Gamma |- e2 \in TNat ->
-               Gamma |- (tadd e1 e2) \in TNat
+                 Gamma |- e1 \in TNat ->
+                 Gamma |- e2 \in TNat ->
+                 Gamma |- (tadd e1 e2) \in TNat
   | T_EqN :    forall Gamma e1 e2,
-               Gamma |- e1 \in TNat ->
-               Gamma |- e2 \in TNat ->
-               Gamma |- (teqn e1 e2) \in TBool
+                 Gamma |- e1 \in TNat ->
+                 Gamma |- e2 \in TNat ->
+                 Gamma |- (teqn e1 e2) \in TBool
   | T_Pair:    forall Gamma e1 e2 T1 T2,
-               Gamma |- e1 \in T1 ->
-               Gamma |- e2 \in T2 ->
-               Gamma |- (tpair e1 e2) \in (TPair T1 T2)
+                 Gamma |- e1 \in T1 ->
+                 Gamma |- e2 \in T2 ->
+                 Gamma |- (tpair e1 e2) \in (TPair T1 T2)
   | T_Cons :   forall Gamma e1 e2 T,
-               Gamma |- e1 \in T ->
-               Gamma |- e2 \in (TList T) -> 
-               Gamma |- (tcons e1 e2) \in (TList T)
+                 Gamma |- e1 \in T ->
+                 Gamma |- e2 \in (TList T) -> 
+                 Gamma |- (tcons e1 e2) \in (TList T)
   | T_CaseL :  forall Gamma e e1 e2 h t T T',
-               Gamma |- e \in (TList T') ->
-               Gamma |- e1 \in T ->
-               (type_update (type_update Gamma h T') t (TList T')) |- e2 \in T ->
-               Gamma |- (tcasel e e1 e2) \in T
+                 Gamma |- e \in (TList T') ->
+                 Gamma |- e1 \in T ->
+                 (type_update (type_update Gamma h T') t (TList T')) |- e2 \in T ->
+                 Gamma |- (tcasel e e1 e2) \in T
   | T_CaseP :  forall Gamma e e1 l r T T1 T2,
-               Gamma |- e \in (TPair T1 T2) ->
-               (type_update (type_update Gamma l T1) r T2) |- e1 \in T ->
-               Gamma |- (tcasep e e1) \in T
+                 Gamma |- e \in (TPair T1 T2) ->
+                 (type_update (type_update Gamma l T1) r T2) |- e1 \in T ->
+                 Gamma |- (tcasep e e1) \in T
   | T_CaseB :  forall Gamma e e1 e2 T,
-               Gamma |- e \in TBool ->
-               Gamma |- e1 \in T ->
-               Gamma |- e2 \in T ->
-               Gamma |- (tcaseb e e1 e2) \in T
+                 Gamma |- e \in TBool ->
+                 Gamma |- e1 \in T ->
+                 Gamma |- e2 \in T ->
+                 Gamma |- (tcaseb e e1 e2) \in T
   | T_Fail :   forall Gamma T,
-               Gamma |- (tfail T) \in T
+                 Gamma |- (tfail T) \in T
   | T_Any :    forall Gamma T,
-               Gamma |- T \in_data ->
-               Gamma |- (tany T) \in T
-  
+                 Gamma |- T \in_data ->
+                 Gamma |- (tany T) \in T
 where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
 
 
@@ -167,14 +171,14 @@ Proof. apply T_True. Qed.
 Definition c := (type_update empty (Id 5) TNat).
 
 Example t2 : c |- (tvar (Id 5)) \in TNat.
-Proof. apply T_Var. Qed.
+Proof. apply T_Var. reflexivity. Qed.
 
 Example t3 : empty |- (tlet (tvar (Id 5)) tzero (tadd (tsucc tzero) (tvar (Id 5)))) \in TNat.
 Proof. apply T_Let with (T1 := TNat).
   apply T_Zero.
   apply T_Add.
   apply T_Succ. apply T_Zero.
-  apply T_Var.
+  apply T_Var. reflexivity.
 Qed.
 
 Example t4 : empty |- (tcasel tnil tnil (tcons (tsucc tzero) tnil)) \in (TList TNat).
@@ -192,5 +196,5 @@ Proof. apply T_CaseL with (T' := TBool) (h := Id 6) (t := Id 7).
     apply T_True.
     apply T_Nil.
   apply T_False.
-  (*apply T_Var. *)
-  Admitted.
+  apply T_Var. reflexivity.
+Qed.
