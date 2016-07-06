@@ -164,37 +164,45 @@ Inductive has_type : context -> tm -> ty -> Prop :=
 where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
 
 
-
-Example t1 : empty |- ttrue \in TBool.
-Proof. apply T_True. Qed.
-
-Definition c := (type_update empty (Id 5) TNat).
-
-Example t2 : c |- (tvar (Id 5)) \in TNat.
-Proof. apply T_Var. reflexivity. Qed.
-
-Example t3 : empty |- (tlet (tvar (Id 5)) tzero (tadd (tsucc tzero) (tvar (Id 5)))) \in TNat.
-Proof. apply T_Let with (T1 := TNat).
-  apply T_Zero.
-  apply T_Add.
-  apply T_Succ. apply T_Zero.
-  apply T_Var. reflexivity.
+Section Examples.
+  Example t1 : empty |- ttrue \in TBool.
+  Proof. apply T_True. Qed.
+  
+  Definition c := (type_update empty (Id 5) TNat).
+  
+  Example t2 : c |- (tvar (Id 5)) \in TNat.
+  Proof. apply T_Var. reflexivity. Qed.
+  
+  Example t3 : empty |- (tlet (tvar (Id 5)) tzero (tadd (tsucc tzero) (tvar (Id 5)))) \in TNat.
+  Proof. apply T_Let with (T1 := TNat).
+         apply T_Zero.
+         apply T_Add.
+         apply T_Succ. apply T_Zero.
+         apply T_Var. reflexivity.
 Qed.
+  
+  Example t4 : empty |- (tcasel tnil tnil (tcons (tsucc tzero) tnil)) \in (TList TNat).
+  Proof. apply T_CaseL with (T' := TNat) (h := Id 5) (t := Id 6).
+         apply T_Nil.
+         apply T_Nil.
+         apply T_Cons.
+         apply T_Succ. apply T_Zero.
+         apply T_Nil.
+  Qed.
+  
+  Example t5 : (type_update empty (Id 5) TBool) |- (tcasel (tcons ttrue tnil) tfalse (tvar (Id 5))) \in TBool.
+  Proof. apply T_CaseL with (T' := TBool) (h := Id 6) (t := Id 7).
+         apply T_Cons.
+         apply T_True.
+         apply T_Nil.
+         apply T_False.
+         apply T_Var. reflexivity.
+  Qed.
 
-Example t4 : empty |- (tcasel tnil tnil (tcons (tsucc tzero) tnil)) \in (TList TNat).
-Proof. apply T_CaseL with (T' := TNat) (h := Id 5) (t := Id 6).
-  apply T_Nil.
-  apply T_Nil.
-  apply T_Cons.
-    apply T_Succ. apply T_Zero.
-    apply T_Nil.
-Qed.
+  Definition aContext :=
+    type_update (type_update (type_update empty (Id 5) TNat) (Id 51) TBool) (Id 2) (TVar (Id 1)).
 
-Example t5 : (type_update empty (Id 5) TBool) |- (tcasel (tcons ttrue tnil) tfalse (tvar (Id 5))) \in TBool.
-Proof. apply T_CaseL with (T' := TBool) (h := Id 6) (t := Id 7).
-  apply T_Cons.
-    apply T_True.
-    apply T_Nil.
-  apply T_False.
-  apply T_Var. reflexivity.
-Qed.
+  Example t6 : aContext |- tvar (Id 2) \in TVar (Id 1).
+  Proof.
+  Admitted.
+End Examples.
