@@ -1,6 +1,10 @@
 Require Import  Datatypes EqNat.
 Local Open Scope nat_scope.
 
+Notation " [ ] " := nil (format "[ ]").
+Notation " [ x ] " := (cons x nil).
+Notation " [ x ; y ; .. ; z ] " := (cons x (cons y .. (cons z nil) ..)).
+
 Inductive id : Type :=
   | Id : nat -> id.
   
@@ -88,7 +92,8 @@ Inductive tm : Type :=
 Reserved Notation "Gamma '|-' T '\in_data'" (at level 40).
 Inductive data : context -> ty -> Prop :=
   | D_Var :  forall Gamma n,
-              (tag_update Gamma n tag_star) |- (TVar n) \in_data
+              (tagcon Gamma) n  = Some tag_star ->
+              Gamma |- (TVar n) \in_data
   | D_Bool : forall Gamma, Gamma |- TBool \in_data
   | D_Nat :  forall Gamma, Gamma |- TNat \in_data
   | D_List : forall Gamma T,
@@ -206,3 +211,27 @@ Qed.
   Proof.
   Admitted.
 End Examples.
+
+Inductive quantifier : Type :=
+ for_all : id -> tag -> quantifier.
+  
+Inductive func_decl : Type :=
+ FDecl : id -> list quantifier -> ty -> (list id) -> tm -> func_decl.
+ 
+(* ident :: a -> a
+   ident x = x *)
+      (*     ident              a                      a       x            x*)
+Check (FDecl (Id 1) [for_all (Id 2) tag_star] (TVar (Id 2)) [Id 3] (tvar (Id 3))).
+
+Fixpoint ty_subst (k: id) (t: ty) (t': ty) : ty :=
+  match t' with
+   | TVar (Id k) => t
+   | TBool       => TBool
+   | TNat        => TNat
+   | TList T     => TList (ty_subst k t T)
+   | TPair TL TR => TPair (ty_subst k t TL) (ty_subst k t TR)
+   | TFun  TL TR => TFun  (ty_subst k t TL) (ty_subst k t TR)
+  end.
+  
+Example ty_subst1 : ty_subst (Id 1) TBool (TFun (TVar (Id 1)) (TVar (Id 1))) = TFun TBool TBool.
+Proof. reflexivity. Qed.
