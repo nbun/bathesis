@@ -66,7 +66,7 @@ Inductive list (X:Type) : Type :=
 | nil  : list X
 | cons : X -> list X -> list X.
 \end{minted}
-We defined a type named 'list' with two members: the constant nil, which represents an empty list, and a binary constructor cons that takes an element and a list of the same type as arguments. In fact, nil and cons have one additional argument, a type X. This is required, because we want polymorphic lists -- but we don't want to explicitly state the type. Fortunately, Coq allows us to declare type arguments as implicit by enclosing them in curly brackets:
+We defined a type named \mintinline{coq}{list} with two members: the constant \mintinline{coq}{nil}, which represents an empty list, and a binary constructor \mintinline{coq}{cons} that takes an element and a list of the same type as arguments. In fact, \mintinline{coq}{nil} and \mintinline{coq}{cons} have one additional argument, a type \mintinline{coq}{X}. This is required, because we want polymorphic lists -- but we don't want to explicitly state the type. Fortunately, Coq allows us to declare type arguments as implicit by enclosing them in curly brackets:
 \begin{minted}{coq}
 Check (cons nat 8 (nil nat)). (*cons nat 8 (nil nat) : list nat*)
 Arguments nil {X}.
@@ -87,10 +87,10 @@ match l with
 | cons _ _ => false
 end.
 \end{minted}
-Function definitions begin with the keyword 'Definition'. isEmpty takes an (implicit) type and a list and returns a boolean value.
-To distinguish empty from non-empty lists, pattern matching can be used on $n$ arguments by writing 'match $x_{0}...x_{n-1}$ with | $p_{0} \rightarrow e_{0}$ | ... | $p_{m-1} \rightarrow e_{m-1}$' for $m$ pattern $p$, consisting of a sub-pattern for every $x_{i}$, and expressions $e$.
+Function definitions begin with the keyword \mintinline{coq}{Definition}. \mintinline{coq}{isEmpty} takes an (implicit) type and a list and returns a boolean value.
+To distinguish empty from non-empty lists, pattern matching can be used on $n$ arguments by writing \mintinline{coq}{match} $x_{0},...,x_{n-1}$ \mintinline{coq}{with} | $p_{0} \rightarrow e_{0}$ | ... | $p_{m-1} \rightarrow e_{m-1}$ for $m$ pattern $p$, consisting of a sub-pattern for every $x_{i}$ and expressions $e_{i}$.
 
-The definition of recursive functions requires that the function is called with a smaller structure than before in each iteration, which ensures that the function eventually terminates. A recursive function is indicated by using 'Fixpoint' instead of 'Definition'.
+The definition of recursive functions requires that the function is called with a smaller structure than before in each iteration, which ensures that the function eventually terminates. A recursive function is indicated by using \mintinline{coq}{Fixpoint} instead of \mintinline{coq}{Definition}.
 \begin{minted}{coq}
 Fixpoint app {X : Type} (l1 l2 : list X) : (list X) :=
 match l1 with
@@ -100,7 +100,7 @@ end.
 \end{minted}
 In this case $l_{1}$ gets shorter with every iteration, thus the function terminates after a finite amount of recursions. 
 
-Coq allows us to define notations for functions and constructor by using the keyword 'Notation', followed by the desired syntax and the expression. 
+Coq allows us to define notations for functions and constructors by using the keyword \mintinline{coq}{Notation}, followed by the desired syntax and the expression. 
 \begin{minted}{coq}
 Notation "x :: y" := (cons x y) (at level 60, right associativity).
 Notation "[ ]" := nil.
@@ -109,7 +109,7 @@ Notation "x ++ y" := (app x y) (at level 60, right associativity).
 \end{minted}
 
 \subsection{Propositions and proofs}
-Every claim that we state or prove has the type 'Prop'. Propositions can be any statement, regardless of its truth. A few examples:
+Every claim that we state or prove has the type \mintinline{coq}{Prop}. Propositions can be any statement, regardless of its truth. A few examples:
 \begin{minted}{coq}
 Check 1 + 1 = 2. (* : Prop *)
 Check forall (X : Type) (l : list X), l ++ [] = l. (* : Prop *)
@@ -123,12 +123,25 @@ Example e1 : 1+1=2.
 Proof. simpl. reflexivity. Qed. 
 \end{minted} 
 \todo{Highlighting für Proof und Qed}
-After naming the proposition as an example, theorem or lemma it appears in the interactive subgoal list that Coq provides. The simpl tactic performs basic simplification like adding two numbers in this case. The updated subgoal is now '2=2', which is obviously true. By using the reflexivity tactic we tell Coq to check both sides for equality, which succeeds and clears the subgoal list, followed by a 'Qed' to complete the proof.
+After naming the proposition as an example, theorem or lemma it appears in the interactive subgoal list that Coq provides. The \mintinline{coq}{simpl} tactic performs basic simplification like adding two numbers in this case. The updated subgoal is now \mintinline{coq}{2=2}, which is obviously true. By using the \mintinline{coq}{reflexivity} tactic we tell Coq to check both sides for equality, which succeeds and clears the subgoal list, followed by \mintinline{coq}{Qed} to complete the proof.
 \begin{minted}{coq}
 Example e2 : forall (X : Type) (l : list X), [] ++ l = l.
 Proof. intros X l. reflexivity. Qed.
 \end{minted}
-Universal quantifiers allow us to introduce variables, the corresponding tactic is called intros. The new context contains a type X and a list l, with the remaining subgoal [ ] ++ l = l. Because we defined app to return the second argument if the first one is an empty list, reflexivity directly proves our goal. It's not just useful for obvious equations, it also simplifies and unfolds definitions until the flat terms match each other, if possible.
+Universal quantifiers allow us to introduce variables, the corresponding tactic is called \mintinline{coq}{intros}. The new context contains a type \mintinline{coq}{X} and a list \mintinline{coq}{l}, with the remaining subgoal \mintinline{coq}{[ ] ++ l = l}. Because we defined \mintinline{coq}{app} to return the second argument if the first one is an empty list, \mintinline{coq}{reflexivity} directly proves our goal. \mintinline{coq}{reflexivity} isn't useful for obvious equations only, it also simplifies and unfolds definitions until the flat terms match each other if possible.
+\par
+To prove that the proposition \mintinline{coq}{l ++ [] = l} holds, we need more advanced tactics, because we can't just apply the definition. \mintinline{coq}{app} works by iterating through the first list, but we need to prove the proposition for every list, regardless of its length. One possibility to solve this problem is by using structural induction.
+\begin{minted}{coq}
+Example e3 : forall (X : Type) (l : list X), l ++ [] = l.
+Proof. intros X. induction l as [|l ls IH].
+reflexivity.
+simpl. rewrite IH. reflexivity.
+Qed.
+\end{minted}
+The proof begins by introducing type \mintinline{coq}{X}, followed by the \mintinline{coq}{induction} tactic applied to \mintinline{coq}{l}. Coq names newly introduced variables by itself, which can be done manually by adding \mintinline{coq}{as [c1|...|cn]} to the tactic. Each $c_{i}$ represents a sequence of variable names, which will be used when introducing variables in the corresponding case. Cases are ordered as listed in the \mintinline{coq}{Definition}.
+\par
+Now we need to prove two cases: the empty list and a cons construct. The first case doesn't require any new variable names, thus the first section in the squared brackets is empty. It is easily solved by applying \mintinline{coq}{reflexivity}, because of the definition of \mintinline{coq}{app}.
+The second case 
  
 
 % Anhang

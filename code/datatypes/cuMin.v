@@ -47,7 +47,7 @@ Inductive ty : Type :=
   | TNat  : ty
   | TList : ty -> ty
   | TPair : ty -> ty -> ty
-  | TFun  : list ty -> ty.
+  | TFun  : list ty  -> ty -> ty.
 
 Inductive context : Type := 
  | con : (partial_map tag) -> (partial_map ty) -> context.
@@ -72,8 +72,8 @@ Definition tag_update (Gamma : context) (x : id) (v : tag) :=
 
 Inductive tm : Type :=
   | tvar   : id -> tm
-  | tapp   : tm -> tm -> tm
-  | tfun   : list ty -> tm
+  | tapp   : id -> list ty -> tm (* ??? *)
+  | tfun   : list ty -> tm (* ??? *)
   | tlet   : tm -> tm -> tm -> tm
   | ttrue  : tm
   | tfalse : tm
@@ -134,7 +134,7 @@ Fixpoint ty_subst (k: id) (t: ty) (t': ty) : ty :=
    | TNat        => TNat
    | TList T     => TList (ty_subst k t T)
    | TPair TL TR => TPair (ty_subst k t TL) (ty_subst k t TR)
-   | TFun tys => TFun (map (ty_subst k t) tys)
+   | TFun tys ty => TFun (map (ty_subst k t) tys) (ty_subst k t ty)
   end.
 
 Fixpoint qty_zip (qs : list quantifier) (tys : list ty) : (list (quantifier * ty)) :=
@@ -148,17 +148,18 @@ Fixpoint qty_zip (qs : list quantifier) (tys : list ty) : (list (quantifier * ty
 Fixpoint multi_ty_subst (qtys : list (quantifier * ty)) (t : ty) : option ty:=
   match qtys, t with
    | [], t => Some t
-   | ((for_all id tag_star, ty) :: qtys), (TFun _) => None (* star tag doesn't allow function types *)
+   | ((for_all id tag_star, ty) :: qtys), (TFun _ _) => None (* star tag doesn't allow function types *)
    | ((for_all id tg, ty) :: qtys), t => multi_ty_subst qtys (ty_subst id ty t)
   end.
   
 Definition qty_subst (qty : (quantifier * ty)) (t : option ty) : option ty:=
   match qty, t with
    | _, None => None
-   | (for_all id tag_star, ty), Some (TFun _) => None (* star tag doesn't allow function types *)
+   | (for_all id tag_star, ty), Some (TFun _ _) => None (* star tag doesn't allow function types *)
    | (for_all id tg, ty), Some t => Some (ty_subst id ty t)
   end.
   
+  (* ??? *)
  Definition multi_ty_subst_alt (qtys : list (quantifier * ty)) (t : ty) : option ty := 
   fold_right (qty_subst) (Some t) qtys.
   
@@ -186,10 +187,10 @@ Inductive has_type : context -> tm -> ty -> Prop :=
                  Gamma |- (tsucc e) \in TNat
   | T_Nil :    forall Gamma T, 
                  Gamma |- tnil \in (TList T)
-  | T_App :    forall Gamma e1 e2 T1 T2,
-                 Gamma |- e1 \in (TFun [T1; T2]) ->
+  | T_App :    forall Gamma e1 e2 id T1 T2 tys,
+                 Gamma |- e1 \in (TFun [T1] T2) ->
                  Gamma |- e2 \in T1 ->
-                 Gamma |- (tapp e1 e2) \in T2
+                 Gamma |- (tapp id tys) \in T2 (* ??? *)
   | T_Let :    forall Gamma e1 e2 x T1 T2,
                  Gamma |- e1 \in T1 ->
                  (type_update Gamma x T1) |- e2 \in T2 ->
@@ -276,13 +277,13 @@ Section Examples.
   Example t6 : aContext |- tvar (Id 2) \in TVar (Id 1).
   Proof. apply T_Var. reflexivity. Qed.
   
-  Example multi_t1 : multi_ty_subst [((for_all (Id 1) tag_empty), TNat);((for_all (Id 2) tag_empty), (TList TBool))] (TFun [TVar (Id 1); (TVar (Id 2)); TNat]) = Some (TFun [TNat; TList TBool; TNat]).
+  Example multi_t1 : multi_ty_subst [((for_all (Id 1) tag_empty), TNat);((for_all (Id 2) tag_empty), (TList TBool))] (TFun [TVar (Id 1); (TVar (Id 2))] TNat) = Some (TFun [TNat; TList TBool] TNat).
   Proof. reflexivity. Qed.
   
-  Example multi_t2 : multi_ty_subst [((for_all (Id 1) tag_star), (TFun [TNat; TBool])); ((for_all (Id 2) tag_empty), (TList TBool))] (TFun [TVar (Id 1); TVar (Id 2); TNat]) = None.
+  Example multi_t2 : multi_ty_subst [((for_all (Id 1) tag_star), (TFun [TNat] TBool)); ((for_all (Id 2) tag_empty), (TList TBool))] (TFun [TVar (Id 1); TVar (Id 2)] TNat) = None.
   Proof. reflexivity. Qed.
   
-  Example ty_subst1 : ty_subst (Id 1) TBool (TFun [(TVar (Id 1)); (TVar (Id 1))]) = TFun [TBool; TBool].
+  Example ty_subst1 : ty_subst (Id 1) TBool (TFun [(TVar (Id 1))] (TVar (Id 1))) = TFun [TBool] TBool.
   Proof. reflexivity. Qed.
 
 End Examples.
