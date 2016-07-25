@@ -32,7 +32,6 @@ Definition emptymap {A:Type} : partial_map A :=
 Definition update {A:Type} (m : partial_map A)
                   (x : id) (v : A) :=
   t_update m x (Some v).
-  
 
 (* Star tagged variables can only be specialized to non-functional data types,
    while the empty tag allows this *)
@@ -72,8 +71,8 @@ Definition tag_update (Gamma : context) (x : id) (v : tag) :=
 
 Inductive tm : Type :=
   | tvar   : id -> tm
-  | tapp   : id -> list ty -> tm (* ??? *)
-  | tfun   : list ty -> tm (* ??? *)
+  | tapp   : tm -> tm -> tm
+  | tfun   : id -> list ty -> tm
   | tlet   : tm -> tm -> tm -> tm
   | ttrue  : tm
   | tfalse : tm
@@ -96,20 +95,37 @@ Inductive quantifier : Type :=
 Inductive func_decl : Type :=
  FDecl : id -> list quantifier -> ty -> (list id) -> tm -> func_decl.
 
+Fixpoint qs_to_optys (Gamma : context) (qs : list quantifier) : (list (option ty)) :=
+  map (fun q => match q with (for_all id _) => (typecon Gamma id) end) qs.
+
+Fixpoint optys_to_tys (optys : list (option ty)) : (list ty) :=
+  match optys with
+  | []                 => []
+  | (Some ty) :: optys => ty :: (optys_to_tys optys)
+  |  None     :: optys =>       (optys_to_tys optys)
+  end.
+
+Definition is_star_tagged (q : quantifier) : bool :=
+  match q with
+  | (for_all _ tag_star)  => true
+  | (for_all _ tag_empty) => false
+  end.
+
+Definition fd_to_tys (Gamma : context) (fd : func_decl) : (list ty) :=
+  match fd with
+  | FDecl _ [] _ _ _ => []
+  | FDecl _ qs _ _ _ => optys_to_tys (qs_to_optys Gamma (filter is_star_tagged qs))
+  end.
+
 Definition beq_fd (fd1 fd2 : func_decl) : bool :=
   match fd1, fd2 with
     | (FDecl m _ _ _ _), (FDecl n _ _ _ _) => if (beq_id m n ) then true else false
   end.
  
-Inductive program : Type :=
-  | Decl  : func_decl -> program
-  | PDecl : func_decl -> program -> program.
+Definition program := list func_decl.
 
-Fixpoint prog_contains (p : program) (fd : func_decl)  : bool :=
-  match p with
-    | Decl  p   => true
-    | PDecl p ps => if (beq_fd p fd) then true else (prog_contains ps fd)
-  end.
+Definition lookup_func (p : program) (i : id) :=
+ find (fun fd => match fd with (FDecl j _ _ _ _) => (beq_id i j) end) p.
 
 Reserved Notation "Gamma '|-' T '\in_data'" (at level 40).
 Inductive data : context -> ty -> Prop :=
@@ -145,28 +161,13 @@ Fixpoint qty_zip (qs : list quantifier) (tys : list ty) : (list (quantifier * ty
    | (q :: qs), (ty :: tys) => (q, ty) :: (qty_zip qs tys)
   end.
 
-Fixpoint multi_ty_subst (qtys : list (quantifier * ty)) (t : ty) : option ty:=
-  match qtys, t with
-   | [], t => Some t
-   | ((for_all id tag_star, ty) :: qtys), (TFun _ _) => None (* star tag doesn't allow function types *)
-   | ((for_all id tg, ty) :: qtys), t => multi_ty_subst qtys (ty_subst id ty t)
-  end.
+Definition multi_ty_subst (qtys : list (quantifier * ty)) (t : ty) : ty := 
+ fold_right (fun qty t => match qty with (for_all id _, ty) => ty_subst id ty t end) t qtys.
   
-Definition qty_subst (qty : (quantifier * ty)) (t : option ty) : option ty:=
-  match qty, t with
-   | _, None => None
-   | (for_all id tag_star, ty), Some (TFun _ _) => None (* star tag doesn't allow function types *)
-   | (for_all id tg, ty), Some t => Some (ty_subst id ty t)
-  end.
-  
-  (* ??? *)
- Definition multi_ty_subst_alt (qtys : list (quantifier * ty)) (t : ty) : option ty := 
-  fold_right (qty_subst) (Some t) qtys.
-  
-Definition func_special (fd : func_decl) (tys : list ty) : option ty := 
+Definition specialize_func (fd : func_decl) (tys : list ty) : option ty := 
   match fd with
-   | (FDecl _ qs t _ _) => if (beq_nat (length qs) (length tys)) 
-                           then multi_ty_subst (qty_zip qs tys) t
+   | (FDecl _ qs t _ _) => if (beq_nat (length qs) (length tys))
+                           then Some (multi_ty_subst (qty_zip qs tys) t)
                            else None
   end.
 
@@ -187,18 +188,19 @@ Inductive has_type : context -> tm -> ty -> Prop :=
                  Gamma |- (tsucc e) \in TNat
   | T_Nil :    forall Gamma T, 
                  Gamma |- tnil \in (TList T)
-  | T_App :    forall Gamma e1 e2 id T1 T2 tys,
+  | T_App :    forall Gamma e1 e2 T1 T2,
                  Gamma |- e1 \in (TFun [T1] T2) ->
                  Gamma |- e2 \in T1 ->
-                 Gamma |- (tapp id tys) \in T2 (* ??? *)
+                 Gamma |- (tapp e1 e2) \in T2
   | T_Let :    forall Gamma e1 e2 x T1 T2,
                  Gamma |- e1 \in T1 ->
                  (type_update Gamma x T1) |- e2 \in T2 ->
                  Gamma |- (tlet (tvar x) e1 e2) \in T2
-  | T_Fun :    forall Gamma P f tys t,
-                 prog_contains P f = true ->
-                 func_special f tys = Some t ->
-                 Gamma |- (tfun tys) \in t (* (tfun tys probably nonsense *)
+  | T_Fun :    forall Gamma P id fd tys t,
+                 lookup_func P id = Some fd ->
+                 specialize_func fd tys = Some t ->
+                 Forall (data Gamma) (fd_to_tys Gamma fd) ->
+                 Gamma |- (tfun id tys) \in t
   | T_Add :    forall Gamma e1 e2,
                  Gamma |- e1 \in TNat ->
                  Gamma |- e2 \in TNat ->
@@ -277,13 +279,20 @@ Section Examples.
   Example t6 : aContext |- tvar (Id 2) \in TVar (Id 1).
   Proof. apply T_Var. reflexivity. Qed.
   
-  Example multi_t1 : multi_ty_subst [((for_all (Id 1) tag_empty), TNat);((for_all (Id 2) tag_empty), (TList TBool))] (TFun [TVar (Id 1); (TVar (Id 2))] TNat) = Some (TFun [TNat; TList TBool] TNat).
-  Proof. reflexivity. Qed.
-  
-  Example multi_t2 : multi_ty_subst [((for_all (Id 1) tag_star), (TFun [TNat] TBool)); ((for_all (Id 2) tag_empty), (TList TBool))] (TFun [TVar (Id 1); TVar (Id 2)] TNat) = None.
+  Example multi_t1 : multi_ty_subst [((for_all (Id 1) tag_empty), TNat);((for_all (Id 2) tag_empty), (TList TBool))] (TFun [TVar (Id 1); (TVar (Id 2))] TNat) = (TFun [TNat; TList TBool] TNat).
   Proof. reflexivity. Qed.
   
   Example ty_subst1 : ty_subst (Id 1) TBool (TFun [(TVar (Id 1))] (TVar (Id 1))) = TFun [TBool] TBool.
   Proof. reflexivity. Qed.
+  
+  Definition prog := [FDecl (Id 1) [(for_all (Id 5) tag_star)] (TFun [TVar (Id 5)] (TVar (Id 5))) [Id 1] (tvar (Id 1))].
+  Definition prog_fd := FDecl (Id 1) [(for_all (Id 5) tag_star)] (TFun [TVar (Id 5)] (TVar (Id 5))) [Id 1] (tvar (Id 1)).
+
+  Example fun1 : aContext |- (tfun (Id 1) [TNat]) \in (TFun [TNat] TNat).
+  Proof. apply T_Fun with (P := prog) (fd := prog_fd).
+  reflexivity.
+  reflexivity.
+  simpl. apply Forall_cons. apply D_Nat. apply Forall_nil.
+  Qed.
 
 End Examples.
