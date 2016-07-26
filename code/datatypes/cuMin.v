@@ -170,6 +170,12 @@ Definition specialize_func (fd : func_decl) (tys : list ty) : option ty :=
                            then Some (multi_ty_subst (qty_zip qs tys) t)
                            else None
   end.
+  
+Definition func_rty (t : ty) : ty :=
+  match t with
+  | TFun _ rty => rty
+  | _          => t
+  end.
 
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
 
@@ -196,11 +202,12 @@ Inductive has_type : context -> tm -> ty -> Prop :=
                  Gamma |- e1 \in T1 ->
                  (type_update Gamma x T1) |- e2 \in T2 ->
                  Gamma |- (tlet (tvar x) e1 e2) \in T2
-  | T_Fun :    forall Gamma P id fd tys t,
+  | T_Fun :    forall Gamma P id fd tys t rty,
                  lookup_func P id = Some fd ->
                  specialize_func fd tys = Some t ->
+                 (func_rty t) = rty ->
                  Forall (data Gamma) (fd_to_tys Gamma fd) ->
-                 Gamma |- (tfun id tys) \in t
+                 Gamma |- (tfun id tys) \in rty
   | T_Add :    forall Gamma e1 e2,
                  Gamma |- e1 \in TNat ->
                  Gamma |- e2 \in TNat ->
@@ -288,8 +295,9 @@ Section Examples.
   Definition prog := [FDecl (Id 1) [(for_all (Id 5) tag_star)] (TFun [TVar (Id 5)] (TVar (Id 5))) [Id 1] (tvar (Id 1))].
   Definition prog_fd := FDecl (Id 1) [(for_all (Id 5) tag_star)] (TFun [TVar (Id 5)] (TVar (Id 5))) [Id 1] (tvar (Id 1)).
 
-  Example fun1 : aContext |- (tfun (Id 1) [TNat]) \in (TFun [TNat] TNat).
-  Proof. apply T_Fun with (P := prog) (fd := prog_fd).
+  Example fun1 : aContext |- (tfun (Id 1) [TNat]) \in TNat.
+  Proof. apply T_Fun with (P := prog) (fd := prog_fd) (t := TFun [TNat] TNat).
+  reflexivity.
   reflexivity.
   reflexivity.
   simpl. apply Forall_cons. apply D_Nat. apply Forall_nil.
