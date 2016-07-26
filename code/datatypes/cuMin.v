@@ -91,18 +91,17 @@ Inductive tm : Type :=
 
 Inductive quantifier : Type :=
  for_all : id -> tag -> quantifier.
+ 
+Definition qid (q : quantifier) : id := match q with (for_all id _) => id end.
 
 Inductive func_decl : Type :=
  FDecl : id -> list quantifier -> ty -> (list id) -> tm -> func_decl.
 
-Fixpoint qs_to_optys (Gamma : context) (qs : list quantifier) : (list (option ty)) :=
-  map (fun q => match q with (for_all id _) => (typecon Gamma id) end) qs.
-
-Fixpoint optys_to_tys (optys : list (option ty)) : (list ty) :=
-  match optys with
-  | []                 => []
-  | (Some ty) :: optys => ty :: (optys_to_tys optys)
-  |  None     :: optys =>       (optys_to_tys optys)
+Fixpoint cat_options {T : Type} (l : list (option T)) : list T :=
+  match l with
+  | []             => []
+  | (Some x) :: ls => x :: (cat_options ls)
+  |  None    :: ls =>      (cat_options ls)
   end.
 
 Definition is_star_tagged (q : quantifier) : bool :=
@@ -114,7 +113,7 @@ Definition is_star_tagged (q : quantifier) : bool :=
 Definition fd_to_tys (Gamma : context) (fd : func_decl) : (list ty) :=
   match fd with
   | FDecl _ [] _ _ _ => []
-  | FDecl _ qs _ _ _ => optys_to_tys (qs_to_optys Gamma (filter is_star_tagged qs))
+  | FDecl _ qs _ _ _ => cat_options (map (fun q => typecon Gamma (qid q)) (filter is_star_tagged qs))
   end.
 
 Definition beq_fd (fd1 fd2 : func_decl) : bool :=
@@ -153,12 +152,11 @@ Fixpoint ty_subst (k: id) (t: ty) (t': ty) : ty :=
    | TFun tys ty => TFun (map (ty_subst k t) tys) (ty_subst k t ty)
   end.
 
-Fixpoint qty_zip (qs : list quantifier) (tys : list ty) : (list (quantifier * ty)) :=
-  match qs, tys with
-   | [],        []          => []
-   | [],        (ty :: _)   => [] (* todo: error handling *)
-   | (q :: _),  []          => [] (* todo: error handling *)
-   | (q :: qs), (ty :: tys) => (q, ty) :: (qty_zip qs tys)
+Fixpoint zip {U V : Type} (us : list U) (vs : list V) : (list (U * V)) :=
+  match us, vs with
+   | [], _  => [] 
+   | _ , [] => [] 
+   | (u :: us), (v :: vs) => (u, v) :: (zip us vs)
   end.
 
 Definition multi_ty_subst (qtys : list (quantifier * ty)) (t : ty) : ty := 
@@ -167,14 +165,8 @@ Definition multi_ty_subst (qtys : list (quantifier * ty)) (t : ty) : ty :=
 Definition specialize_func (fd : func_decl) (tys : list ty) : option ty := 
   match fd with
    | (FDecl _ qs t _ _) => if (beq_nat (length qs) (length tys))
-                           then Some (multi_ty_subst (qty_zip qs tys) t)
+                           then Some (multi_ty_subst (zip qs tys) t)
                            else None
-  end.
-  
-Definition func_rty (t : ty) : ty :=
-  match t with
-  | TFun _ rty => rty
-  | _          => t
   end.
 
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
@@ -202,10 +194,9 @@ Inductive has_type : context -> tm -> ty -> Prop :=
                  Gamma |- e1 \in T1 ->
                  (type_update Gamma x T1) |- e2 \in T2 ->
                  Gamma |- (tlet (tvar x) e1 e2) \in T2
-  | T_Fun :    forall Gamma P id fd tys t rty,
+  | T_Fun :    forall Gamma P id fd tys atys rty,
                  lookup_func P id = Some fd ->
-                 specialize_func fd tys = Some t ->
-                 (func_rty t) = rty ->
+                 specialize_func fd tys = Some (TFun atys rty) ->
                  Forall (data Gamma) (fd_to_tys Gamma fd) ->
                  Gamma |- (tfun id tys) \in rty
   | T_Add :    forall Gamma e1 e2,
@@ -296,8 +287,7 @@ Section Examples.
   Definition prog_fd := FDecl (Id 1) [(for_all (Id 5) tag_star)] (TFun [TVar (Id 5)] (TVar (Id 5))) [Id 1] (tvar (Id 1)).
 
   Example fun1 : aContext |- (tfun (Id 1) [TNat]) \in TNat.
-  Proof. apply T_Fun with (P := prog) (fd := prog_fd) (t := TFun [TNat] TNat).
-  reflexivity.
+  Proof. apply T_Fun with (P := prog) (fd := prog_fd) (atys := [TNat]).
   reflexivity.
   reflexivity.
   simpl. apply Forall_cons. apply D_Nat. apply Forall_nil.

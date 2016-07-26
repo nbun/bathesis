@@ -1,7 +1,6 @@
 Require Import Reals String Datatypes.
 Open Scope string_scope.
 Open Scope list_scope.
-
 Inductive prod (X Y : Type) : Type :=
   pair : X -> Y -> prod X Y.
   
@@ -13,7 +12,7 @@ Notation "[ ]" := nil.
 Notation "[ x , .. , y ]" := (cons x .. (cons y []) ..).
 
 Inductive Literal : Type :=
-  | Intc   : nat      -> Literal
+  | Intc   : nat    -> Literal
   | Floatc : R      -> Literal
   | Charc  : string -> Literal.
  
@@ -30,6 +29,10 @@ Inductive TypeExpr : Type :=
   | TVar     : TVarIndex -> TypeExpr
   | FuncType : TypeExpr  -> TypeExpr      -> TypeExpr
   | TCons    : QName     -> list TypeExpr -> TypeExpr.
+
+Definition Int   := TCons ("Prelude", "Int"  ) [].
+Definition Float := TCons ("Prelude", "Float") [].
+Definition Char  := TCons ("Prelude", "Char" ) [].
 
 Inductive ConsDecl : Type :=
   | Cons :  QName -> nat -> Visibility -> list TypeExpr -> ConsDecl.
@@ -57,7 +60,7 @@ Inductive CombType : Type :=
   | FuncPartCall : nat -> CombType 
   | ConsPartCall : nat -> CombType.
 
-(* Type and constructor can't use identival names! *)
+(* Type and constructor can't use identical names! *)
 Inductive TPattern : Type := 
   | Pattern : QName -> list VarIndex -> TPattern
   | LPattern : Literal -> TPattern.
