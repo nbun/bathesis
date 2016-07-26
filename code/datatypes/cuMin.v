@@ -120,7 +120,7 @@ Definition beq_fd (fd1 fd2 : func_decl) : bool :=
   match fd1, fd2 with
     | (FDecl m _ _ _ _), (FDecl n _ _ _ _) => if (beq_id m n ) then true else false
   end.
- 
+
 Definition program := list func_decl.
 
 Definition lookup_func (p : program) (i : id) :=
@@ -186,10 +186,10 @@ Inductive has_type : context -> tm -> ty -> Prop :=
                  Gamma |- (tsucc e) \in TNat
   | T_Nil :    forall Gamma T, 
                  Gamma |- tnil \in (TList T)
-  | T_App :    forall Gamma e1 e2 T1 T2,
-                 Gamma |- e1 \in (TFun [T1] T2) ->
+  | T_App :    forall Gamma e1 e2 T1 Ts T2,
+                 Gamma |- e1 \in (TFun ([T1] ++ Ts) T2) ->
                  Gamma |- e2 \in T1 ->
-                 Gamma |- (tapp e1 e2) \in T2
+                 Gamma |- (tapp e1 e2) \in (TFun Ts T2)
   | T_Let :    forall Gamma e1 e2 x T1 T2,
                  Gamma |- e1 \in T1 ->
                  (type_update Gamma x T1) |- e2 \in T2 ->
@@ -292,5 +292,30 @@ Section Examples.
   reflexivity.
   simpl. apply Forall_cons. apply D_Nat. apply Forall_nil.
   Qed.
+  
+  Definition fun2 := FDecl (Id 1) [(for_all (Id 0) tag_star); (for_all (Id 0) tag_star); (for_all (Id 0) tag_star)] (TFun [TVar (Id 0); TVar (Id 0)] (TVar (Id 0))) [Id 1; Id 2] (tadd (tvar (Id 1)) (tvar (Id 2))).
+  Definition prog2 := [fun2].
+  Definition aContext2 :=
+  tag_update
+    (type_update
+      (type_update empty (Id 3) TNat)
+      (Id 4) TNat)
+    (Id 0) tag_star.
+
+  (* (f1 :: (t0 -> t0 -> t0)) v3 v4 *)
+  Example t7 :
+  aContext2 |- tapp
+                (tapp (tfun (Id 1)
+                            (cons (TVar (Id 0))
+                                  (cons (TVar (Id 0))
+                                        (cons (TVar (Id 0)) nil))))
+                      (tvar (Id 3)))
+                (tvar (Id 4)) \in (TFun [] TNat).
+   Proof. apply T_App with (T1 := TVar (Id 0)).
+   apply T_App with (T1 := TVar (Id 0)).
+   apply T_Fun with (P := prog2) (fd := fun2) (atys := [TVar (Id 0); TVar (Id 0)]).
+   reflexivity.
+   simpl.
+   Admitted.
 
 End Examples.
