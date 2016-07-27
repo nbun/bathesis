@@ -1,37 +1,4 @@
-Require Import  Datatypes EqNat Lists.List.
-Local Open Scope nat_scope.
-
-Notation " [ ] " := nil (format "[ ]").
-Notation " [ x ] " := (cons x nil).
-Notation "x :: l" := (cons x l) (at level 60, right associativity).
-Notation " [ x ; y ; .. ; z ] " := (cons x (cons y .. (cons z nil) ..)).
-
-Inductive id : Type :=
-  | Id : nat -> id.
-  
-Definition total_map (A:Type) := id -> A.
-
-Definition partial_map (A:Type) := total_map (option A).
-
-Definition tmap_empty {A:Type} (v : A) : total_map A :=
-  (fun _ => v).
-  
-
-Definition beq_id id1 id2 :=
-  match id1,id2 with
-    | Id n1, Id n2 => beq_nat n1 n2
-  end.
-  
-Definition t_update {A:Type} (m : total_map A)
-                    (x : id) (v : A) :=
-  fun x' => if beq_id x x' then v else m x'.
-
-Definition emptymap {A:Type} : partial_map A :=
-  tmap_empty None.
-
-Definition update {A:Type} (m : partial_map A)
-                  (x : id) (v : A) :=
-  t_update m x (Some v).
+Require Import maps EqNat Lists.List.
 
 (* Star tagged variables can only be specialized to non-functional data types,
    while the empty tag allows this *)
@@ -46,7 +13,7 @@ Inductive ty : Type :=
   | TNat  : ty
   | TList : ty -> ty
   | TPair : ty -> ty -> ty
-  | TFun  : list ty  -> ty -> ty.
+  | TFun  : ty -> ty -> ty.
 
 Inductive context : Type := 
  | con : (partial_map tag) -> (partial_map ty) -> context.
@@ -149,7 +116,7 @@ Fixpoint ty_subst (k: id) (t: ty) (t': ty) : ty :=
    | TNat        => TNat
    | TList T     => TList (ty_subst k t T)
    | TPair TL TR => TPair (ty_subst k t TL) (ty_subst k t TR)
-   | TFun tys ty => TFun (map (ty_subst k t) tys) (ty_subst k t ty)
+   | TFun  TA TR => TFun  (ty_subst k t TA) (ty_subst k t TR)
   end.
 
 Fixpoint zip {U V : Type} (us : list U) (vs : list V) : (list (U * V)) :=
@@ -186,19 +153,19 @@ Inductive has_type : context -> tm -> ty -> Prop :=
                  Gamma |- (tsucc e) \in TNat
   | T_Nil :    forall Gamma T, 
                  Gamma |- tnil \in (TList T)
-  | T_App :    forall Gamma e1 e2 T1 Ts T2,
-                 Gamma |- e1 \in (TFun ([T1] ++ Ts) T2) ->
+  | T_App :    forall Gamma e1 e2 T1 T2,
+                 Gamma |- e1 \in (TFun T1 T2) ->
                  Gamma |- e2 \in T1 ->
-                 Gamma |- (tapp e1 e2) \in (TFun Ts T2)
+                 Gamma |- (tapp e1 e2) \in T2
   | T_Let :    forall Gamma e1 e2 x T1 T2,
                  Gamma |- e1 \in T1 ->
                  (type_update Gamma x T1) |- e2 \in T2 ->
                  Gamma |- (tlet (tvar x) e1 e2) \in T2
-  | T_Fun :    forall Gamma P id fd tys atys rty,
+  | T_Fun :    forall Gamma P id fd tys T,
                  lookup_func P id = Some fd ->
-                 specialize_func fd tys = Some (TFun atys rty) ->
+                 specialize_func fd tys = Some T ->
                  Forall (data Gamma) (fd_to_tys Gamma fd) ->
-                 Gamma |- (tfun id tys) \in rty
+                 Gamma |- (tfun id tys) \in T
   | T_Add :    forall Gamma e1 e2,
                  Gamma |- e1 \in TNat ->
                  Gamma |- e2 \in TNat ->
@@ -277,45 +244,50 @@ Section Examples.
   Example t6 : aContext |- tvar (Id 2) \in TVar (Id 1).
   Proof. apply T_Var. reflexivity. Qed.
   
-  Example multi_t1 : multi_ty_subst [((for_all (Id 1) tag_empty), TNat);((for_all (Id 2) tag_empty), (TList TBool))] (TFun [TVar (Id 1); (TVar (Id 2))] TNat) = (TFun [TNat; TList TBool] TNat).
+  Example multi_t1 : multi_ty_subst [((for_all (Id 1) tag_empty), TNat);((for_all (Id 2) tag_empty), (TList TBool))] (TFun (TVar (Id 1)) (TFun (TVar (Id 2)) TNat)) = (TFun TNat (TFun (TList TBool) TNat)).
   Proof. reflexivity. Qed.
   
-  Example ty_subst1 : ty_subst (Id 1) TBool (TFun [(TVar (Id 1))] (TVar (Id 1))) = TFun [TBool] TBool.
+  Example ty_subst1 : ty_subst (Id 1) TBool (TFun (TVar (Id 1)) (TVar (Id 1))) = TFun TBool TBool.
   Proof. reflexivity. Qed.
   
-  Definition prog := [FDecl (Id 1) [(for_all (Id 5) tag_star)] (TFun [TVar (Id 5)] (TVar (Id 5))) [Id 1] (tvar (Id 1))].
-  Definition prog_fd := FDecl (Id 1) [(for_all (Id 5) tag_star)] (TFun [TVar (Id 5)] (TVar (Id 5))) [Id 1] (tvar (Id 1)).
+  Definition prog_fd := FDecl (Id 1) [(for_all (Id 5) tag_star)] (TFun (TVar (Id 5)) (TVar (Id 5))) [Id 1] (tvar (Id 1)).
+  Definition prog := [prog_fd].
 
-  Example fun1 : aContext |- (tfun (Id 1) [TNat]) \in TNat.
-  Proof. apply T_Fun with (P := prog) (fd := prog_fd) (atys := [TNat]).
+  Example fun1 : aContext |- (tfun (Id 1) [TNat]) \in (TFun TNat TNat).
+  Proof. apply T_Fun with (P := prog) (fd := prog_fd).
   reflexivity.
   reflexivity.
   simpl. apply Forall_cons. apply D_Nat. apply Forall_nil.
   Qed.
   
-  Definition fun2 := FDecl (Id 1) [(for_all (Id 0) tag_star); (for_all (Id 0) tag_star); (for_all (Id 0) tag_star)] (TFun [TVar (Id 0); TVar (Id 0)] (TVar (Id 0))) [Id 1; Id 2] (tadd (tvar (Id 1)) (tvar (Id 2))).
-  Definition prog2 := [fun2].
   Definition aContext2 :=
   tag_update
     (type_update
       (type_update empty (Id 3) TNat)
       (Id 4) TNat)
     (Id 0) tag_star.
+    
+  Definition union (t1 t2: tm) : tm := tcaseb (tany TNat) t1 t2.
+  Definition fun3 := FDecl (Id 1)
+                       [for_all (Id 0) tag_star]
+                       (TFun (TVar (Id 0)) (TFun (TVar (Id 0)) (TVar (Id 0))))
+                       [Id 42;Id 43]
+                       (union (tvar (Id 42)) (tvar (Id 43))).
+  Definition prog3 := [fun3].
 
-  (* (f1 :: (t0 -> t0 -> t0)) v3 v4 *)
   Example t7 :
-  aContext2 |- tapp
-                (tapp (tfun (Id 1)
-                            (cons (TVar (Id 0))
-                                  (cons (TVar (Id 0))
-                                        (cons (TVar (Id 0)) nil))))
-                      (tvar (Id 3)))
-                (tvar (Id 4)) \in (TFun [] TNat).
-   Proof. apply T_App with (T1 := TVar (Id 0)).
-   apply T_App with (T1 := TVar (Id 0)).
-   apply T_Fun with (P := prog2) (fd := fun2) (atys := [TVar (Id 0); TVar (Id 0)]).
-   reflexivity.
-   simpl.
-   Admitted.
+    aContext2 |- tapp
+              (tapp (tfun (Id 1)
+                          (cons (TNat) nil))
+                    (tvar (Id 3)))
+              (tvar (Id 4)) \in TNat.
+  Proof. apply T_App with (T1 := TNat). apply T_App with (T1 := TNat).
+  apply T_Fun with (P := prog3) (fd := fun3).
+  reflexivity.
+  reflexivity.
+  simpl. apply Forall_nil.
+  apply T_Var. reflexivity.
+  apply T_Var. reflexivity.
+  Qed.
 
 End Examples.
