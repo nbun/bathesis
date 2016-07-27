@@ -65,6 +65,8 @@ Definition qid (q : quantifier) : id := match q with (for_all id _) => id end.
 Inductive func_decl : Type :=
  FDecl : id -> list quantifier -> ty -> (list id) -> tm -> func_decl.
 
+Definition fd_qs (fd : func_decl) := match fd with FDecl _ qs _ _ _ => qs end.
+
 Fixpoint cat_options {T : Type} (l : list (option T)) : list T :=
   match l with
   | []             => []
@@ -116,7 +118,7 @@ Fixpoint ty_subst (k: id) (t: ty) (t': ty) : ty :=
    | TBool       => TBool
    | TNat        => TNat
    | TList T     => TList (ty_subst k t T)
-   | TPair TL TR => TPair (ty_subst k t TL) (ty_subst k t TR)
+   | TPair TF TS => TPair (ty_subst k t TF) (ty_subst k t TS)
    | TFun  TA TR => TFun  (ty_subst k t TA) (ty_subst k t TR)
   end.
 
@@ -135,6 +137,15 @@ Definition specialize_func (fd : func_decl) (tys : list ty) : option ty :=
    | (FDecl _ qs t _ _) => if (beq_nat (length qs) (length tys))
                            then Some (multi_ty_subst (zip qs tys) t)
                            else None
+  end.
+
+Fixpoint is_concr_ty (t : ty) : Prop := 
+  match t with
+  | TVar  _     => False
+  | TList T     => is_concr_ty T
+  | TPair TF TS => (and (is_concr_ty TF) (is_concr_ty TS))
+  | TFun  TA TR => (and (is_concr_ty TA) (is_concr_ty TR))
+  | _           => True
   end.
 
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
@@ -165,6 +176,13 @@ Inductive has_type : context -> tm -> ty -> Prop :=
   | T_Fun :    forall Gamma P id fd tys T,
                  lookup_func P id = Some fd ->
                  specialize_func fd tys = Some T ->
+                 Forall (data Gamma) (fd_to_tys Gamma fd) ->
+                 Gamma |- (tfun id tys) \in T
+  | T_Fun2 :   forall Gamma P id fd tys T,
+                 lookup_func P id = Some fd ->
+                 length tys = length (fd_qs fd) ->
+                 specialize_func fd tys = Some T ->
+                 is_concr_ty T ->
                  Forall (data Gamma) (fd_to_tys Gamma fd) ->
                  Gamma |- (tfun id tys) \in T
   | T_Add :    forall Gamma e1 e2,
@@ -290,5 +308,21 @@ Section Examples.
   apply T_Var. reflexivity.
   apply T_Var. reflexivity.
   Qed.
-
+  
+  Example t8 :
+    aContext2 |- tapp
+              (tapp (tfun (Id 1)
+                          (cons (TNat) nil))
+                    (tvar (Id 3)))
+              (tvar (Id 4)) \in TNat.
+  Proof. apply T_App with (T1 := TNat). apply T_App with (T1 := TNat).
+  apply T_Fun2 with (P := prog3) (fd := fun3).
+  reflexivity.
+  reflexivity.
+  reflexivity.
+  simpl. repeat split.
+  simpl. apply Forall_nil.
+  apply T_Var. reflexivity.
+  apply T_Var. reflexivity.
+  Qed.
 End Examples.
