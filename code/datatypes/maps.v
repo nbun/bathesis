@@ -1,10 +1,4 @@
-Require Import  Datatypes EqNat Lists.List.
-Local Open Scope nat_scope.
-
-Notation " [ ] " := nil (format "[ ]").
-Notation " [ x ] " := (cons x nil).
-Notation "x :: l" := (cons x l) (at level 60, right associativity).
-Notation " [ x ; y ; .. ; z ] " := (cons x (cons y .. (cons z nil) ..)).
+Require Import EqNat.
 
 Inductive id : Type :=
   | Id : nat -> id.

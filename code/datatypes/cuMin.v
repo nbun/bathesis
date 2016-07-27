@@ -1,4 +1,5 @@
 Require Import maps EqNat Lists.List.
+Import ListNotations.
 
 (* Star tagged variables can only be specialized to non-functional data types,
    while the empty tag allows this *)
