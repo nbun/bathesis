@@ -1,4 +1,5 @@
-Require Import maps EqNat Lists.List.
+Require Import CQE.Maps.
+Require Import EqNat Lists.List.
 Import ListNotations.
 
 Section General.
@@ -168,7 +169,7 @@ Section Functions.
 
 End Functions.
 
-Section Typing.
+Module Typing.
 
   (* Rules for being a data type *)
   Reserved Notation "Gamma '|-' T '\is_data_type'" (at level 40).
@@ -185,7 +186,7 @@ Section Typing.
                  Gamma |- T \is_data_type ->
                  Gamma |- T' \is_data_type ->
                  Gamma |- (TPair T T') \is_data_type
-  where "Gamma '|-' T '\is_data_type'" := (is_data_type Gamma T).
+  where "Gamma '|-' T '\is_data_type'" := (is_data_type Gamma T) : typing_scope.
 
   (* Typing rules *)
   Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
@@ -253,10 +254,13 @@ Section Typing.
     | T_Any :    forall Gamma T,
                    Gamma |- T \is_data_type ->
                    Gamma |- (tany T) \in T
-  where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
+  where "Gamma '|-' t '\in' T" := (has_type Gamma t T) : typing_scope.
 
- (* End Typing. *)
+End Typing.
 
+Import Typing.
+Open Scope typing_scope.
+  
 Section Examples.
   Example t1 : empty |- ttrue \in TBool.
   Proof. apply T_True. Qed.

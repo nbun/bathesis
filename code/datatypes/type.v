@@ -1,4 +1,4 @@
-Require Import flatCurry.
+Require Import CQE.flatCurry.
 Require Import Datatypes EqNat Lists.List Ascii Bool String.
 Local Open Scope nat_scope.
 

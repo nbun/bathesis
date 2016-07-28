@@ -1,6 +1,7 @@
--Q . curroqe
+-Q . CQE 
 
-maps.v
-cuMin.v
 flatCurry.v
 types.v
+cuMin.v
+Maps.v
+
