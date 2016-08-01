@@ -20,6 +20,9 @@ Section General.
    | (u :: us), (v :: vs) => (u, v) :: (zip us vs)
   end.
 
+  Definition func_comp {A B C} (f : B -> C) (g : A -> B) : (A -> C) :=
+    (fun x => f (g x)).
+
 End General.
 
   (* Data types *)
@@ -61,7 +64,8 @@ End General.
 
 Section Context.
 
-  (* A context maps IDs of type variables to tags and concrete types. *)
+  (* A context maps IDs of type variables to tags and IDs of variables to 
+     types. *)
   Inductive context : Type := 
     | con : (partial_map tag) -> (partial_map ty) -> context.
 
@@ -115,12 +119,13 @@ Section Functions.
   (* Returns a function declaration's list of quantifiers. *)
   Definition fd_qs (fd : func_decl) := match fd with FDecl _ qs _ _ _ => qs end.
 
+
   (* Takes a context and function declaration and returns the type of
      all *star-tagged* type variables according to the context. *)
   Definition fd_to_tys (Gamma : context) (fd : func_decl) : (list ty) :=
     match fd with
     | FDecl _ [] _ _ _ => []
-    | FDecl _ qs _ _ _ => cat_options (map (fun q => typecon Gamma (qid q))
+    | FDecl _ qs _ _ _ => cat_options (map (func_comp (typecon Gamma) qid)
                                            (filter is_star_tagged qs))
     end.
 

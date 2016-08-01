@@ -90,7 +90,7 @@ Inductive FuncDecl : Type :=
 Inductive TProg : Type := 
   | Prog : string -> list string -> list TypeDecl -> list FuncDecl -> list OpDecl -> TProg.
 
-Check  (Prog "test"
+(* Check  (Prog "test"
   ["Prelude"]
   []
   [
@@ -100,3 +100,4 @@ Check  (Prog "test"
   ]
   [] 
  ).
+*)

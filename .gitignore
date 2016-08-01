@@ -186,3 +186,4 @@ TSWLatexianTemp*
 #Coq
 *.glob
 *.vo
+*.v.d
