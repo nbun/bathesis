@@ -1,15 +1,7 @@
-Require Import Reals String Datatypes.
+Require Import Reals String Datatypes Lists.List.
+Import ListNotations.
 Open Scope string_scope.
 Open Scope list_scope.
-Inductive prod (X Y : Type) : Type :=
-  pair : X -> Y -> prod X Y.
-  
-Arguments pair {X} {Y} _ _.
-Notation "( x , y )" := (pair x y).
-Notation "x :: y" := (cons x y)
-                     (at level 60, right associativity).
-Notation "[ ]" := nil.
-Notation "[ x , .. , y ]" := (cons x .. (cons y []) ..).
 
 Inductive Literal : Type :=
   | Intc   : nat    -> Literal

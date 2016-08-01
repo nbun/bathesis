@@ -1,34 +1,27 @@
-Require Import CQE.flatCurry.
+Require Import CQE.flatCurry CQE.Maps.
 Require Import Datatypes EqNat Lists.List Ascii Bool String.
+Import flatCurry_maps ListNotations.
 Local Open Scope nat_scope.
 
-Notation " [ ] " := nil (format "[ ]").
-Notation " [ x ] " := (cons x nil).
-Notation "x :: l" := (cons x l) (at level 60, right associativity).
-Notation " [ x ; y ; .. ; z ] " := (cons x (cons y .. (cons z nil) ..)).
-  
-Definition total_map (A:Type) := VarIndex -> A.
+Definition context := (partial_map TypeExpr).
 
-Definition partial_map (A:Type) := total_map (option A).
+Definition typeCon (c : context) := c.
 
-Definition tmap_empty {A:Type} (v : A) : total_map A :=
-  (fun _ => v).
-  
-Definition t_update {A:Type} (m : total_map A)
-                    (x : VarIndex) (v : A) :=
-  fun x' => if beq_nat x x' then v else m x'.
+Definition typeUpdate (Gamma : context) (x : VarIndex) (v : TypeExpr) := 
+  (update (typeCon Gamma) x v).
 
-Definition emptymap {A:Type} : partial_map A :=
-  tmap_empty None.
-
-Definition update {A:Type} (m : partial_map A)
-                  (x : VarIndex) (v : A) :=
-  t_update m x (Some v).
-
-Definition context :=  (partial_map TypeExpr).
+Definition multiTypeUpdate (Gamma : context) (vitys : list (VarIndex * TypeExpr)) :=
+  fold_right (fun vity con => match vity with (vi, ty)
+                           => typeUpdate con vi ty end)
+  Gamma vitys.
 
 Definition empty := @emptymap TypeExpr.
-Check andb.
+
+Fixpoint elem {T : Type} (eq : T -> T -> bool) (x : T) (xs : list T) : bool :=
+  match xs with
+  | [] => false
+  | (e :: xs) => if (eq x e) then true else (elem eq x xs)
+  end.
 
 Definition beq_ascii (a : ascii) (b : ascii) : bool :=
   match a, b with
@@ -46,6 +39,11 @@ Fixpoint beq_str (s : string) (s' : string) : bool :=
   | String _ _ , Emptystring  => false
   end.
 
+Definition beq_qname (q : QName) (q' : QName) : bool :=
+  match q, q' with
+  | (n, m), (n', m') => (andb (beq_str n n') (beq_str m m'))
+  end.
+
 Definition litType (l : Literal) : TypeExpr :=
   match l with
   | Intc _   => Int
@@ -58,39 +56,86 @@ Definition funcType (fd : FuncDecl) : TypeExpr :=
 
 Definition lookupFuncDecl (p : TProg) (q : QName) : option FuncDecl :=
   match p, q with 
-  | Prog _ _ _ fds _,  (n, m) => find (fun fd => match fd with Func (n', m') _ _ _ _ => (andb (beq_str n n') (beq_str m m')) end) fds
+  | Prog _ _ _ fds _,  q => 
+    find (fun fd => match fd with Func q' _ _ _ _ => (beq_qname q q') end) fds
   end.
 
-Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
+Fixpoint searchConsDeclList (q : QName) (cds : list ConsDecl) : option ConsDecl :=
+  match q, cds with
+  | q, [] => None
+  | q, ((Cons q' _ _ _) as cd :: cds) => if (beq_qname q q') then Some cd
+                                         else searchConsDeclList q cds
+  end.
+
+Fixpoint searchTypeDeclList (q : QName) (tyds : list TypeDecl) : option (ConsDecl * TypeDecl) :=
+  match q, tyds with 
+  | q, ((Typec _ _ _ cds) as ty :: tyds) => 
+    match (searchConsDeclList q cds) with
+    | None            => searchTypeDeclList q tyds
+    | Some cd => Some (cd, ty)
+    end
+  | q, ((TypeSyn _ _ _ _) :: tyds) => searchTypeDeclList q tyds
+  | q, [] => None
+  end.
+
+Definition lookupConsDecl (p : TProg) (q : QName) : option (ConsDecl * TypeDecl) :=
+  match p with (Prog _ _ tyds _ _) => searchTypeDeclList q tyds end.
+
 
 Definition brexprsToExprs (brexprs : list BranchExpr) : list Expr :=
   map (fun brexpr => match brexpr with (Branch _ e) => e end) brexprs.
 
+Fixpoint exprsHaveType (hasType : context -> TypeExpr -> Expr -> Prop) 
+ (Gamma : context) (exprs : list Expr) (tyexprs : list TypeExpr) : Prop :=
+  match exprs, tyexprs with
+  | (expr :: exprs), (tyexpr :: tyexprs) => (hasType Gamma tyexpr expr) /\ (exprsHaveType hasType Gamma exprs tyexprs)
+  | [],              (tyexpr :: _)       => False
+  | (expr :: _),     []                  => False
+  | [],              []                  => True
+  end.
+
+Fixpoint propList {A : Type} (xs : list A) (ps : list (A -> Prop)) : Prop :=
+  match xs, ps with
+  | (x :: xs), (p :: ps) => p x /\ (propList xs ps)
+  | [],        (p :: _)  => False
+  | (x :: _),  []        => False
+  | [],        []        => True
+  end.
+
+Definition sndList {A B : Type} (ps : list (A * B)) : list B :=
+  map (fun p => match p with (_,b) => b end) ps.
+
+Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
+
 Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
-  | T_Var :    forall Gamma i T,
-                 Gamma i = Some T ->
-                 Gamma |- (Var i) \in T
-  | T_Lit :    forall Gamma l T,
-                 T = litType l ->
-                 Gamma |- (Lit l) \in T
-  | T_Comb :   forall Gamma P ctype qname exprs fd T,
-                 lookupFuncDecl P qname = Some fd ->
-                 funcType fd = T ->
-                 (* specialize_func ? *)
-                 Gamma |- (Comb ctype qname exprs) \in T
-  | T_Let :    forall Gamma vexprs e T,
-                 Gamma |- e \in T ->
-                 Gamma |- (Let vexprs e) \in T
+  | T_Var :       forall Gamma vi T,
+                    Gamma vi = Some T ->
+                    Gamma |- (Var vi) \in T
+  | T_Lit :       forall Gamma l T,
+                    T = litType l ->
+                    Gamma |- (Lit l) \in T
+  | T_Comb_Fun :  forall Gamma P qname exprs fd T,
+                    lookupFuncDecl P qname = Some fd ->
+                    funcType fd = T ->
+                    Gamma |- (Comb FuncCall qname exprs) \in T
+  | T_Comb_Cons : forall Gamma P qname exprs cd,
+                    lookupConsDecl P qname = Some cd ->
+                    Gamma |- (Comb ConsCall qname exprs) \in (TCons qname []) (* typeexpr of a consdecl? *)
+  | T_Let :       forall Gamma vexprs tyexprs e T,
+                    exprsHaveType hasType Gamma (sndList vexprs) tyexprs ->
+                    (* Non strictly positive occurrence of hasType *)
+                    Gamma |- e \in T ->
+                    Gamma |- (Let vexprs e) \in T
 (*| T_Free : *)
-  | T_Or :     forall Gamma e1 e2 T,
-                 Gamma |- e1 \in T ->
-                 Gamma |- e2 \in T ->
-                 Gamma |- (Or e1 e2) \in T
-  | T_Case :   forall Gamma ctype e brexprs T,
-                 Forall (hasType Gamma T) (brexprsToExprs brexprs) ->
-                 Gamma |- (Case ctype e brexprs) \in T
-  | T_Typed :  forall Gamma e T,
-                 Gamma |- (Typed e T) \in T
+  | T_Or :        forall Gamma e1 e2 T,
+                    Gamma |- e1 \in T ->
+                    Gamma |- e2 \in T ->
+                    Gamma |- (Or e1 e2) \in T
+  | T_Case :      forall Gamma ctype e brexprs T,
+                    Forall (hasType Gamma T) (brexprsToExprs brexprs) ->
+                    Gamma |- (Case ctype e brexprs) \in T
+  | T_Typed :     forall Gamma e T,
+                    Gamma |- (Typed e T) \in T
 where "Gamma '|-' t '\in' T" := (hasType Gamma T t).
 
 Section Examples.
@@ -105,7 +150,7 @@ Section Examples.
   ).
   
   Example e1 : empty |- (Comb FuncCall ("t","const42") []) \in Int.
-  Proof. apply T_Comb with (P := prog) (fd := func42).
+  Proof. apply T_Comb_Fun with (P := prog) (fd := func42).
   reflexivity.
   reflexivity.
   Qed.

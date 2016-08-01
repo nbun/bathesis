@@ -1,6 +1,6 @@
 Require Import CQE.Maps.
 Require Import EqNat Lists.List.
-Import ListNotations.
+Import ListNotations cuMin_maps.
 
 Section General.
 
