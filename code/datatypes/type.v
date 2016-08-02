@@ -85,28 +85,16 @@ Definition lookupConsDecl (p : TProg) (q : QName) : option (ConsDecl * TypeDecl)
 Definition brexprsToExprs (brexprs : list BranchExpr) : list Expr :=
   map (fun brexpr => match brexpr with (Branch _ e) => e end) brexprs.
 
-Fixpoint exprsHaveType (hasType : context -> TypeExpr -> Expr -> Prop) 
- (Gamma : context) (exprs : list Expr) (tyexprs : list TypeExpr) : Prop :=
-  match exprs, tyexprs with
-  | (expr :: exprs), (tyexpr :: tyexprs) => (hasType Gamma tyexpr expr) /\ (exprsHaveType hasType Gamma exprs tyexprs)
-  | [],              (tyexpr :: _)       => False
-  | (expr :: _),     []                  => False
-  | [],              []                  => True
-  end.
-
-Fixpoint propList {A : Type} (xs : list A) (ps : list (A -> Prop)) : Prop :=
-  match xs, ps with
-  | (x :: xs), (p :: ps) => p x /\ (propList xs ps)
-  | [],        (p :: _)  => False
-  | (x :: _),  []        => False
-  | [],        []        => True
+Fixpoint replSnd {A B C : Type} (abs : list (A * B)) (cs : list C) : list (A * C) :=
+  match abs, cs with
+  | ((a, b) :: abs), (c :: cs) => (a, c) :: (replSnd abs cs)
+  | _, _                       => []
   end.
 
 Definition sndList {A B : Type} (ps : list (A * B)) : list B :=
   map (fun p => match p with (_,b) => b end) ps.
 
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
-
 Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
   | T_Var :       forall Gamma vi T,
                     Gamma vi = Some T ->
@@ -121,11 +109,15 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
   | T_Comb_Cons : forall Gamma P qname exprs cd,
                     lookupConsDecl P qname = Some cd ->
                     Gamma |- (Comb ConsCall qname exprs) \in (TCons qname []) (* typeexpr of a consdecl? *)
-  | T_Let :       forall Gamma vexprs tyexprs e T,
-                    exprsHaveType hasType Gamma (sndList vexprs) tyexprs ->
-                    (* Non strictly positive occurrence of hasType *)
+  | T_Let :       forall Gamma GammaNew vexprs exprs tyexprs vtyexprs e T,
+                    exprs = sndList vexprs ->
+                    vtyexprs = replSnd vexprs tyexprs ->
+                    (forall n,
+                      n < Lists.List.length exprs ->
+                      Gamma |- (nth n exprs (Lit (Charc "e"))) \in (nth n tyexprs) Char) ->
                     Gamma |- e \in T ->
-                    Gamma |- (Let vexprs e) \in T
+                    GammaNew = (multiTypeUpdate Gamma vtyexprs) ->
+                    GammaNew |- (Let vexprs e) \in T
 (*| T_Free : *)
   | T_Or :        forall Gamma e1 e2 T,
                     Gamma |- e1 \in T ->
@@ -151,6 +143,32 @@ Section Examples.
   
   Example e1 : empty |- (Comb FuncCall ("t","const42") []) \in Int.
   Proof. apply T_Comb_Fun with (P := prog) (fd := func42).
+  reflexivity.
+  reflexivity.
+  Qed.
+  
+  Definition letexp := Let [(2,(Comb FuncCall ("Prelude","+") [(Lit (Intc 2));(Lit (Intc 1))] ))] (Comb FuncCall ("Prelude","+") [(Var 1);(Var 2)] ).
+  Definition fun2 := (Func ("test","test") 1  Public 
+        (FuncType (TCons ("Prelude","Int") [] ) (TCons ("Prelude","Int") [] ))
+        (Rule  [1] letexp)).
+  Definition plus := Func ("Prelude", "+") 1 Public Int (Rule [1] (Lit (Intc 42))).
+  Definition prog2 :=
+  (Prog "test"
+  ["Prelude"]
+  []
+  [fun2;plus]
+  [] 
+  ).
+  Example e2 : typeUpdate empty 2 Int |- letexp \in Int.
+  Proof. apply T_Let with (Gamma := empty) (exprs := [(Comb FuncCall ("Prelude","+") [(Lit (Intc 2));(Lit (Intc 1))])]) (tyexprs := [Int]) (vtyexprs := [(2,Int)]).
+  reflexivity.
+  reflexivity.
+  simpl. intros. replace n with 0. apply T_Comb_Fun with (P := prog2) (fd := plus).
+  reflexivity.
+  reflexivity.
+  inversion H. reflexivity. inversion H1.
+  apply T_Comb_Fun with (P := prog2) (fd := plus).
+  reflexivity.
   reflexivity.
   reflexivity.
   Qed.
