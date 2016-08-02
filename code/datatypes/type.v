@@ -132,16 +132,26 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     Gamma |- e \in T ->
                     GammaNew = (multiTypeUpdate Gamma vtyexprs) ->
                     GammaNew |- (Let vexprs e) \in T
-(*| T_Free : *)
+
+  | T_Free :      forall Gamma vis expr tyexprs T,
+                  Gamma |- expr \in T ->
+                  (forall n,
+                      n < Lists.List.length vis ->
+                      Gamma (nth n vis 0) = Some (nth n tyexprs Char)) ->
+                  Gamma |- (Free vis expr) \in T
+
   | T_Or :        forall Gamma e1 e2 T,
                     Gamma |- e1 \in T ->
                     Gamma |- e2 \in T ->
                     Gamma |- (Or e1 e2) \in T
+
   | T_Case :      forall Gamma ctype e brexprs T,
                     Forall (hasType Gamma T) (brexprsToExprs brexprs) ->
                     Gamma |- (Case ctype e brexprs) \in T
+
   | T_Typed :     forall Gamma e T,
                     Gamma |- (Typed e T) \in T
+
 where "Gamma '|-' t '\in' T" := (hasType Gamma T t).
 
 Section Examples.
@@ -201,14 +211,35 @@ Section Examples.
   ]
   [] 
  ).
- 
- Example e3 : empty |- comb1 \in (TCons ("test","Maybe") [(TCons ("Prelude","Int") [] )] ).
- Proof. apply T_Comb_Cons with (P := prog3) (consdecl := consdecl1) (typedecl := typedecl1).
- reflexivity.
- simpl. intros.
- replace n with 0.
- apply T_Lit. reflexivity.
- inversion H. reflexivity. inversion H1.
- reflexivity.
+
+  Example e3 : empty |- comb1 \in (TCons ("test","Maybe") [(TCons ("Prelude","Int") [] )] ).
+  Proof. apply T_Comb_Cons with (P := prog3) (consdecl := consdecl1) (typedecl := typedecl1).
+    reflexivity.
+    simpl. intros.
+    replace n with 0.
+    apply T_Lit. reflexivity.
+    inversion H. reflexivity. inversion H1.
+    reflexivity.
+  Qed.
+
+  Definition free1 := (Free  [1] (Var 1)).
+  Definition prog4 := 
+   (Prog "test"
+  ["Prelude"]
+  []
+  [
+  (Func ("test","test") 0  Public 
+        (TVar 0)
+        (Rule  [] free1))
+  ]
+  [] 
+ ).
+  Example e4 : typeUpdate empty 1 Int |- free1 \in Int.
+  Proof. apply T_Free with (tyexprs := [Int]).
+    apply T_Var. reflexivity.
+    simpl. intros. replace n with 0. reflexivity.
+    inversion H. reflexivity. inversion H1.
+  Qed.
+
 End Examples.
 
