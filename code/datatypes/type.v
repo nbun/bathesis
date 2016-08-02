@@ -91,6 +91,12 @@ Fixpoint replSnd {A B C : Type} (abs : list (A * B)) (cs : list C) : list (A * C
   | _, _                       => []
   end.
 
+Definition typedeclQname (td : TypeDecl) : QName :=
+  match td with 
+  | Typec qn _ _ _   => qn
+  | TypeSyn qn _ _ _ => qn
+  end.
+
 Definition sndList {A B : Type} (ps : list (A * B)) : list B :=
   map (fun p => match p with (_,b) => b end) ps.
 
@@ -99,16 +105,24 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
   | T_Var :       forall Gamma vi T,
                     Gamma vi = Some T ->
                     Gamma |- (Var vi) \in T
+
   | T_Lit :       forall Gamma l T,
                     T = litType l ->
                     Gamma |- (Lit l) \in T
+
   | T_Comb_Fun :  forall Gamma P qname exprs fd T,
                     lookupFuncDecl P qname = Some fd ->
                     funcType fd = T ->
                     Gamma |- (Comb FuncCall qname exprs) \in T
-  | T_Comb_Cons : forall Gamma P qname exprs cd,
-                    lookupConsDecl P qname = Some cd ->
-                    Gamma |- (Comb ConsCall qname exprs) \in (TCons qname []) (* typeexpr of a consdecl? *)
+
+  | T_Comb_Cons : forall Gamma P qname tqname exprs tyexprs consdecl typedecl,
+                    lookupConsDecl P qname = Some (consdecl, typedecl) ->
+                    (forall n,
+                      n < Lists.List.length exprs ->
+                      Gamma |- (nth n exprs (Lit (Charc "e"))) \in (nth n tyexprs) Char) ->
+                      tqname = (typedeclQname typedecl) ->
+                    Gamma |- (Comb ConsCall qname exprs) \in (TCons tqname tyexprs)
+
   | T_Let :       forall Gamma GammaNew vexprs exprs tyexprs vtyexprs e T,
                     exprs = sndList vexprs ->
                     vtyexprs = replSnd vexprs tyexprs ->
@@ -161,16 +175,40 @@ Section Examples.
   ).
   Example e2 : typeUpdate empty 2 Int |- letexp \in Int.
   Proof. apply T_Let with (Gamma := empty) (exprs := [(Comb FuncCall ("Prelude","+") [(Lit (Intc 2));(Lit (Intc 1))])]) (tyexprs := [Int]) (vtyexprs := [(2,Int)]).
-  reflexivity.
-  reflexivity.
-  simpl. intros. replace n with 0. apply T_Comb_Fun with (P := prog2) (fd := plus).
-  reflexivity.
-  reflexivity.
-  inversion H. reflexivity. inversion H1.
-  apply T_Comb_Fun with (P := prog2) (fd := plus).
-  reflexivity.
-  reflexivity.
-  reflexivity.
+    reflexivity.
+    reflexivity.
+    simpl. intros. replace n with 0. apply T_Comb_Fun with (P := prog2) (fd := plus).
+    reflexivity.
+    reflexivity.
+    inversion H. reflexivity. inversion H1.
+    apply T_Comb_Fun with (P := prog2) (fd := plus).
+    reflexivity.
+    reflexivity.
+    reflexivity.
   Qed.
+
+  Definition comb1 := (Comb ConsCall ("test","Some") [(Lit (Intc 5))] ).
+  Definition typedecl1 := (Typec ("test","Maybe") Public  [0]  [(Cons ("test","None") 0 Public  [] );(Cons ("test","Some") 1 Public  [(TVar 0)] )] ).
+  Definition consdecl1 := (Cons ("test","Some") 1 Public  [(TVar 0)] ).
+  Definition prog3 := 
+   (Prog "test"
+  ["Prelude"]
+  [typedecl1]
+  [
+  (Func ("test","test") 0  Public 
+        (TCons ("test","Maybe") [(TCons ("Prelude","Int") [] )] )
+        (Rule  [] (Typed comb1 (TCons ("test","Maybe") [(TCons ("Prelude","Int") [] )] ))))
+  ]
+  [] 
+ ).
+ 
+ Example e3 : empty |- comb1 \in (TCons ("test","Maybe") [(TCons ("Prelude","Int") [] )] ).
+ Proof. apply T_Comb_Cons with (P := prog3) (consdecl := consdecl1) (typedecl := typedecl1).
+ reflexivity.
+ simpl. intros.
+ replace n with 0.
+ apply T_Lit. reflexivity.
+ inversion H. reflexivity. inversion H1.
+ reflexivity.
 End Examples.
 
