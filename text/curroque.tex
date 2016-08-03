@@ -4,6 +4,7 @@
 \usepackage[T1]{fontenc}        % T1-Fonts
 \usepackage[utf8]{inputenc}     % Enkodierung
 \usepackage[ngerman]{babel}     % neue deutsche Rechtschreibung
+\usepackage{amsmath}
 
 % Kapitelüberschrift in der Kopfzeile
 \usepackage[automark]{scrpage2} % Schickerer Satzspiegel mit KOMA-Script
@@ -22,6 +23,7 @@
 
 % Eine kleine Hilfe für offene Lücken
 \newcommand{\todo}[1]{\marginpar{\textbf{TODO:} #1}}
+\newcommand{\coqinline}[1]{\mintinline{coq}{#1}}
 
 \begin{document}
 
@@ -66,13 +68,13 @@ Inductive list (X:Type) : Type :=
 | nil  : list X
 | cons : X -> list X -> list X.
 \end{minted}
-We defined a type named \mintinline{coq}{list} with two members: the constant \mintinline{coq}{nil}, which represents an empty list, and a binary constructor \mintinline{coq}{cons} that takes an element and a list of the same type as arguments. In fact, \mintinline{coq}{nil} and \mintinline{coq}{cons} have one additional argument, a type \mintinline{coq}{X}. This is required, because we want polymorphic lists -- but we don't want to explicitly state the type. Fortunately, Coq allows us to declare type arguments as implicit by enclosing them in curly brackets:
+We defined a type named \coqinline{list} with two members: the constant \coqinline{nil}, which represents an empty list, and a binary constructor \coqinline{cons} that takes an element and a list of the same type as arguments. In fact, \coqinline{nil} and \coqinline{cons} have one additional argument, a type \coqinline{X}. This is required, because we want polymorphic lists -- but we do not want to explicitly state the type. Fortunately, Coq allows us to declare type arguments as implicit by enclosing them in curly brackets:
 \begin{minted}{coq}
 Check (cons nat 8 (nil nat)). (*cons nat 8 (nil nat) : list nat*)
 Arguments nil {X}.
 Arguments cons {X} _ _.
 \end{minted}
-Coq's type inference system deduces the type of a list automatically now.
+Coq's type inference system infers the type of a list automatically now.
 \begin{minted}{coq}
 Check (cons 2 (cons 4 nil)). (* cons 2 (cons 4 nil) : list nat *)
 Check (cons 2 (cons nil nil)). 
@@ -87,10 +89,10 @@ match l with
 | cons _ _ => false
 end.
 \end{minted}
-Function definitions begin with the keyword \mintinline{coq}{Definition}. \mintinline{coq}{isEmpty} takes an (implicit) type and a list and returns a boolean value.
-To distinguish empty from non-empty lists, pattern matching can be used on $n$ arguments by writing \mintinline{coq}{match} $x_{0},...,x_{n-1}$ \mintinline{coq}{with} | $p_{0} \rightarrow e_{0}$ | ... | $p_{m-1} \rightarrow e_{m-1}$ for $m$ pattern $p$, consisting of a sub-pattern for every $x_{i}$ and expressions $e_{i}$.
+Function definitions begin with the keyword \coqinline{Definition}. \coqinline{isEmpty} takes an (implicit) type and a list and returns a boolean value.
+To distinguish empty from non-empty lists, pattern matching can be used on $n$ arguments by writing \coqinline{match} $x_{0},...,x_{n-1}$ \coqinline{with} | $p_{0} \rightarrow e_{0}$ | ... | $p_{m-1} \rightarrow e_{m-1}$ for $m$ pattern $p$, consisting of a sub-pattern for every $x_{i}$ and expressions $e_{i}$.
 
-The definition of recursive functions requires that the function is called with a smaller structure than before in each iteration, which ensures that the function eventually terminates. A recursive function is indicated by using \mintinline{coq}{Fixpoint} instead of \mintinline{coq}{Definition}.
+The definition of recursive functions requires that the function is called with a smaller structure than before in each iteration, which ensures that the function eventually terminates. A recursive function is indicated by using \coqinline{Fixpoint} instead of \coqinline{Definition}.
 \begin{minted}{coq}
 Fixpoint app {X : Type} (l1 l2 : list X) : (list X) :=
 match l1 with
@@ -100,7 +102,7 @@ end.
 \end{minted}
 In this case $l_{1}$ gets shorter with every iteration, thus the function terminates after a finite amount of recursions. 
 
-Coq allows us to define notations for functions and constructors by using the keyword \mintinline{coq}{Notation}, followed by the desired syntax and the expression. 
+Coq allows us to define notations for functions and constructors by using the keyword \coqinline{Notation}, followed by the desired syntax and the expression. 
 \begin{minted}{coq}
 Notation "x :: y" := (cons x y) (at level 60, right associativity).
 Notation "[ ]" := nil.
@@ -109,13 +111,14 @@ Notation "x ++ y" := (app x y) (at level 60, right associativity).
 \end{minted}
 
 \subsection{Propositions and proofs}
-Every claim that we state or prove has the type \mintinline{coq}{Prop}. Propositions can be any statement, regardless of its truth. A few examples:
+Every claim that we state or prove has the type \coqinline{Prop}. Propositions can be any statement, regardless of its truth. A few examples:
 \begin{minted}{coq}
 Check 1 + 1 = 2. (* : Prop *)
 Check forall (X : Type) (l : list X), l ++ [] = l. (* : Prop *)
 Check forall (n : nat), n > 0 -> n * n > 0. (* : Prop *)
+Check (fun n => n <> 2). (* : nat -> Prop*)
 \end{minted}
-The first proposition is a simple equation, while the second one contains an universal quantifier. This allows us to state propositions about every type of list or, in the third example, about every natural number that is greater than zero. The implication allows us to require specific properties that limit the universal quantification.
+The first proposition is a simple equation, while the second one contains an universal quantifier. This allows us to state propositions about every type of list, or, as shown in the third example, about every natural number greater than zero. Combined with implications we can premise specific properties that limit the set of elements the proposition applies to. The last example contains an anonymous function, which is used by stating the functions' arguments and an expression.
 \par
 Now how do we prove these propositions? Proving an equation requires to show that both sides are equal, usually by simplifying one side until it looks exactly like the other. Coq allows us to do this by using tactics, which can perform a multitude of different operations.
 \begin{minted}{coq}
@@ -123,14 +126,14 @@ Example e1 : 1+1=2.
 Proof. simpl. reflexivity. Qed. 
 \end{minted} 
 \todo{Highlighting für Proof und Qed}
-After naming the proposition as an example, theorem or lemma it appears in the interactive subgoal list that Coq provides. The \mintinline{coq}{simpl} tactic performs basic simplification like adding two numbers in this case. The updated subgoal is now \mintinline{coq}{2=2}, which is obviously true. By using the \mintinline{coq}{reflexivity} tactic we tell Coq to check both sides for equality, which succeeds and clears the subgoal list, followed by \mintinline{coq}{Qed} to complete the proof.
+After naming the proposition as an example, theorem or lemma it appears in the interactive subgoal list that Coq provides. The \coqinline{simpl} tactic performs basic simplification like adding two numbers in this case. The updated subgoal is now \coqinline{2=2}, which is obviously true. By using the \coqinline{reflexivity} tactic we tell Coq to check both sides for equality, which succeeds and clears the subgoal list, followed by \coqinline{Qed} to complete the proof.
 \begin{minted}{coq}
 Example e2 : forall (X : Type) (l : list X), [] ++ l = l.
 Proof. intros X l. reflexivity. Qed.
 \end{minted}
-Universal quantifiers allow us to introduce variables, the corresponding tactic is called \mintinline{coq}{intros}. The new context contains a type \mintinline{coq}{X} and a list \mintinline{coq}{l}, with the remaining subgoal \mintinline{coq}{[ ] ++ l = l}. Because we defined \mintinline{coq}{app} to return the second argument if the first one is an empty list, \mintinline{coq}{reflexivity} directly proves our goal. \mintinline{coq}{reflexivity} isn't useful for obvious equations only, it also simplifies and unfolds definitions until the flat terms match each other if possible.
+Universal quantifiers allow us to introduce variables, the corresponding tactic is called \coqinline{intros}. The new context contains a type \coqinline{X} and a list \coqinline{l}, with the remaining subgoal \coqinline{[ ] ++ l = l}. Because we defined \coqinline{app} to return the second argument if the first one is an empty list, \coqinline{reflexivity} directly proves our goal. \coqinline{reflexivity} is not useful for obvious equations only, it also simplifies and unfolds definitions until the flat terms match each other if possible.
 \par
-To prove that the proposition \mintinline{coq}{l ++ [] = l} holds, we need more advanced tactics, because we can't just apply the definition. \mintinline{coq}{app} works by iterating through the first list, but we need to prove the proposition for every list, regardless of its length. One possibility to solve this problem is by using structural induction.
+To prove that the proposition \coqinline{l ++ [] = l} holds, we need more advanced tactics, because we cannot just apply the definition. \coqinline{app} works by iterating through the first list, but we need to prove the proposition for every list, regardless of its length. One possibility to solve this problem is by using structural induction.
 \begin{minted}{coq}
 Example e3 : forall (X : Type) (l : list X), l ++ [] = l.
 Proof. intros X. induction l as [|l ls IH].
@@ -138,11 +141,101 @@ reflexivity.
 simpl. rewrite IH. reflexivity.
 Qed.
 \end{minted}
-The proof begins by introducing type \mintinline{coq}{X}, followed by the \mintinline{coq}{induction} tactic applied to \mintinline{coq}{l}. Coq names newly introduced variables by itself, which can be done manually by adding \mintinline{coq}{as [c1|...|cn]} to the tactic. Each $c_{i}$ represents a sequence of variable names, which will be used when introducing variables in the corresponding case. Cases are ordered as listed in the \mintinline{coq}{Definition}.
+The proof begins by introducing type \coqinline{X}, followed by the \coqinline{induction} tactic applied to \coqinline{l}. Coq names newly introduced variables by itself, which can be done manually by adding \coqinline{as [c1|...|cn]} to the tactic. Each $c_{i}$ represents a sequence of variable names, which will be used when introducing variables in the corresponding case. Cases are ordered as listed in the \coqinline{Definition}.
 \par
-Now we need to prove two cases: the empty list and a cons construct. The first case doesn't require any new variable names, thus the first section in the squared brackets is empty. It is easily solved by applying \mintinline{coq}{reflexivity}, because of the definition of \mintinline{coq}{app}.
-The second case 
- 
+Now we need to prove two cases: the empty list and a cons construct. The first case does not require any new variable names, thus the first section in the squared brackets is empty. It is easily solved by applying \coqinline{reflexivity}, because of the definition of \coqinline{app}.
+The second case requires variables for the list's head and tail, which we call \coqinline{l} and \coqinline{ls} respectively. The variable name \coqinline{IH} identifies the induction hypothesis \coqinline{ls ++ [ ] = ls}, which Coq generates automatically. The goal changes as following:
+\begin{minted}{coq}
+(l :: ls) ++ [ ] = l :: ls
+ l :: ls  ++ [ ] = l :: ls (* simpl *)
+ l :: ls         = l :: ls (* rewrite with IH *)
+\end{minted}
+The tactic \coqinline{rewrite} changes the current goal by replacing every occurrence of the left side of the provided equation with the right side. Both sides are equal now, hence \coqinline{reflexivity} proves the last case.
+\par 
+Example \coqinline{e4} is different from the other examples, in the sense that one cannot prove a function by itself and that only supplying an argument returns a verifiable inequality. 
+\begin{minted}{coq}
+Example e4 : (fun n => n <> 2) 1.
+Proof.
+  simpl.       (* 1 <> 2 *)
+  unfold not.  (* 1 = 2 -> False *)
+  intros H.    (* H : 1 = 2, False *)
+  inversion H. (* No more subgoals. *)
+Qed.
+\end{minted}
+This proof is not as straight forward as the other ones, mainly because of the inequality, which is a notation\footnote{It is often useful to be able to look up notations, \coqinline{Locate "<>"} returns the term associated with \coqinline{<>}.} for \coqinline{not (x = y)}. Because \coqinline{not} is the outermost term, we need to eliminate it first by applying \coqinline{unfold}. This replaces \coqinline{not} with its definition \coqinline{fun A : Prop => A -> False}, where \coqinline{False} is the unprovable proposition. Why does this work?
+Assuming that a proposition \coqinline{P} is true, \coqinline{not P} means that \coqinline{P} implies \coqinline{False}, which is false, because something true cannot imply something false. On the other hand, if \coqinline{P} is false, then \coqinline{False -> False} is true because anything follows from falsehood, as stated by the principle of explosion. \todo{verweis?}
+\par
+The current goal \coqinline{4 = 8 -> False} is further simplified by introducing \coqinline{4 = 8} as an hypothesis \coqinline{H}, leaving \coqinline{False} as the remaining goal. Intuitively we know that \coqinline{H} is false, but Coq needs a justification for this claim.
+Conveniently the tactic \coqinline{inversion} solves this problem easily by applying two core principles of inductively defined data types:
+\begin{itemize}
+	\item Injectivity: \coqinline{C n = C m} implies that n and m are equal for a constructor \coqinline{C}.
+	\item Disjoint constructors: Values created by different constructors cannot be equal.
+\end{itemize}
+By applying \coqinline{inversion} to the hypothesis \coqinline{2 = 1} we tell Coq to add all inferable equations as additional hypotheses. In this case we start with \coqinline{2 = 1} or the Peano number representation \coqinline{S(S(O)) = S(0)}. Injectivity implies that if the previous equation was true, \coqinline{S(O) = O} must also be true. This is obviously false, since it would allow two different representations of nil. Hence, the application of \coqinline{inversion} to \coqinline{2 = 1} infers the current goal \coqinline{False}, which concludes the proof.
+
+Besides directly supplying arguments to functions that return propositions, there are other interesting applications for them, that we will discuss in the next section.
+
+\subsection{Higher-order constructs}
+Functions can be passed as arguments to other functions or returned as a result, they are first-class citizens in Coq. This allows us create higher-order functions, such as \coqinline{map} or \coqinline{fold}.
+\todo{minted bug?}
+\begin{minted}{coq}
+Fixpoint map {X Y : Type} (f : X -> Y) (l : list X) : (list Y) :=
+  match l with
+  | []     => []
+  | h :: t => (f h) :: (map f t)
+  end.
+\end{minted}
+Function types are represented by combining two or more type variables with an arrow. Coq does not only allow higher-order functions, but also higher-order propositions. A predefined example is \coqinline{Forall}, which features a \coqinline{A -> Prop} construct from the last section.
+\begin{minted}{coq}
+Forall : forall A : Type, (A -> Prop) -> list A -> Prop
+\end{minted}
+\coqinline{Forall} takes a \textit{property} of \coqinline{A}, which returns a \coqinline{Prop} for any given \coqinline{A}, plus a list of \coqinline{A} and returns a proposition. It works by applying the property to every element of the given list and can be proven by showing that all elements satisfy the property.
+\begin{minted}{coq}
+Example e5 : Forall (fun n => n <> 8) [2;4].
+Proof.
+apply Forall_cons. intros H. inversion H.
+(* Forall (fun n : nat => n <> 8) [4] *)
+apply Forall_cons. intros H. inversion H.
+(* Forall (fun n : nat => n <> 8) [ ] *)
+apply Forall_nil.
+Qed.
+\end{minted}
+\coqinline{Forall} is an inductively defined proposition, which requires rules to be applied in order to prove a certain goal. This will be further explained in the next section, for now it sufficient to know that \coqinline{Forall} can be proven by applying the rules \coqinline{Forall_cons} and \coqinline{Forall_nil}, depending on the remaining list. Because we begin with a non-empty list, we have to apply \coqinline{Forall_cons}. The goal changes to \coqinline{2 <> 8}, the head of the list applied to the property. We have already proven these types of inequality before, \coqinline{inversion} is actually able to do most of the work we did manually by itself. Next the same procedure needs to be done for the list's tail \coqinline{[4]}, which works exactly the same. To conclude the proof, we need to show that the property is satisfied by the empty list. \coqinline{Forall_nil} covers this case, which is trivially fulfilled.
+\subsection{Logic and inductively defined propositions}
+\begin{minted}{coq}
+Fixpoint InB (x : nat) (l : list nat) : bool :=
+match l with
+| [] => false
+| x' :: l' => if (beq_nat x x') then true else InB x l'
+end.
+
+Fixpoint In (x : nat) (l : list nat) : Prop :=
+match l with
+| [] => False
+| x' :: l' => x' = x \/ In x l'
+end.
+
+Inductive InInd : nat -> list nat -> Prop :=
+| Head : forall n l, n = hd n l -> InInd n l
+| Tail : forall n l, InInd n (tl l) -> InInd n l.
+
+Example e5 : InB 42 [1;2;42] = true.
+Proof. simpl. reflexivity. Qed.
+Example e6 : In 42 [1;2;42].
+Proof. simpl. right. right. left. reflexivity. Qed.
+Example e7 : InInd 42 [1;2;42].
+Proof. apply Tail. simpl. apply Tail. simpl. apply Head. simpl. reflexivity. Qed.
+\end{minted}
+
+\chapter{Wat?}
+\chapter{CuMin}
+\section{Typing}
+\chapter{Curry}
+\section{FlatCurry}
+\section{Typing}
+\subsection{Differences to CuMin}
+\subsection{Conversion of FlatCurry to Coq}
+\chapter{Conclusion}
 
 % Anhang
 \appendix
