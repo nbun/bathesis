@@ -117,27 +117,20 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
 
   | T_Comb_Cons : forall Gamma P qname tqname exprs tyexprs consdecl typedecl,
                     lookupConsDecl P qname = Some (consdecl, typedecl) ->
-                    (forall n,
-                      n < Lists.List.length exprs ->
-                      Gamma |- (nth n exprs (Lit (Charc "e"))) \in (nth n tyexprs) Char) ->
-                      tqname = (typedeclQname typedecl) ->
+                    Forall2 (hasType Gamma) tyexprs exprs ->
                     Gamma |- (Comb ConsCall qname exprs) \in (TCons tqname tyexprs)
 
   | T_Let :       forall Gamma GammaNew vexprs exprs tyexprs vtyexprs e T,
                     exprs = sndList vexprs ->
                     vtyexprs = replSnd vexprs tyexprs ->
-                    (forall n,
-                      n < Lists.List.length exprs ->
-                      Gamma |- (nth n exprs (Lit (Charc "e"))) \in (nth n tyexprs) Char) ->
+                    Forall2 (hasType Gamma) tyexprs exprs ->
                     Gamma |- e \in T ->
                     GammaNew = (multiTypeUpdate Gamma vtyexprs) ->
                     GammaNew |- (Let vexprs e) \in T
 
   | T_Free :      forall Gamma vis expr tyexprs T,
                   Gamma |- expr \in T ->
-                  (forall n,
-                      n < Lists.List.length vis ->
-                      Gamma (nth n vis 0) = Some (nth n tyexprs Char)) ->
+                  Forall2 (fun vi tyexpr => Gamma vi = Some tyexpr) vis tyexprs ->
                   Gamma |- (Free vis expr) \in T
 
   | T_Or :        forall Gamma e1 e2 T,
@@ -187,10 +180,10 @@ Section Examples.
   Proof. apply T_Let with (Gamma := empty) (exprs := [(Comb FuncCall ("Prelude","+") [(Lit (Intc 2));(Lit (Intc 1))])]) (tyexprs := [Int]) (vtyexprs := [(2,Int)]).
     reflexivity.
     reflexivity.
-    simpl. intros. replace n with 0. apply T_Comb_Fun with (P := prog2) (fd := plus).
+    apply Forall2_cons. apply T_Comb_Fun with (P := prog2) (fd := plus).
     reflexivity.
     reflexivity.
-    inversion H. reflexivity. inversion H1.
+    apply Forall2_nil.
     apply T_Comb_Fun with (P := prog2) (fd := plus).
     reflexivity.
     reflexivity.
@@ -216,10 +209,9 @@ Section Examples.
   Proof. apply T_Comb_Cons with (P := prog3) (consdecl := consdecl1) (typedecl := typedecl1).
     reflexivity.
     simpl. intros.
-    replace n with 0.
+    apply Forall2_cons.
     apply T_Lit. reflexivity.
-    inversion H. reflexivity. inversion H1.
-    reflexivity.
+    apply Forall2_nil.
   Qed.
 
   Definition free1 := (Free  [1] (Var 1)).
@@ -237,9 +229,8 @@ Section Examples.
   Example e4 : typeUpdate empty 1 Int |- free1 \in Int.
   Proof. apply T_Free with (tyexprs := [Int]).
     apply T_Var. reflexivity.
-    simpl. intros. replace n with 0. reflexivity.
-    inversion H. reflexivity. inversion H1.
+    simpl. intros. apply Forall2_cons. reflexivity.
+    apply Forall2_nil.
   Qed.
 
 End Examples.
-
