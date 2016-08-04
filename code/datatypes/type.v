@@ -1,27 +1,7 @@
 Require Import CQE.flatCurry CQE.Maps.
 Require Import Datatypes EqNat Lists.List Ascii Bool String.
-Import flatCurry_maps ListNotations.
+Import ListNotations.
 Local Open Scope nat_scope.
-
-Definition context := (partial_map TypeExpr).
-
-Definition typeCon (c : context) := c.
-
-Definition typeUpdate (Gamma : context) (x : VarIndex) (v : TypeExpr) := 
-  (update (typeCon Gamma) x v).
-
-Definition multiTypeUpdate (Gamma : context) (vitys : list (VarIndex * TypeExpr)) :=
-  fold_right (fun vity con => match vity with (vi, ty)
-                           => typeUpdate con vi ty end)
-  Gamma vitys.
-
-Definition empty := @emptymap TypeExpr.
-
-Fixpoint elem {T : Type} (eq : T -> T -> bool) (x : T) (xs : list T) : bool :=
-  match xs with
-  | [] => false
-  | (e :: xs) => if (eq x e) then true else (elem eq x xs)
-  end.
 
 Definition beq_ascii (a : ascii) (b : ascii) : bool :=
   match a, b with
@@ -42,6 +22,31 @@ Fixpoint beq_str (s : string) (s' : string) : bool :=
 Definition beq_qname (q : QName) (q' : QName) : bool :=
   match q, q' with
   | (n, m), (n', m') => (andb (beq_str n n') (beq_str m m'))
+  end.
+
+Inductive context : Type := 
+  | Con : (partial_map VarIndex TypeExpr) -> (partial_map QName TypeExpr) -> context.
+
+Definition vCon (c : context) := match c with Con vcon _ => vcon end.
+
+Definition fCon (c : context) := match c with Con _ fcon => fcon end.
+
+Definition varUpdate (Gamma : context) (vi : VarIndex) (t : TypeExpr) : context := 
+  Con (update beq_nat (vCon Gamma) vi t) (fCon Gamma).
+
+Definition funcUpdate (Gamma : context) (qn : QName) (t : TypeExpr) : context :=
+  Con (vCon Gamma) (update beq_qname (fCon Gamma) qn t).
+
+Definition multiTypeUpdate (Gamma : context) (vitys : list (VarIndex * TypeExpr)) :=
+  fold_right (fun vity con => match vity with (vi, ty) => varUpdate con vi ty end)
+  Gamma vitys.
+
+Definition empty := Con emptymap emptymap.
+
+Fixpoint elem {T : Type} (eq : T -> T -> bool) (x : T) (xs : list T) : bool :=
+  match xs with
+  | [] => false
+  | (e :: xs) => if (eq x e) then true else (elem eq x xs)
   end.
 
 Definition litType (l : Literal) : TypeExpr :=
@@ -85,9 +90,9 @@ Definition lookupConsDecl (p : TProg) (q : QName) : option (ConsDecl * TypeDecl)
 Definition brexprsToExprs (brexprs : list BranchExpr) : list Expr :=
   map (fun brexpr => match brexpr with (Branch _ e) => e end) brexprs.
 
-Fixpoint replSnd {A B C : Type} (abs : list (A * B)) (cs : list C) : list (A * C) :=
+Fixpoint replaceSnd {A B C : Type} (abs : list (A * B)) (cs : list C) : list (A * C) :=
   match abs, cs with
-  | ((a, b) :: abs), (c :: cs) => (a, c) :: (replSnd abs cs)
+  | ((a, b) :: abs), (c :: cs) => (a, c) :: (replaceSnd abs cs)
   | _, _                       => []
   end.
 
@@ -97,13 +102,10 @@ Definition typedeclQname (td : TypeDecl) : QName :=
   | TypeSyn qn _ _ _ => qn
   end.
 
-Definition sndList {A B : Type} (ps : list (A * B)) : list B :=
-  map (fun p => match p with (_,b) => b end) ps.
-
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
 Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
   | T_Var :       forall Gamma vi T,
-                    Gamma vi = Some T ->
+                    (vCon Gamma) vi = Some T ->
                     Gamma |- (Var vi) \in T
 
   | T_Lit :       forall Gamma l T,
@@ -121,8 +123,8 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     Gamma |- (Comb ConsCall qname exprs) \in (TCons tqname tyexprs)
 
   | T_Let :       forall Gamma GammaNew vexprs exprs tyexprs vtyexprs e T,
-                    exprs = sndList vexprs ->
-                    vtyexprs = replSnd vexprs tyexprs ->
+                    exprs = map snd vexprs ->
+                    vtyexprs = replaceSnd vexprs tyexprs ->
                     Forall2 (hasType Gamma) tyexprs exprs ->
                     Gamma |- e \in T ->
                     GammaNew = (multiTypeUpdate Gamma vtyexprs) ->
@@ -130,7 +132,7 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
 
   | T_Free :      forall Gamma vis expr tyexprs T,
                   Gamma |- expr \in T ->
-                  Forall2 (fun vi tyexpr => Gamma vi = Some tyexpr) vis tyexprs ->
+                  Forall2 (fun vi tyexpr => (vCon Gamma) vi = Some tyexpr) vis tyexprs ->
                   Gamma |- (Free vis expr) \in T
 
   | T_Or :        forall Gamma e1 e2 T,
@@ -176,7 +178,7 @@ Section Examples.
   [fun2;plus]
   [] 
   ).
-  Example e2 : typeUpdate empty 2 Int |- letexp \in Int.
+  Example e2 : varUpdate empty 2 Int |- letexp \in Int.
   Proof. apply T_Let with (Gamma := empty) (exprs := [(Comb FuncCall ("Prelude","+") [(Lit (Intc 2));(Lit (Intc 1))])]) (tyexprs := [Int]) (vtyexprs := [(2,Int)]).
     reflexivity.
     reflexivity.
@@ -226,7 +228,7 @@ Section Examples.
   ]
   [] 
  ).
-  Example e4 : typeUpdate empty 1 Int |- free1 \in Int.
+  Example e4 : varUpdate empty 1 Int |- free1 \in Int.
   Proof. apply T_Free with (tyexprs := [Int]).
     apply T_Var. reflexivity.
     simpl. intros. apply Forall2_cons. reflexivity.

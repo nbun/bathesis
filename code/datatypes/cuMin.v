@@ -1,6 +1,6 @@
 Require Import CQE.Maps.
 Require Import EqNat Lists.List.
-Import ListNotations cuMin_maps.
+Import ListNotations.
 
 Section General.
 
@@ -67,26 +67,26 @@ Section Context.
   (* A context maps IDs of type variables to tags and IDs of variables to 
      types. *)
   Inductive context : Type := 
-    | con : (partial_map tag) -> (partial_map ty) -> context.
+    | con : (partial_map id tag) -> (partial_map id ty) -> context.
 
   (* Empty context *)
   Definition empty := con emptymap emptymap.
 
   (* Returns type context of a context. *)
-  Definition typecon (Gamma : context) : (partial_map ty) :=
+  Definition typecon (Gamma : context) : (partial_map id ty) :=
     match Gamma with (con _ tyc) => tyc end.
 
   (* Returns tag context of a context. *)
-  Definition tagcon (Gamma : context) : (partial_map tag) :=
+  Definition tagcon (Gamma : context) : (partial_map id tag) :=
     match Gamma with (con tagc _) => tagc end.
 
   (* Updates the ID's type in a context. *)
   Definition type_update (Gamma : context) (x : id) (v : ty) := 
-    (con (tagcon Gamma) (update (typecon Gamma) x v)).
+    (con (tagcon Gamma) (update beq_id (typecon Gamma) x v)).
 
   (* Updates the ID's tag in a context. *)
   Definition tag_update (Gamma : context) (x : id) (v : tag) := 
-    (con (update (tagcon Gamma) x v) (typecon Gamma)).
+    (con (update beq_id (tagcon Gamma) x v) (typecon Gamma)).
 
 End Context.
 
