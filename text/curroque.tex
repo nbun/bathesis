@@ -5,6 +5,7 @@
 \usepackage[utf8]{inputenc}     % Enkodierung
 \usepackage[ngerman]{babel}     % neue deutsche Rechtschreibung
 \usepackage{amsmath}
+\usepackage{proof}
 
 % Kapitelüberschrift in der Kopfzeile
 \usepackage[automark]{scrpage2} % Schickerer Satzspiegel mit KOMA-Script
@@ -200,31 +201,61 @@ apply Forall_cons. intros H. inversion H.
 apply Forall_nil.
 Qed.
 \end{minted}
-\coqinline{Forall} is an inductively defined proposition, which requires rules to be applied in order to prove a certain goal. This will be further explained in the next section, for now it sufficient to know that \coqinline{Forall} can be proven by applying the rules \coqinline{Forall_cons} and \coqinline{Forall_nil}, depending on the remaining list. Because we begin with a non-empty list, we have to apply \coqinline{Forall_cons}. The goal changes to \coqinline{2 <> 8}, the head of the list applied to the property. We have already proven these types of inequality before, \coqinline{inversion} is actually able to do most of the work we did manually by itself. Next the same procedure needs to be done for the list's tail \coqinline{[4]}, which works exactly the same. To conclude the proof, we need to show that the property is satisfied by the empty list. \coqinline{Forall_nil} covers this case, which is trivially fulfilled.
-\subsection{Logic and inductively defined propositions}
+\coqinline{Forall} is an inductively defined proposition, which requires rules to be applied in order to prove a certain goal. This will be further explained in the next section, for now it sufficient to know that \coqinline{Forall} can be proven by applying the rules \coqinline{Forall_cons} and \coqinline{Forall_nil}, depending on the remaining list. Because we begin with a non-empty list, we have to apply \coqinline{Forall_cons}. The goal changes to \coqinline{2 <> 8}, the head of the list applied to the property. We have already proven this type of inequality before, \coqinline{inversion} is actually able to do most of the work we did manually by itself. Next the same procedure needs to be done for the list's tail \coqinline{[4]}, which works exactly the same as before. To conclude the proof, we need to show that the property is satisfied by the empty list. \coqinline{Forall_nil} covers this case, which is trivially fulfilled.
+\subsection{Inductively defined propositions}
+Properties of a data type can be written in multiple ways, two of which we already discussed: Boolean equations of the form \coqinline{b x = true} and functions that return propositions. For example the function \coqinline{InB} returns \coqinline{true} if a \coqinline{nat} is contained in a list, the boolean function could look like this:
 \begin{minted}{coq}
 Fixpoint InB (x : nat) (l : list nat) : bool :=
 match l with
 | [] => false
 | x' :: l' => if (beq_nat x x') then true else InB x l'
 end.
-
+Example e5 : InB 42 [1;2;42] = true.
+Proof. reflexivity. Qed.
+\end{minted}
+Because \coqinline{InB} returns a boolean value, we have to check for equality with \coqinline{true} in order to get a provable proposition. The proof is fairly simple, \coqinline{reflexivity} evaluates the expression and checks the equation, nothing more needs to be done.
+\par 
+Properties are another approach that works equally well. This definition connects multiple equations by disjunction, noted as \coqinline{\/}. The resulting proposition needs to contain a least one true equation to become true itself.
+\begin{minted}{coq}
 Fixpoint In (x : nat) (l : list nat) : Prop :=
 match l with
 | [] => False
 | x' :: l' => x' = x \/ In x l'
 end.
-
+Example e6 : In 42 [1;2;42].
+Proof. 
+  simpl. (* 1 = 42 \/ 2 = 42 \/ 42 = 42 \/ False *)
+  right.           (* 2 = 42 \/ 42 = 42 \/ False *)
+  right.                     (* 42 = 42 \/ False *)
+  left.                      (* 42 = 42 *)
+  reflexivity.
+Qed.
+\end{minted}
+Proving the same example as before, we need new tactics to work with logical connectives. By simplifying the original statement we get a disjunction of equations for every element in the list. If we want to show that a disjunction is true, we need to choose a side we believe to be true and prove it. \coqinline{left} and \coqinline{right} keep only the respective side as the current goal, discarding the other one. A similar tactic exists for the logical conjunction \coqinline{/\ }, with the difference that \coqinline{split} keeps both sides as subgoals, since a conjunction is only true if both sides are true.
+\par
+The last option to describe this property is by using inductively defined propositions. As already mentioned before, inductively defined propositions consist of rules that describe how an argument can satisfy the proposition. A useful notation for representing these rules are \textit{inference rules}. They consist of an optional list of premises that needs to be fulfilled in order for the conclusion below the line to hold.
+\par
+We can describe \coqinline{In} with two rules:
+\begin{figure}
+	\begin{minipage}{.5 \linewidth}
+		\infer[1]{n \in (n :: l)}{}
+	\end{minipage}
+	\begin{minipage}{.5 \linewidth}
+		\infer[2]{n \in (e :: l)}{n \in l}
+	\end{minipage}
+\end{figure}
+	\todo{Unterschiedliche Höhe?...}
+Rule one states that the list's head is an element of the list. If the lists's head is not the element we want to find in the list, it has to be contained in the tail of the list, as described in the second rule. This definition can be transferred to Coq:
+\begin{minted}{coq}
 Inductive InInd : nat -> list nat -> Prop :=
 | Head : forall n l, n = hd n l -> InInd n l
 | Tail : forall n l, InInd n (tl l) -> InInd n l.
-
-Example e5 : InB 42 [1;2;42] = true.
-Proof. simpl. reflexivity. Qed.
-Example e6 : In 42 [1;2;42].
-Proof. simpl. right. right. left. reflexivity. Qed.
 Example e7 : InInd 42 [1;2;42].
 Proof. apply Tail. simpl. apply Tail. simpl. apply Head. simpl. reflexivity. Qed.
+\end{minted}
+
+\begin{minted}{coq}
+Forall2 : forall A B : Type, (A -> B -> Prop) -> list A -> list B -> Prop
 \end{minted}
 
 \chapter{Wat?}
