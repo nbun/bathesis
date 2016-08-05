@@ -78,3 +78,27 @@ Sprache "Imp")
 [14] https://de.sharelatex.com/learn/Code_Highlighting_with_minted  
 [15] http://pygments.org/languages/  
 [16] https://www.informatik.uni-kiel.de/~mh/lehre/seminare/hinweise.html  
+
+## 6. Phase: Formalisierung der Typung von FlatCurry
+
+* analog zu CuMin soll nun die Typung von FlatCurry umgesetzt werden [17]
+*  in der Umgebung soll nun jeder Konstruktor mit seinem (vollen) Typ als auch den Typvariablen (des übergeordneten Datentyps) abgelegt werden.  
+   Beispiel:
+   `data Either a b = Left a | Right b`
+   `{ Left |-> (a -> Either a b, [a,b]), Right |> (b -> Either a b, [a,b]) }`
+   Im Falle von Datentypdeklarationen findest du diese Information relativ direkt wieder:
+     *"data type definition of the form*
+ 
+        data t x1...xn = ...| c t1....tkc |…
+        
+     *is represented by the FlatCurry term*
+
+       (Type t [i1,...,in] [...(Cons c kc [t1,...,tkc])…])
+
+     *where each ij is the index of the type variable xj."*  
+   Da die Typsubstitution Variablen als erstes Argument erhält, sollten direkt die Indizes abgelegt werden.
+
+* ähnlich sollen auf Funktionen in der Umgebung abgelegt werden: neben der Typsignatur soll auch eine Liste mit den Typvariablen (bzw. Indizes) aus der Typsignatur hinterlegt sein. Leider musst du die aus der Signatur extrahieren, da wir hier eben keine explizit allquantifizierten Variablen haben wie in CuMin.
+  Beispiel: `{ test |-> (a -> b -> Int -> Bool -> c, [a,b,c]) }`
+
+[17] [FlatCurry Typing Rules](text/FlatCurryTyping.tex)
