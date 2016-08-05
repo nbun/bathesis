@@ -1,0 +1,173 @@
+\documentclass[12pt]{article}
+\usepackage{bussproofs}
+\usepackage{amssymb}
+\usepackage{amsmath}
+
+
+% This is the "centered" symbol
+\def\fCenter{{\mbox{\Large$\rightarrow$}}}
+
+% Optional to turn on the short abbreviations
+\EnableBpAbbreviations
+
+\begin{document}
+\thispagestyle{empty}
+
+\section*{FlatCurry Typing Rules}
+\noindent
+
+\underline{Variable}
+\begin{prooftree}
+\AxiomC{$\Gamma, x \mapsto \tau \vdash x :: \tau$}
+\end{prooftree}
+
+\bigskip 
+
+\underline{Constructor Application}
+\begin{prooftree}
+\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_k \mapsto t_k}~]$}
+\AxiomC{$\dots$}
+\AxiomC{$\Gamma \vdash e_n :: \tau_n[~\overline{x_k \mapsto t_k}~]$}
+\TrinaryInfC{$\Gamma, \{ C \mapsto (\tau_1 \rightarrow
+  \dots \rightarrow \tau_n \rightarrow \tau, \overline{x_k}\} \vdash \text{$C$ } e_1
+  \dots e_n :: \tau[~\overline{x_k \mapsto t_k}~]$}
+\end{prooftree}
+where $\overline{x_k}$ type variables in $\tau$.
+
+\bigskip
+
+\underline{Function Application}
+\begin{prooftree}
+\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_k \mapsto t_k}~]$}
+\AxiomC{$\dots$}
+\AxiomC{$\Gamma \vdash e_n :: \tau_n[~\overline{x_k \mapsto t_k}~]$}
+\TrinaryInfC{$\Gamma, \{ \text{$f$} \mapsto (\tau_1 \rightarrow
+  \dots \rightarrow \tau_n \rightarrow \tau, \overline{x_k})\} \vdash \text{$f$ } e_1
+  \dots e_n :: \tau[~\overline{x_k \mapsto t_k}~]$}
+\end{prooftree}
+where $\overline{x_k}$ type variables in $(\tau_1 \rightarrow
+  \dots \rightarrow \tau_n \rightarrow \tau)$.
+
+\bigskip
+
+\underline{(f)Case-Expression}
+\begin{prooftree}
+\AxiomC{$\Gamma, x_1 \mapsto \tau_{1_1}, \dots, x_n \mapsto \tau_{1_n} \vdash e_1 :: \tau'$}
+\AxiomC{$\dots$}
+\AxiomC{$\Gamma, x_1 \mapsto \tau_{k_1}, \dots, x_m \mapsto
+  \tau_{k_m} \vdash e_k :: \tau'$}
+\noLine
+\TrinaryInfC{$\Gamma \vdash e :: \tau$}\RightLabel{\footnotesize with $k > 0$}
+\UnaryInfC{ $\Gamma, Cs \vdash \text{(f)case e of } \{ \text{$C_1$ } x_1 \dots x_n \rightarrow
+  e_1; \dots ; \text{$C_k$ } x_1 \dots x_m \rightarrow e_k\}  :: \tau'$}
+\end{prooftree}
+with
+\[
+Cs = \{C_1 \mapsto (\tau_{1_1} \rightarrow
+  \dots \rightarrow \tau_{1_n} \rightarrow \tau), \dots , C_k \mapsto (\tau_{k_1} \rightarrow
+  \dots \rightarrow \tau_{k_m} \rightarrow \tau) \}
+\]
+
+\bigskip
+
+\underline{Or-Expression}
+\begin{prooftree}
+\AxiomC{$\Gamma \vdash e_1 :: \tau$}
+\AxiomC{$\Gamma \vdash e_2 :: \tau$}
+\BinaryInfC{$\Gamma \vdash e_1 \text{ or } e_2 :: \tau$}
+\end{prooftree}
+
+\underline{Recursive Let-Expression}
+\begin{prooftree}
+\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto \tau_n \vdash e_1 :: \tau_1$}
+\AxiomC{\dots}
+\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_{n} \mapsto
+  \tau_{n} \vdash e_n :: \tau_n$}
+\noLine
+\TrinaryInfC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto
+  \tau_n \vdash e :: \tau$}\RightLabel{\footnotesize with $n > 0$}
+\UnaryInfC{$\Gamma \vdash \text{let } x_1 = e_1, \dots , x_n = e_n
+  \text{ in } e :: \tau $}
+\end{prooftree}
+
+\underline{Let-Expression}
+\begin{prooftree}
+\AxiomC{$\Gamma, x_2 \mapsto \tau_2, \dots, x_n \mapsto \tau_n \vdash e_1 :: \tau_1$}
+\AxiomC{\dots}
+\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_{n-1} \mapsto
+  \tau_{n-1} \vdash e_n :: \tau_n$}
+\noLine
+\TrinaryInfC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto
+  \tau_n \vdash e :: \tau$}\RightLabel{\footnotesize with $n > 0$}
+\UnaryInfC{$\Gamma \vdash \text{let } x_1 = e_1, \dots , x_n = e_n
+  \text{ in } e :: \tau $}
+\end{prooftree}
+
+\section*{FlatCurry Typing Rules - Extended}
+\noindent
+
+\underline{Free-Declaration}
+\begin{prooftree}
+\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto \tau_n \vdash
+  e :: \tau$}
+\UnaryInfC{$\Gamma \vdash \text{let } x_1, \dots, x_n \text{ free in } e :: \tau $}
+\end{prooftree}
+
+\underline{Literals}
+\begin{prooftree}
+\AxiomC{$\Gamma \vdash \text{Intc}~ i :: Int$}
+\end{prooftree}
+\begin{prooftree}
+\AxiomC{$\Gamma \vdash \text{Floatc}~ f :: Float$}
+\end{prooftree}
+\begin{prooftree}
+\AxiomC{$\Gamma \vdash \text{Charc}~ c :: Char$}
+\end{prooftree}
+
+\underline{Typed Expression}
+\begin{prooftree}
+\AxiomC{$\Gamma \vdash e :: \tau$}
+\UnaryInfC{$\Gamma \vdash (e ::: \tau) :: \tau$}
+\end{prooftree}
+
+\underline{Partial Function Application}
+\begin{prooftree}
+\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_i \mapsto t_i}~]$}
+\AxiomC{$\dots$}
+\AxiomC{$\Gamma \vdash e_k :: \tau_k[~\overline{x_i \mapsto t_i}~]$}\RightLabel{\footnotesize with
+  $k < n$}
+\TrinaryInfC{$\Gamma, Fs \vdash \text{$f$ } e_1
+  \dots e_k :: (\tau_{k+1} \rightarrow \dots \rightarrow \tau_n
+  \rightarrow \tau)[~\overline{x_i \mapsto t_i}~] $}
+\end{prooftree}
+with
+\[
+Fs = \{ \text{$f$} \mapsto (\tau_1 \rightarrow
+  \dots \rightarrow \tau_k \rightarrow \tau_{k+1} \rightarrow \dots
+  \rightarrow \tau_n \rightarrow \tau, \overline{x_i})\}
+\]
+where $\overline{x_i}$ type variables in  $(\tau_1 \rightarrow \dots
+  \rightarrow \tau_n \rightarrow \tau)$.
+
+\bigskip
+
+\underline{Partial Constructor Application}
+\begin{prooftree}
+\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_i \mapsto t_i}~]$}
+\AxiomC{$\dots$}
+\AxiomC{$\Gamma \vdash e_k :: \tau_k[~\overline{x_i \mapsto t_i}~]$}\RightLabel{\footnotesize with
+  $k < n$}
+\TrinaryInfC{$\Gamma, Cs \vdash \text{$C$ } e_1
+  \dots e_k :: (\tau_{k+1} \rightarrow \dots \rightarrow \tau_n
+  \rightarrow \tau)[~\overline{x_i \mapsto t_i}~] $}
+\end{prooftree}
+with
+\[
+Cs = \{ \text{$C$ } \mapsto (\tau_1 \rightarrow
+  \dots \rightarrow \tau_k \rightarrow \tau_{k+1} \rightarrow \dots
+  \rightarrow \tau_n \rightarrow \tau, \overline{x_i})\}
+\]
+where $\overline{x_i}$ type variables in $\tau$.
+
+\bigskip
+\end{document}
