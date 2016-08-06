@@ -25,23 +25,38 @@ Definition beq_qname (q : QName) (q' : QName) : bool :=
   end.
 
 Inductive context : Type := 
-  | Con : (partial_map VarIndex TypeExpr) -> (partial_map QName TypeExpr) -> context.
+  | Con : (partial_map VarIndex TypeExpr) -> 
+          (partial_map QName TypeExpr) ->
+          (partial_map QName (TypeExpr * (list TVarIndex))) -> context.
 
-Definition vCon (c : context) := match c with Con vcon _ => vcon end.
+Definition vCon (c : context) := match c with Con vcon _ _ => vcon end.
 
-Definition fCon (c : context) := match c with Con _ fcon => fcon end.
+Definition fCon (c : context) := match c with Con _ fcon _ => fcon end.
+
+Definition cCon (c : context) := match c with Con _ _ ccon => ccon end.
 
 Definition varUpdate (Gamma : context) (vi : VarIndex) (t : TypeExpr) : context := 
-  Con (update beq_nat (vCon Gamma) vi t) (fCon Gamma).
+  Con (update beq_nat (vCon Gamma) vi t) (fCon Gamma) (cCon Gamma).
 
 Definition funcUpdate (Gamma : context) (qn : QName) (t : TypeExpr) : context :=
-  Con (vCon Gamma) (update beq_qname (fCon Gamma) qn t).
+  Con (vCon Gamma) (update beq_qname (fCon Gamma) qn t) (cCon Gamma).
+
+Definition consUpdate (Gamma : context) (qn : QName) (tvis : (TypeExpr * list TVarIndex)) :=
+Con (vCon Gamma) (fCon Gamma) (update beq_qname (cCon Gamma) qn tvis).
+
+Fixpoint typeRetType (t : TypeExpr) : TypeExpr :=
+  match t with
+  | TVar _    as t => t
+  | TCons _ _ as c => c
+  | FuncType _ (FuncType _ _ as f) => typeRetType f
+  | FuncType _ r   => r
+  end.
 
 Definition multiTypeUpdate (Gamma : context) (vitys : list (VarIndex * TypeExpr)) :=
   fold_right (fun vity con => match vity with (vi, ty) => varUpdate con vi ty end)
   Gamma vitys.
 
-Definition empty := Con emptymap emptymap.
+Definition empty := Con emptymap emptymap emptymap.
 
 Fixpoint elem {T : Type} (eq : T -> T -> bool) (x : T) (xs : list T) : bool :=
   match xs with
@@ -102,6 +117,20 @@ Definition typedeclQname (td : TypeDecl) : QName :=
   | TypeSyn qn _ _ _ => qn
   end.
 
+Fixpoint typeSubst (k: TVarIndex) (t: TypeExpr) (t': TypeExpr) : TypeExpr :=
+  match t' with
+  | TVar i as v  => if (beq_nat i k) then t else v
+  | FuncType argT retT => FuncType (typeSubst k t argT) (typeSubst k t retT)
+  | TCons qn ts => TCons qn (map (typeSubst k t) ts) 
+  end.
+
+Fixpoint specConsType (ct : TypeExpr) (ts : list TypeExpr) : TypeExpr :=
+  match ct, ts with
+  | FuncType (TVar i) retT, t :: ts => FuncType t (specConsType (typeSubst i t retT) ts)
+  | FuncType argT     retT, _ :: ts => FuncType argT (specConsType retT ts)
+  | t, _ => t
+  end.
+
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
 Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
   | T_Var :       forall Gamma vi T,
@@ -117,16 +146,18 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     funcType fd = T ->
                     Gamma |- (Comb FuncCall qname exprs) \in T
 
-  | T_Comb_Cons : forall Gamma P qname tqname exprs tyexprs consdecl typedecl,
-                    lookupConsDecl P qname = Some (consdecl, typedecl) ->
+  | T_Comb_Cons : forall Gamma qname exprs tyexprs type tvars specT T,
                     Forall2 (hasType Gamma) tyexprs exprs ->
-                    Gamma |- (Comb ConsCall qname exprs) \in (TCons tqname tyexprs)
+                    (cCon Gamma) qname = Some (type, tvars) ->
+                    specConsType type tyexprs = specT ->
+                    typeRetType specT = T ->
+                    Gamma |- (Comb ConsCall qname exprs) \in T
 
   | T_Let :       forall Gamma GammaNew vexprs exprs tyexprs vtyexprs e T,
                     exprs = map snd vexprs ->
                     vtyexprs = replaceSnd vexprs tyexprs ->
                     Forall2 (hasType Gamma) tyexprs exprs ->
-                    Gamma |- e \in T ->
+                    Gamma |- e \in T -> (* update hier *)
                     GammaNew = (multiTypeUpdate Gamma vtyexprs) ->
                     GammaNew |- (Let vexprs e) \in T
 
@@ -145,6 +176,7 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     Gamma |- (Case ctype e brexprs) \in T
 
   | T_Typed :     forall Gamma e T,
+                    Gamma |- e \in T ->
                     Gamma |- (Typed e T) \in T
 
 where "Gamma '|-' t '\in' T" := (hasType Gamma T t).
@@ -207,13 +239,27 @@ Section Examples.
   [] 
  ).
 
-  Example e3 : empty |- comb1 \in (TCons ("test","Maybe") [(TCons ("Prelude","Int") [] )] ).
-  Proof. apply T_Comb_Cons with (P := prog3) (consdecl := consdecl1) (typedecl := typedecl1).
-    reflexivity.
-    simpl. intros.
-    apply Forall2_cons.
-    apply T_Lit. reflexivity.
+  Example e3 : (consUpdate empty ("test", "Some") (FuncType (TVar 1) (TCons ("test", "Maybe") [TVar 1]), [1])) |- comb1 \in (TCons ("test","Maybe") [Int] ).
+  Proof. apply T_Comb_Cons with (tyexprs := [Int]) (type := FuncType (TVar 1) (TCons ("test", "Maybe") [TVar 1])) (tvars := [1]) (specT := FuncType Int (TCons ("test", "Maybe") [Int])).
+    apply Forall2_cons. apply T_Lit. reflexivity.
     apply Forall2_nil.
+    reflexivity.
+    reflexivity.
+    reflexivity.
+  Qed.
+
+  Definition comb2 := Comb ConsCall ("test","T") [Lit (Intc 5); Lit (Intc 2); Lit (Charc "a"); Lit (Charc "b")].
+  Example e4 : (consUpdate empty ("test","T") ((FuncType Int (FuncType (TVar 0) (FuncType Char (FuncType (TVar 1) (TCons ("test", "Test") [TVar 0; TVar 1]))))), [0; 1])) |- comb2 \in (TCons ("test", "Test") [Int; Char]).
+  Proof.
+    apply T_Comb_Cons with(tyexprs := [Int; Int; Char; Char]) (type := (FuncType Int (FuncType (TVar 0) (FuncType Char (FuncType (TVar 1) (TCons ("test", "Test") [TVar 0; TVar 1])))))) (tvars := [0; 1]) (specT := FuncType Int (FuncType Int (FuncType Char (FuncType Char (TCons ("test", "Test") [Int; Char]))))).
+    apply Forall2_cons. apply T_Lit. reflexivity.
+    apply Forall2_cons. apply T_Lit. reflexivity.
+    apply Forall2_cons. apply T_Lit. reflexivity.
+    apply Forall2_cons. apply T_Lit. reflexivity.
+    apply Forall2_nil.
+    reflexivity.
+    reflexivity.
+    reflexivity.
   Qed.
 
   Definition free1 := (Free  [1] (Var 1)).
@@ -228,7 +274,7 @@ Section Examples.
   ]
   [] 
  ).
-  Example e4 : varUpdate empty 1 Int |- free1 \in Int.
+  Example e5 : varUpdate empty 1 Int |- free1 \in Int.
   Proof. apply T_Free with (tyexprs := [Int]).
     apply T_Var. reflexivity.
     simpl. intros. apply Forall2_cons. reflexivity.

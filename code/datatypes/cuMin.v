@@ -159,8 +159,7 @@ Section Functions.
   (* Takes a list of (quantifier,type) pairs and applies a type substitution
      of the quantifier's ID to a type repeatedly to a given type. *)
   Definition multi_ty_subst (qtys : list (quantifier * ty)) (t : ty) : ty := 
-    fold_right (fun qty t => match qty with (for_all id _, ty) 
-                          => ty_subst id ty t end)
+    fold_right (fun qty t => match qty with (for_all id _, ty) => ty_subst id ty t end)
                t qtys.
 
   (* Specializes a function declaration by applying multi_ty_subst with
