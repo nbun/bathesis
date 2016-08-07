@@ -156,6 +156,11 @@ Definition tyVarOpToTy (tvo : option (TypeExpr * list TVarIndex)) : TypeExpr :=
   | None => (TCons ("Coq","NoType") [])
   end.
 
+Inductive Forall3 {A B C : Type} (R : A -> B -> C -> Prop) : list A -> list B -> list C -> Prop :=
+ | Forall3_nil  : Forall3 R [] [] []
+ | Forall3_cons : forall x y z l l' l'',
+    R x y z -> Forall3 R l l' l'' -> Forall3 R (x::l) (y::l') (z:: l'').
+
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
 Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
   | T_Var :       forall Gamma vi T,
@@ -196,9 +201,9 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                           funcPart specT (Some n) = T ->
                     Gamma |- (Comb (ConsPartCall remArg) qname exprs) \in T
 
-  | T_Let :       forall Gamma vexprs tyexprs e T,
+  | T_Let :       forall Gamma Delta vexprs tyexprs e T,
                     let exprs := map snd vexprs 
-                      in Forall2 (hasType Gamma) tyexprs exprs ->
+                      in Forall3 hasType Delta tyexprs exprs ->
                     let vtyexprs := replaceSnd vexprs tyexprs
                       in let Omega := multiTypeUpdate Gamma vtyexprs
                            in  Omega |- e \in T ->
@@ -247,13 +252,13 @@ Section Examples.
   Definition letexp := Let  [(1,(Comb FuncCall ("Prelude","+") [(Lit (Intc 3));(Lit (Intc 2))] ))] (Comb FuncCall ("Prelude","+") [(Var 1);(Lit (Intc 4))]).
   Definition con3 := funcUpdate empty ("Prelude","+") (FuncType Int Int,[]).
   Example e2 : con3 |- letexp \in Int.
-  Proof. apply T_Let with (tyexprs := [Int]).
-    apply Forall2_cons. apply T_Comb_Fun with (tyexprs := [Int; Int]).
+  Proof. apply T_Let with (tyexprs := [Int]) (Delta := [con3]).
+    apply Forall3_cons. apply T_Comb_Fun with (tyexprs := [Int; Int]).
     apply Forall2_cons. apply T_Lit. reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
     apply Forall2_nil.
     reflexivity.
-    apply Forall2_nil.
+    apply Forall3_nil.
     apply T_Comb_Fun with (tyexprs := [Int; Int]).
     apply Forall2_cons. apply T_Var. reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
@@ -263,10 +268,31 @@ Section Examples.
   Definition letexp2 := Let  [(1,(Comb FuncCall ("Prelude","+") [(Var 2);(Lit (Intc 1))] ));(2,(Comb FuncCall ("Prelude","+") [(Var 1);(Lit (Intc 2))] ))] (Comb FuncCall ("Prelude","+") [(Var 1);(Lit (Intc 3))] ).
   Example e8 : con3 |- letexp2 \in Int.
   Proof.
-    apply T_Let with (tyexprs := [Int; Int]).
-    apply Forall2_cons. apply T_Comb_Fun with (tyexprs := [Int; Int]).
+    apply T_Let with (tyexprs := [Int; Int]) (Delta := [con3]).
+    apply Forall3_cons. apply T_Comb_Fun with (tyexprs := [Int; Int]).
     apply Forall2_cons. apply T_Var.
   Admitted.
+
+  Definition letexp3 := Let  [(1,(Comb FuncCall ("Prelude","+") [(Lit (Intc 1));(Lit (Intc 1))] ));(2,(Comb FuncCall ("Prelude","+") [(Var 1);(Lit (Intc 1))] ))] (Comb FuncCall ("Prelude","+") [(Var 2);(Var 1)] ).
+  Example e9 : con3 |- letexp3 \in Int.
+  Proof. apply T_Let with (tyexprs := [Int; Int]) (Delta := [con3; varUpdate con3 1 Int]).
+  apply Forall3_cons. apply T_Comb_Fun with (tyexprs := [Int; Int]).
+  apply Forall2_cons. apply T_Lit. reflexivity.
+  apply Forall2_cons. apply T_Lit. reflexivity.
+  apply Forall2_nil.
+  reflexivity.
+  apply Forall3_cons. apply T_Comb_Fun with (tyexprs := [Int; Int]).
+  apply Forall2_cons. apply T_Var. reflexivity.
+  apply Forall2_cons. apply T_Lit. reflexivity.
+  apply Forall2_nil.
+  reflexivity.
+  apply Forall3_nil.
+  simpl. apply T_Comb_Fun with (tyexprs := [Int; Int]).
+  apply Forall2_cons. apply T_Var. reflexivity.
+  apply Forall2_cons. apply T_Var. reflexivity.
+  apply Forall2_nil.
+  reflexivity.
+Qed.
 
   Definition comb1 := (Comb ConsCall ("test","Some") [(Lit (Intc 5))] ).
   Definition typedecl1 := (Typec ("test","Maybe") Public  [0]  [(Cons ("test","None") 0 Public  [] );(Cons ("test","Some") 1 Public  [(TVar 0)] )] ).
