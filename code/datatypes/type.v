@@ -65,12 +65,12 @@ Fixpoint funcPart (t : TypeExpr) (n : option nat) : TypeExpr :=
                                             | Some O     => f
                                             | Some (S n) => funcPart f' (Some n)
                                             end
-  | FuncType _ (TCons _ _ as c)     as f => match n with
-                                            | Some _ => f
-                                            | None   => c
+  | FuncType _ retT     as f => match n with
+                                            | Some O => f
+                                            | _      => retT
                                             end
-  | FuncType _ r   => r
   end.
+  Eval compute in funcPart (FuncType Int Char) (Some 1).
 
 Definition multiTypeUpdate (Gamma : context) (vitys : list (VarIndex * TypeExpr)) :=
   fold_right (fun vity con => match vity with (vi, ty) => varUpdate con vi ty end)
@@ -181,7 +181,49 @@ Fixpoint funcTyList (l : TypeExpr) : list TypeExpr :=
   | FuncType argT retT => (funcTyList argT) ++ (funcTyList retT)
   | tyexpr => [tyexpr]
   end.
-  Eval compute in funcTyList (FuncType (FuncType (TVar 0) (TVar 1)) (FuncType (TCons ("Prelude", "[]") [TVar 0]) (TCons ("Prelude", "[]")  [TVar 1]))).
+
+Fixpoint varBindings (e : Expr) : list VarIndex :=
+  match e with
+  | Free vis _ => vis
+  | Let viexprs _ => (map fst viexprs)
+  | Var _ => []
+  | Lit _ => []
+  | Comb _ _ es => concat (map varBindings es)
+  | Or e1 e2    => (varBindings e1) ++ (varBindings e2)
+  | Case _ e _ => varBindings e
+  | Typed e _  => varBindings e
+  end.
+
+Fixpoint varList (e : Expr) : list VarIndex :=
+  match e with
+  | Var i as v => [i]
+  | Lit _      => []
+  | Comb _ _ es => concat (map varList es)
+  | Or e1 e2    => (varList e1) ++ (varList e2)
+  | Let _ e    => varList e
+  | Free _ e   => varList e
+  | Case _ e _ => varList e
+  | Typed e _  => varList e
+  end.
+
+Fixpoint varFree (vbs vs : list VarIndex) : nat :=
+  match vs with
+  | []      => 0
+  | v :: vs => if (elem beq_nat v vbs) then (varFree vbs vs) else 1 + (varFree vbs vs)
+  end.
+
+(*
+Fixpoint nodup {A : Type} (beq : A -> A -> bool) (l : list A) : list A :=
+  match l with
+  | [] => []
+  | x :: xs => x :: nodup beq (filter (fun y => negb (beq x y)) xs)
+  end.
+*)
+Definition varCount (e : Expr) : nat :=
+  varFree ((varBindings e)) ((varList e)).
+  
+Definition varCountL (es : list Expr) : nat :=
+  fold_right Nat.add 0 (map varCount es).
 
 Definition length := @Datatypes.length Expr.
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
@@ -194,11 +236,12 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     T = litType l ->
                     Gamma |- (Lit l) \in T
 
-  | T_Comb_Fun :  forall Gamma qname exprs substTypes T,
+  | T_Comb_Fun :  forall Gamma qname exprs substTypes varCount T,
                     let funcT := fromOption defaultTyVars ((fCon Gamma) qname) in
-                      let specT := multiTypeSubst (snd funcT) substTypes (fst funcT)
-                        in funcPart specT None = T ->
-                           Forall2 (hasType Gamma) (removelast (funcTyList specT)) exprs ->
+                      let specT := multiTypeSubst (snd funcT) substTypes (fst funcT) in
+                        let n := funcArgCnt (fst funcT) - varCount
+                          in funcPart specT (Some n) = T ->
+                             Forall2 (hasType Gamma) (removelast (funcTyList specT)) exprs ->
                     Gamma |- (Comb FuncCall qname exprs) \in T
 
   | T_Comb_PFun : forall Gamma qname exprs substTypes remArg T,
@@ -257,14 +300,14 @@ Section Examples.
   Example e0 : con0 |- (Comb (FuncPartCall 2) ("test","first") [(Lit (Charc "a"))] ) \in FuncType Int (FuncType (TVar 1) Char).
   Proof.
     apply T_Comb_PFun with (substTypes := [Char]).
-    simpl.
+    reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
     apply Forall2_nil.
   Qed.
 
   Definition con2 := funcUpdate empty ("test","left") ((FuncType (TVar 0) (FuncType (TVar 1) (TVar 0))), [0;1]).
   Example e1 : con2 |- Comb FuncCall ("test","left") [(Lit (Intc 1));(Lit (Charc "a"))] \in Int.
-  Proof. apply T_Comb_Fun with (substTypes := [Int; Char]).
+  Proof. apply T_Comb_Fun with (substTypes := [Int; Char]) (varCount := 0).
     reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
@@ -279,26 +322,27 @@ Section Examples.
                         ("test", "double") (FuncType Int Int, []).
   Definition func42 := (Comb FuncCall ("Prelude","map") [(Comb (FuncPartCall 1) ("test","double") [] );(Var 1)] ).
   Example e42 : (varUpdate con42 1 (TCons ("Prelude", "[]") [Int])) |- func42 \in (FuncType (TCons ("Prelude", "[]") [Int]) (TCons ("Prelude", "[]")  [Int])).
-  Proof. apply T_Comb_Fun with (substTypes := [Int; Int]).
+  Proof. apply T_Comb_Fun with (substTypes := [Int; Int]) (varCount := 1).
     reflexivity.
     apply Forall2_cons. apply T_Comb_PFun with (substTypes := []).
     simpl. intros.
+    reflexivity.
     apply Forall2_nil.
     apply Forall2_cons. apply T_Var. reflexivity.
     apply Forall2_nil.
   Qed.
-
+  
   Definition letexp := Let  [(1,(Comb FuncCall ("Prelude","+") [(Lit (Intc 3));(Lit (Intc 2))] ))] (Comb FuncCall ("Prelude","+") [(Var 1);(Lit (Intc 4))]).
   Definition con3 := funcUpdate empty ("Prelude","+") (FuncType Int (FuncType Int Int),[]).
   Example e2 : con3 |- letexp \in Int.
   Proof. apply T_Let with (tyexprs := [Int]). 
-    apply Forall2_cons. apply T_Comb_Fun with (substTypes := []).
+    apply Forall2_cons. apply T_Comb_Fun with (substTypes := []) (varCount := 0).
     reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
     apply Forall2_nil.
     apply Forall2_nil.
-    apply T_Comb_Fun with (substTypes := []).
+    apply T_Comb_Fun with (substTypes := []) (varCount := 0).
     reflexivity.
     apply Forall2_cons. apply T_Var. reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
@@ -309,18 +353,18 @@ Section Examples.
   Example e8 : con3 |- letexp2 \in Int.
   Proof.
     apply T_Let with (tyexprs := [Int; Int]).
-    apply Forall2_cons. apply T_Comb_Fun with (substTypes := []).
+    apply Forall2_cons. apply T_Comb_Fun with (substTypes := []) (varCount := 0).
     reflexivity.
     apply Forall2_cons. apply T_Var. reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
     apply Forall2_nil.
-    apply Forall2_cons. simpl. apply T_Comb_Fun with (substTypes := []).
+    apply Forall2_cons. simpl. apply T_Comb_Fun with (substTypes := []) (varCount := 0).
     reflexivity.
     apply Forall2_cons. apply T_Var. reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
     apply Forall2_nil.
     apply Forall2_nil.
-    simpl. apply T_Comb_Fun with (substTypes := []).
+    simpl. apply T_Comb_Fun with (substTypes := []) (varCount := 0).
     reflexivity.
     apply Forall2_cons. apply T_Var. reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
@@ -330,19 +374,19 @@ Section Examples.
   Definition letexp3 := Let  [(1,(Comb FuncCall ("Prelude","+") [(Lit (Intc 1));(Lit (Intc 1))] ));(2,(Comb FuncCall ("Prelude","+") [(Var 1);(Lit (Intc 1))] ))] (Comb FuncCall ("Prelude","+") [(Var 2);(Var 1)] ).
   Example e9 : con3 |- letexp3 \in Int.
   Proof. apply T_Let with (tyexprs := [Int; Int]).
-  apply Forall2_cons. apply T_Comb_Fun with (substTypes := []).
+  apply Forall2_cons. apply T_Comb_Fun with (substTypes := []) (varCount := 0).
   simpl. intros.
   reflexivity.
   apply Forall2_cons. apply T_Lit. reflexivity.
   apply Forall2_cons. apply T_Lit. reflexivity.
   apply Forall2_nil.
-  apply Forall2_cons. apply T_Comb_Fun with (substTypes := []).
+  apply Forall2_cons. apply T_Comb_Fun with (substTypes := []) (varCount := 0).
   reflexivity.
   apply Forall2_cons. apply T_Var. reflexivity.
   apply Forall2_cons. apply T_Lit. reflexivity.
   apply Forall2_nil.
   apply Forall2_nil.
-  simpl. apply T_Comb_Fun with (substTypes := []).
+  simpl. apply T_Comb_Fun with (substTypes := []) (varCount := 0).
   reflexivity.
   apply Forall2_cons. apply T_Var. reflexivity.
   apply Forall2_cons. apply T_Var. reflexivity.
@@ -377,7 +421,7 @@ Qed.
   Definition e5 : con1 |- comb3 \in (FuncType (TVar 1) (TCons ("test","Test") [(TCons ("Prelude","Int") [] );(TVar 1)] )).
   Proof.
     apply T_Comb_PCons with (substTypes := [Int; Char]).
-    reflexivity.
+    simpl.
     apply Forall2_cons. apply T_Lit. reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
