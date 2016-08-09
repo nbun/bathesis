@@ -107,16 +107,7 @@ Fixpoint extractTVars (t : TypeExpr) : list TVarIndex :=
   | FuncType argT retT => (extractTVars argT) ++ (extractTVars retT)
   end.
 
-(*
-Fixpoint qSortNat (l : list nat) : list nat :=
-  match l with
-  | [] => []
-  | x :: xs => let lexs := filter (ble_nat x) xs in
-                 let gtxs := filter (bgt_nat x) xs
-                   in qSortNat lexs ++ [x] ++ qSortNat gtxs
-  end.
-*)
-Definition funcTVars (t : TypeExpr) : list TVarIndex := nodup beq_nat (extractTVars t).
+Definition funcTVars (t : TypeExpr) : list TVarIndex := rev (nodup beq_nat (rev (extractTVars t))).
 
 
 Fixpoint addFunc (con : context) (fdecl : FuncDecl) : context :=
@@ -384,8 +375,8 @@ Section Examples.
   ]
   [] 
   ).
-  Definition con0 := funcUpdate empty ("test","first") (FuncType (TVar 0) (FuncType Int (FuncType (TVar 1) (TVar 0))), [0;1]).
-  Example e0 : con0 |- (Comb (FuncPartCall 2) ("test","first") [(Lit (Charc "a"))] ) \in FuncType Int (FuncType (TVar 1) Char).
+
+  Example e0 : con |- (Comb (FuncPartCall 2) ("test","first") [(Lit (Charc "a"))] ) \in FuncType Int (FuncType (TVar 1) Char).
   Proof.
     apply T_Comb_PFun with (substTypes := [Char]).
     simpl.
@@ -394,8 +385,7 @@ Section Examples.
     apply Forall2_nil.
   Qed.
 
-  Definition con2 := funcUpdate empty ("test","left") ((FuncType (TVar 0) (FuncType (TVar 1) (TVar 0))), [0;1]).
-  Example e1 : con2 |- Comb FuncCall ("test","left") [(Lit (Intc 1));(Lit (Charc "a"))] \in Int.
+  Example e1 : con |- Comb FuncCall ("test","left") [(Lit (Intc 1));(Lit (Charc "a"))] \in Int.
   Proof. apply T_Comb_Fun with (substTypes := [Int; Char]).
     reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
@@ -403,9 +393,8 @@ Section Examples.
     apply Forall2_nil.
   Qed.
 
-  Definition letexp := Let  [(1,(Comb FuncCall ("Prelude","+") [(Lit (Intc 3));(Lit (Intc 2))] ))] (Comb FuncCall ("Prelude","+") [(Var 1);(Lit (Intc 4))]).
-  Definition con3 := funcUpdate empty ("Prelude","+") (FuncType Int (FuncType Int Int),[]).
-  Example e2 : con3 |- letexp \in Int.
+  Definition letexp := Let  [(1,(Comb FuncCall ("test","plus") [(Lit (Intc 3));(Lit (Intc 2))] ))] (Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 4))]).
+  Example e2 : con |- letexp \in Int.
   Proof. apply T_Let with (tyexprs := [Int]).
     simpl. unfold gt. unfold lt. reflexivity.
     apply Forall2_cons. apply T_Comb_Fun with (substTypes := []).
@@ -421,8 +410,8 @@ Section Examples.
     apply Forall2_nil.
   Qed.
 
-  Definition letexp2 := Let  [(1,(Comb FuncCall ("Prelude","+") [(Var 2);(Lit (Intc 1))] ));(2,(Comb FuncCall ("Prelude","+") [(Var 1);(Lit (Intc 2))] ))] (Comb FuncCall ("Prelude","+") [(Var 1);(Lit (Intc 3))] ).
-  Example e8 : con3 |- letexp2 \in Int.
+  Definition letexp2 := Let  [(1,(Comb FuncCall ("test","plus") [(Var 2);(Lit (Intc 1))] ));(2,(Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 2))] ))] (Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 3))] ).
+  Example e8 : con |- letexp2 \in Int.
   Proof.
     apply T_Let with (tyexprs := [Int; Int]).
     simpl. unfold gt. unfold lt. apply le_S. reflexivity.
@@ -444,8 +433,8 @@ Section Examples.
     apply Forall2_nil.
   Qed.
 
-  Definition letexp3 := Let  [(1,(Comb FuncCall ("Prelude","+") [(Lit (Intc 1));(Lit (Intc 1))] ));(2,(Comb FuncCall ("Prelude","+") [(Var 1);(Lit (Intc 1))] ))] (Comb FuncCall ("Prelude","+") [(Var 2);(Var 1)] ).
-  Example e9 : con3 |- letexp3 \in Int.
+  Definition letexp3 := Let  [(1,(Comb FuncCall ("test","plus") [(Lit (Intc 1));(Lit (Intc 1))] ));(2,(Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 1))] ))] (Comb FuncCall ("test","plus") [(Var 2);(Var 1)] ).
+  Example e9 : con |- letexp3 \in Int.
   Proof. apply T_Let with (tyexprs := [Int; Int]).
     simpl. unfold gt. unfold lt. apply le_S. reflexivity.
     apply Forall2_cons. apply T_Comb_Fun with (substTypes := []).
@@ -467,11 +456,8 @@ Section Examples.
     apply Forall2_nil.
 Qed.
 
-  Definition comb1 := (Comb ConsCall ("test","Some") [(Lit (Intc 5))] ).
-  Definition typedecl1 := (Typec ("test","Maybe") Public  [0]  [(Cons ("test","None") 0 Public  [] );(Cons ("test","Some") 1 Public  [(TVar 0)] )] ).
-  Definition consdecl1 := (Cons ("test","Some") 1 Public  [(TVar 0)] ).
-
-  Example e3 : (consUpdate empty ("test", "Some") (FuncType (TVar 1) (TCons ("test", "Maybe") [TVar 1]), [1])) |- comb1 \in (TCons ("test","Maybe") [Int] ).
+  Definition comb1 := (Comb ConsCall ("test","Just") [(Lit (Intc 5))] ).
+  Example e3 : con |- comb1 \in (TCons ("test","Maybe") [Int] ).
   Proof. apply T_Comb_Cons with (substTypes := [Int]).
     reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
@@ -479,8 +465,7 @@ Qed.
   Qed.
 
   Definition comb2 := Comb ConsCall ("test","T") [Lit (Intc 5); Lit (Intc 2); Lit (Charc "a"); Lit (Charc "b")].
-  Definition con1 := (consUpdate empty ("test","T") ((FuncType Int (FuncType (TVar 0) (FuncType Char (FuncType (TVar 1) (TCons ("test", "Test") [TVar 0; TVar 1]))))), [0; 1])).
-  Example e4 : con1 |- comb2 \in (TCons ("test", "Test") [Int; Char]).
+  Example e4 : con |- comb2 \in (TCons ("test", "Test") [Int; Char]).
   Proof.
     apply T_Comb_Cons with (substTypes := [Int; Char]).
     reflexivity.
@@ -492,7 +477,7 @@ Qed.
   Qed.
 
   Definition comb3 := (Comb (ConsPartCall 1) ("test","T") [(Lit (Intc 5));(Lit (Intc 2));(Lit (Charc "a"))] ).
-  Definition e5 : con1 |- comb3 \in (FuncType (TVar 1) (TCons ("test","Test") [(TCons ("Prelude","Int") [] );(TVar 1)] )).
+  Definition e5 : con |- comb3 \in (FuncType (TVar 1) (TCons ("test","Test") [(TCons ("Prelude","Int") [] );(TVar 1)] )).
   Proof.
     apply T_Comb_PCons with (substTypes := [Int]).
     reflexivity.
