@@ -3,6 +3,17 @@ Require Import Datatypes EqNat Lists.List Ascii Bool String.
 Import ListNotations.
 Local Open Scope nat_scope.
 
+Definition func_comp {A B C} (f : B -> C) (g : A -> B) : (A -> C) :=
+ (fun x => f (g x)).
+
+(* Takes two lists and returns a list of pairs *)
+Fixpoint zip {U V : Type} (us : list U) (vs : list V) : (list (U * V)) :=
+match us, vs with
+ | [], _  => [] 
+ | _ , [] => [] 
+ | (u :: us), (v :: vs) => (u, v) :: (zip us vs)
+end.
+
 Definition beq_ascii (a : ascii) (b : ascii) : bool :=
   match a, b with
   | Ascii a7 a6 a5 a4 a3 a2 a1 a0 , Ascii b7 b6 b5 b4 b3 b2 b1 b0 =>
@@ -19,14 +30,6 @@ Fixpoint ble_nat (n m : nat) : bool :=
   end.
 
 Definition bgt_nat (n m : nat) : bool := negb (ble_nat n m).
-
-(* Takes two lists and returns a list of pairs *)
-Fixpoint zip {U V : Type} (us : list U) (vs : list V) : (list (U * V)) :=
-  match us, vs with
-   | [], _  => [] 
-   | _ , [] => [] 
-   | (u :: us), (v :: vs) => (u, v) :: (zip us vs)
-  end.
 
 Fixpoint beq_str (s : string) (s' : string) : bool :=
   match s, s' with
@@ -141,11 +144,14 @@ Fixpoint funcPart (t : TypeExpr) (n : option nat) : TypeExpr :=
                                             | _      => retT
                                             end
   end.
-  Eval compute in funcPart (FuncType Int Char) (Some 1).
 
-Definition multiTypeUpdate (Gamma : context) (vitys : list (VarIndex * TypeExpr)) :=
+Definition multiTypeUpdate (Gamma : context) (vitys : list (VarIndex * TypeExpr)) : context :=
   fold_right (fun vity con => match vity with (vi, ty) => varUpdate con vi ty end)
   Gamma vitys.
+
+Definition multiListTypeUpdate (Gamma : context) (vityls : list ((list VarIndex) * (list TypeExpr))) : context :=
+  fold_right (fun vityl con => match vityl with (vil, tyl) => multiTypeUpdate Gamma (zip vil tyl) end)
+  Gamma vityls.
 
 Definition litType (l : Literal) : TypeExpr :=
   match l with
@@ -188,6 +194,16 @@ Definition lookupConsDecl (p : TProg) (q : QName) : option (ConsDecl * TypeDecl)
 Definition brexprsToExprs (brexprs : list BranchExpr) : list Expr :=
   map (fun brexpr => match brexpr with (Branch _ e) => e end) brexprs.
 
+Definition brexprsToPatterns (brexprs : list BranchExpr) : list TPattern :=
+  map (fun brexpr => match brexpr with (Branch p _) => p end) brexprs.
+
+Fixpoint pattsSplit (ps : list TPattern) : list (QName * (list VarIndex)) :=
+  match ps with
+  | [] => []
+  | (Pattern qn vis) :: ps => (qn,vis) :: (pattsSplit ps)
+  | (LPattern l)     :: ps => pattsSplit ps
+  end.
+
 Fixpoint replaceSnd {A B C : Type} (abs : list (A * B)) (cs : list C) : list (A * C) :=
   match abs, cs with
   | ((a, b) :: abs), (c :: cs) => (a, c) :: (replaceSnd abs cs)
@@ -207,9 +223,15 @@ Fixpoint typeSubst (k: TVarIndex) (t: TypeExpr) (t': TypeExpr) : TypeExpr :=
   | TCons qn ts => TCons qn (map (typeSubst k t) ts)
   end.
 
-Fixpoint multiTypeSubst (ks : list TVarIndex) (ts : list TypeExpr) (t' : TypeExpr) : TypeExpr :=
+Definition multiTypeSubst (ks : list TVarIndex) (ts : list TypeExpr) (t' : TypeExpr) : TypeExpr :=
   fold_right (fun kt t' => match kt with (k, t) => typeSubst k t t' end)
               t' (zip ks ts).
+
+Fixpoint multiListTypeSubst (qns : list QName) (kks : list (list TVarIndex)) (tts : list (list TypeExpr)) (t's : list TypeExpr) : (list TypeExpr) :=
+  match kks, tts, t's with
+  | ks :: kks, ts :: tts, t' :: t's => (multiTypeSubst ks ts t') :: (multiListTypeSubst qns kks tts t's)
+  | _, _, _ => []
+  end.
 
 Fixpoint specFuncType (ft : TypeExpr) (ts : list TypeExpr) : TypeExpr :=
   match ft, ts with
@@ -340,10 +362,16 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     Gamma |- e1 \in T ->
                     Gamma |- e2 \in T ->
                     Gamma |- (Or e1 e2) \in T
-
-  | T_Case :      forall Gamma ctype e brexprs T Tc,
+ (* Wunderschoen... -> TODO: Auslagerung in Funktion *)
+  | T_Case :      forall Gamma ctype e brexprs substTypesList T Tc,
                     @length BranchExpr brexprs > 0 ->
-                    Forall (hasType Gamma T) (brexprsToExprs brexprs) ->
+                    let pattps := pattsSplit (brexprsToPatterns brexprs) in 
+                    let qnames := map fst pattps in
+                    let consdecls := map (func_comp (fromOption defaultTyVars) (cCon Gamma)) qnames in
+                    let specTs := multiListTypeSubst qnames (map snd consdecls) substTypesList (map fst consdecls) in
+                    let vistysl := zip (map snd pattps) (map funcTyList specTs) in
+                    let Delta := multiListTypeUpdate Gamma vistysl in
+                    Forall (hasType Delta T) (brexprsToExprs brexprs) ->
                     Gamma |- e \in Tc ->
                     Gamma |- (Case ctype e brexprs) \in T
 
@@ -371,7 +399,11 @@ Section Examples.
         (Rule  [1;2] (Var 1)));
   (Func ("test","plus") 2  Public 
         (FuncType (TCons ("Prelude","Int") [] ) (FuncType (TCons ("Prelude","Int") [] ) (TCons ("Prelude","Int") [] )))
-        (Rule  [1;2] (Comb FuncCall ("Prelude","+") [(Var 1);(Var 2)] )))
+        (Rule  [1;2] (Comb FuncCall ("Prelude","+") [(Var 1);(Var 2)] )));
+  (Func ("test","test_case") 1  Public 
+        (FuncType (TCons ("Prelude","Maybe") [(TCons ("Prelude","Int") [] )] ) (TCons ("Prelude","Int") [] ))
+        (Rule  [1] (Case Rigid (Var 1) [(Branch (Pattern ("Prelude","Just") [2] )(Var 2));(Branch (Pattern ("Prelude","Nothing") [] )(Lit (Intc 5)))] )))
+
   ]
   [] 
   ).
@@ -411,7 +443,7 @@ Section Examples.
   Qed.
 
   Definition letexp2 := Let  [(1,(Comb FuncCall ("test","plus") [(Var 2);(Lit (Intc 1))] ));(2,(Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 2))] ))] (Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 3))] ).
-  Example e8 : con |- letexp2 \in Int.
+  Example e3 : con |- letexp2 \in Int.
   Proof.
     apply T_Let with (tyexprs := [Int; Int]).
     simpl. unfold gt. unfold lt. apply le_S. reflexivity.
@@ -434,7 +466,7 @@ Section Examples.
   Qed.
 
   Definition letexp3 := Let  [(1,(Comb FuncCall ("test","plus") [(Lit (Intc 1));(Lit (Intc 1))] ));(2,(Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 1))] ))] (Comb FuncCall ("test","plus") [(Var 2);(Var 1)] ).
-  Example e9 : con |- letexp3 \in Int.
+  Example e4 : con |- letexp3 \in Int.
   Proof. apply T_Let with (tyexprs := [Int; Int]).
     simpl. unfold gt. unfold lt. apply le_S. reflexivity.
     apply Forall2_cons. apply T_Comb_Fun with (substTypes := []).
@@ -457,7 +489,7 @@ Section Examples.
 Qed.
 
   Definition comb1 := (Comb ConsCall ("test","Just") [(Lit (Intc 5))] ).
-  Example e3 : con |- comb1 \in (TCons ("test","Maybe") [Int] ).
+  Example e5 : con |- comb1 \in (TCons ("test","Maybe") [Int] ).
   Proof. apply T_Comb_Cons with (substTypes := [Int]).
     reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
@@ -465,7 +497,7 @@ Qed.
   Qed.
 
   Definition comb2 := Comb ConsCall ("test","T") [Lit (Intc 5); Lit (Intc 2); Lit (Charc "a"); Lit (Charc "b")].
-  Example e4 : con |- comb2 \in (TCons ("test", "Test") [Int; Char]).
+  Example e6 : con |- comb2 \in (TCons ("test", "Test") [Int; Char]).
   Proof.
     apply T_Comb_Cons with (substTypes := [Int; Char]).
     reflexivity.
@@ -477,7 +509,7 @@ Qed.
   Qed.
 
   Definition comb3 := (Comb (ConsPartCall 1) ("test","T") [(Lit (Intc 5));(Lit (Intc 2));(Lit (Charc "a"))] ).
-  Definition e5 : con |- comb3 \in (FuncType (TVar 1) (TCons ("test","Test") [(TCons ("Prelude","Int") [] );(TVar 1)] )).
+  Definition e7 : con |- comb3 \in (FuncType (TVar 1) (TCons ("test","Test") [(TCons ("Prelude","Int") [] );(TVar 1)] )).
   Proof.
     apply T_Comb_PCons with (substTypes := [Int]).
     reflexivity.
@@ -488,10 +520,25 @@ Qed.
   Qed.
 
   Definition free1 := (Free  [1] (Var 1)).
-  Example e6 : varUpdate empty 1 Int |- free1 \in Int.
+  Example e8 : varUpdate empty 1 Int |- free1 \in Int.
   Proof. apply T_Free with (tyexprs := [Int]).
     apply T_Var. reflexivity.
     simpl. intros. apply Forall2_cons. reflexivity.
     apply Forall2_nil.
   Qed.
+
+  Definition case1 := (Case Rigid (Var 1) [(Branch (Pattern ("test","Just") [2] )(Var 2));(Branch (Pattern ("test","Nothing") [] )(Lit (Intc 5)))] ).
+  Example e9 : (varUpdate con 1 Int) |- case1 \in Int.
+  Proof.
+    apply T_Case with (substTypesList := [[Int]; [Int]]) (Tc := Int).
+    simpl. unfold gt. unfold lt. apply le_S. reflexivity.
+    simpl. apply Forall_cons. apply T_Var. reflexivity.
+    apply Forall_cons. apply T_Lit. reflexivity.
+    apply Forall_nil.
+    apply T_Var. reflexivity.
+  Qed. 
 End Examples.
+
+Notation "'Let' v0 := e0 , v1 := e1 'in' e" := (let v0 := e0 in (let v1 := e1 in e)) (at level 0).
+Eval compute in Let x := 1, y := 2 in (x + y).
+Fail Notation "'Let' v0 := e0 , .. , vn := en 'in' e" := (let v0 := e0 in .. (let vn := en in e) .. ) (at level 0).
