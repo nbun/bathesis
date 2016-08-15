@@ -151,11 +151,13 @@ Fixpoint funcArgCnt (f : TypeExpr) : nat :=
 Definition noType := TCons ("Coq", "NoType") [].
 Definition defaultTyVars := (noType, @nil TVarIndex).
 
-Fixpoint funcTyList (l : TypeExpr) : list TypeExpr :=
+Fixpoint funcTyList (l : TypeExpr) : (list TypeExpr * TypeExpr) :=
   match l with
-  | FuncType (FuncType _ _ as f) retT => [f] ++ (funcTyList retT)
-  | FuncType argT retT => (funcTyList argT) ++ (funcTyList retT)
-  | tyexpr => [tyexpr]
+  | FuncType (FuncType _ _ as f) retT => let (x,y) := (funcTyList retT) in ([f] ++ x, y)
+  | FuncType argT (FuncType _ _ as retT) => let (x,y) := (funcTyList argT) in
+                                              let (a,b) := (funcTyList retT) in (x ++ a, b)
+  | FuncType argT retT => let (x,y) := (funcTyList argT) in (x, retT)
+  | tyexpr => ([tyexpr], tyexpr)
   end.
 
 Definition length := Datatypes.length.
@@ -173,7 +175,7 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     let funcT := fromOption defaultTyVars ((fCon Gamma) qname) in
                       let specT := multiTypeSubst (snd funcT) substTypes (fst funcT)
                           in funcPart specT None = T ->
-                             Forall2 (hasType Gamma) (removelast (funcTyList specT)) exprs ->
+                             Forall2 (hasType Gamma) (fst (funcTyList specT)) exprs ->
                     Gamma |- (Comb FuncCall qname exprs) \in T
 
   | T_Comb_PFun : forall Gamma qname exprs substTypes remArg T,
@@ -181,14 +183,14 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                       let specT := multiTypeSubst (snd funcT) substTypes (fst funcT) in
                         let n := funcArgCnt (fst funcT) - remArg
                           in funcPart specT (Some n) = T ->
-                             Forall2 (hasType Gamma) (firstn (@length Expr exprs) (funcTyList specT)) exprs ->
+                             Forall2 (hasType Gamma) (firstn (@length Expr exprs) (fst (funcTyList specT))) exprs ->
                     Gamma |- (Comb (FuncPartCall remArg) qname exprs) \in T
 
   | T_Comb_Cons : forall Gamma qname exprs substTypes T,
                     let consT := fromOption defaultTyVars ((cCon Gamma) qname) in
                       let specT := multiTypeSubst (snd consT) substTypes (fst consT)
                         in funcPart specT None = T ->
-                           Forall2 (hasType Gamma) (removelast (funcTyList specT)) exprs ->
+                           Forall2 (hasType Gamma) (fst (funcTyList specT)) exprs ->
                     Gamma |- (Comb ConsCall qname exprs) \in T
 
   | T_Comb_PCons :forall Gamma qname exprs substTypes remArg T,
@@ -196,7 +198,7 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                       let specT := multiTypeSubst (snd consT) substTypes (fst consT) in
                         let n := funcArgCnt (fst consT) - remArg
                           in funcPart specT (Some n) = T ->
-                             Forall2 (hasType Gamma) (firstn (@length Expr exprs) (funcTyList specT)) exprs ->
+                             Forall2 (hasType Gamma) (firstn (@length Expr exprs) (fst (funcTyList specT))) exprs ->
                     Gamma |- (Comb (ConsPartCall remArg) qname exprs) \in T 
 
   | T_Let :       forall Gamma vexprs tyexprs e T,
@@ -217,17 +219,30 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     Gamma |- e1 \in T ->
                     Gamma |- e2 \in T ->
                     Gamma |- (Or e1 e2) \in T
- (* Wunderschoen... -> TODO: Auslagerung in Funktion *)
+(*
+  | T_Case' :      forall Gamma ctype e brexprs substTypes T Tc,
+                    @length BranchExpr brexprs > 0 ->
+                    let (qns, vis) := unzip (pattsSplit (brexprsToPatterns brexprs)) in
+                    let (pattys, pattvis) := unzip (map (compose (fromOption defaultTyVars) (cCon Gamma)) qns) in
+                    let specTs  := map (multiTypeSubst (hd [] pattvis) substTypes) pattys in
+                    let vistysl := zip vis (map (compose fst funcTyList) specTs) in
+                    let Delta := multiListTypeUpdate Gamma vistysl
+                    in Forall (hasType Delta T) (brexprsToExprs brexprs) ->
+                    Forall (fun ty => ty = Tc) (map ((flip funcPart) None) specTs) ->
+                    Gamma |- e \in Tc ->
+                    Gamma |- (Case ctype e brexprs) \in T *)
   | T_Case :      forall Gamma ctype e brexprs substTypes T Tc,
                     @length BranchExpr brexprs > 0 ->
-                    let pattps := pattsSplit (brexprsToPatterns brexprs) in 
-                    let qnames := map fst pattps in
-                    let consdecls := map (compose (fromOption defaultTyVars) (cCon Gamma)) qnames in
-                    let specTs := map (multiTypeSubst (snd (hd defaultTyVars consdecls)) substTypes) (map fst consdecls) in
-                    let vistysl := zip (map snd pattps) (map funcTyList specTs) in
-                    let Delta := multiListTypeUpdate Gamma vistysl in
-                    Forall (hasType Delta T) (brexprsToExprs brexprs) ->
-                    Forall (fun ty => ty = Tc) (map ((flip funcPart) None) specTs) ->
+                    let pattps   := pattsSplit (brexprsToPatterns brexprs) in
+                    let contyvis := map (compose (fromOption defaultTyVars) (cCon Gamma))
+                                        (map fst pattps) in
+                    let specTs   := map (multiTypeSubst (hd [] (map snd contyvis)) substTypes)
+                                        (map fst contyvis) in
+                    let vistysl  := zip (map snd pattps)
+                                        (map (compose fst funcTyList) specTs) in
+                    let Delta    := multiListTypeUpdate Gamma vistysl
+                      in Forall (hasType Delta T) (brexprsToExprs brexprs) ->
+                         Forall (fun ty => ty = Tc) (map ((flip funcPart) None) specTs) ->
                     Gamma |- e \in Tc ->
                     Gamma |- (Case ctype e brexprs) \in T
 
@@ -394,7 +409,3 @@ Qed.
     apply T_Var. simpl. reflexivity.
   Qed. 
 End Examples.
-
-Notation "'Let' v0 := e0 , v1 := e1 'in' e" := (let v0 := e0 in (let v1 := e1 in e)) (at level 0).
-Eval compute in Let x := 1, y := 2 in (x + y).
-Fail Notation "'Let' v0 := e0 , .. , vn := en 'in' e" := (let v0 := e0 in .. (let vn := en  in e) .. ) (v0 closed binder, vn closed binder, at level 0).

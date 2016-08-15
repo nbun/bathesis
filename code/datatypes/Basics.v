@@ -9,6 +9,12 @@ match us, vs with
  | (u :: us), (v :: vs) => (u, v) :: (zip us vs)
 end.
 
+Fixpoint unzip {U V : Type} (uvs : list (U * V)) : (list U * list V) :=
+  match uvs with
+  | [] => ([],[])
+  | (u,v) :: uvs => let (us,vs) := unzip uvs in (u :: us, v :: vs)
+  end.
+
 Fixpoint elem {T : Type} (eq : T -> T -> bool) (x : T) (xs : list T) : bool :=
   match xs with
   | [] => false
