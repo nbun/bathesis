@@ -1,43 +1,7 @@
-Require Import CQE.flatCurry CQE.Maps.
-Require Import Datatypes EqNat Lists.List Ascii Bool String.
+Require Import CQE.FlatCurry CQE.Maps CQE.Basics.
+Require Import Datatypes EqNat Lists.List Ascii Bool String Program.Basics.
 Import ListNotations.
 Local Open Scope nat_scope.
-
-Definition func_comp {A B C} (f : B -> C) (g : A -> B) : (A -> C) :=
- (fun x => f (g x)).
-
-(* Takes two lists and returns a list of pairs *)
-Fixpoint zip {U V : Type} (us : list U) (vs : list V) : (list (U * V)) :=
-match us, vs with
- | [], _  => [] 
- | _ , [] => [] 
- | (u :: us), (v :: vs) => (u, v) :: (zip us vs)
-end.
-
-Definition beq_ascii (a : ascii) (b : ascii) : bool :=
-  match a, b with
-  | Ascii a7 a6 a5 a4 a3 a2 a1 a0 , Ascii b7 b6 b5 b4 b3 b2 b1 b0 =>
-     (andb (andb (andb (andb (andb (andb (andb
-     (eqb a7 b7)  (eqb a6 b6)) (eqb a5 b5)) (eqb a4 b4)) 
-     (eqb a3 b3)) (eqb a2 b2)) (eqb a1 b1)) (eqb a0 b0))
-  end.
-
-Fixpoint ble_nat (n m : nat) : bool :=
-  match n, m with
-  | O, _ => true
-  | S n, O => false
-  | S n, S m => ble_nat n m
-  end.
-
-Definition bgt_nat (n m : nat) : bool := negb (ble_nat n m).
-
-Fixpoint beq_str (s : string) (s' : string) : bool :=
-  match s, s' with
-  | String c d,  String c' d' => (andb (beq_ascii c c') (beq_str d d'))
-  | EmptyString, EmptyString  => true
-  | EmptyString, String _ _   => false
-  | String _ _ , Emptystring  => false
-  end.
 
 Definition beq_qname (q : QName) (q' : QName) : bool :=
   match q, q' with
@@ -73,19 +37,6 @@ Fixpoint tyListFunc (tys : list TypeExpr) : TypeExpr :=
   | []      => TCons ("Coq","NoType") []
   end.
 
-Fixpoint elem {T : Type} (eq : T -> T -> bool) (x : T) (xs : list T) : bool :=
-  match xs with
-  | [] => false
-  | (e :: xs) => if (eq x e) then true else (elem eq x xs)
-  end.
-
-Fixpoint nodup {A : Type} (beq : A -> A -> bool) (l : list A) : list A :=
-  match l with
-  | [] => []
-  | x :: xs => if (elem beq x xs) then (nodup beq xs) 
-                                  else x :: (nodup beq xs)
-  end.
-
 Definition addCons (con : context) (tqn : QName) (vis : list TVarIndex) (c : ConsDecl) : context :=
   match c with
   | Cons qn _ _ args => consUpdate con qn (tyListFunc (args ++ [TCons tqn (map TVar vis)]), vis)
@@ -110,7 +61,7 @@ Fixpoint extractTVars (t : TypeExpr) : list TVarIndex :=
   | FuncType argT retT => (extractTVars argT) ++ (extractTVars retT)
   end.
 
-Definition funcTVars (t : TypeExpr) : list TVarIndex := rev (nodup beq_nat (rev (extractTVars t))).
+Definition funcTVars (t : TypeExpr) : list TVarIndex := rev (Basics.nodup beq_nat (rev (extractTVars t))).
 
 
 Fixpoint addFunc (con : context) (fdecl : FuncDecl) : context :=
@@ -160,37 +111,6 @@ Definition litType (l : Literal) : TypeExpr :=
   | Charc _  => Char
   end.
 
-Definition funcType (fd : FuncDecl) : TypeExpr :=
-  match fd with Func _ _ _ t _ => t end.
-
-Definition lookupFuncDecl (p : TProg) (q : QName) : option FuncDecl :=
-  match p, q with 
-  | Prog _ _ _ fds _,  q => 
-    find (fun fd => match fd with Func q' _ _ _ _ => (beq_qname q q') end) fds
-  end.
-
-Fixpoint searchConsDeclList (q : QName) (cds : list ConsDecl) : option ConsDecl :=
-  match q, cds with
-  | q, [] => None
-  | q, ((Cons q' _ _ _) as cd :: cds) => if (beq_qname q q') then Some cd
-                                         else searchConsDeclList q cds
-  end.
-
-Fixpoint searchTypeDeclList (q : QName) (tyds : list TypeDecl) : option (ConsDecl * TypeDecl) :=
-  match q, tyds with 
-  | q, ((Typec _ _ _ cds) as ty :: tyds) => 
-    match (searchConsDeclList q cds) with
-    | None            => searchTypeDeclList q tyds
-    | Some cd => Some (cd, ty)
-    end
-  | q, ((TypeSyn _ _ _ _) :: tyds) => searchTypeDeclList q tyds
-  | q, [] => None
-  end.
-
-Definition lookupConsDecl (p : TProg) (q : QName) : option (ConsDecl * TypeDecl) :=
-  match p with (Prog _ _ tyds _ _) => searchTypeDeclList q tyds end.
-
-
 Definition brexprsToExprs (brexprs : list BranchExpr) : list Expr :=
   map (fun brexpr => match brexpr with (Branch _ e) => e end) brexprs.
 
@@ -210,12 +130,6 @@ Fixpoint replaceSnd {A B C : Type} (abs : list (A * B)) (cs : list C) : list (A 
   | _, _                       => []
   end.
 
-Definition typedeclQname (td : TypeDecl) : QName :=
-  match td with 
-  | Typec qn _ _ _   => qn
-  | TypeSyn qn _ _ _ => qn
-  end.
-
 Fixpoint typeSubst (k: TVarIndex) (t: TypeExpr) (t': TypeExpr) : TypeExpr :=
   match t' with
   | TVar i as v  => if (beq_nat i k) then t else v
@@ -227,19 +141,6 @@ Definition multiTypeSubst (ks : list TVarIndex) (ts : list TypeExpr) (t' : TypeE
   fold_right (fun kt t' => match kt with (k, t) => typeSubst k t t' end)
               t' (zip ks ts).
 
-Fixpoint multiListTypeSubst (qns : list QName) (kks : list (list TVarIndex)) (tts : list (list TypeExpr)) (t's : list TypeExpr) : (list TypeExpr) :=
-  match kks, tts, t's with
-  | ks :: kks, ts :: tts, t' :: t's => (multiTypeSubst ks ts t') :: (multiListTypeSubst qns kks tts t's)
-  | _, _, _ => []
-  end.
-
-Fixpoint specFuncType (ft : TypeExpr) (ts : list TypeExpr) : TypeExpr :=
-  match ft, ts with
-  | FuncType (TVar i) retT, t :: ts => FuncType t (specFuncType (typeSubst i t retT) ts)
-  | FuncType argT     retT, _ :: ts => FuncType argT (specFuncType retT ts)
-  | t, _ => t
-  end.
-
 Fixpoint funcArgCnt (f : TypeExpr) : nat :=
   match f with
   | FuncType _ (FuncType _ _ as f') => 1 + funcArgCnt f'
@@ -247,18 +148,8 @@ Fixpoint funcArgCnt (f : TypeExpr) : nat :=
   | _ => 0
   end.
 
-Definition fromOption {A : Type} (default : A) (opA : option A) : A :=
-  match opA with
-  | Some x => x
-  | None   => default
-  end.
-
-Definition defaultTyVars := (TCons ("Coq", "NoType") [], @nil TVarIndex).
-
-Inductive Forall3 {A B C : Type} (R : A -> B -> C -> Prop) : list A -> list B -> list C -> Prop :=
- | Forall3_nil  : Forall3 R [] [] []
- | Forall3_cons : forall x y z l l' l'',
-    R x y z -> Forall3 R l l' l'' -> Forall3 R (x::l) (y::l') (z:: l'').
+Definition noType := TCons ("Coq", "NoType") [].
+Definition defaultTyVars := (noType, @nil TVarIndex).
 
 Fixpoint funcTyList (l : TypeExpr) : list TypeExpr :=
   match l with
@@ -266,42 +157,6 @@ Fixpoint funcTyList (l : TypeExpr) : list TypeExpr :=
   | FuncType argT retT => (funcTyList argT) ++ (funcTyList retT)
   | tyexpr => [tyexpr]
   end.
-
-Fixpoint varBindings (e : Expr) : list VarIndex :=
-  match e with
-  | Free vis _ => vis
-  | Let viexprs _ => (map fst viexprs)
-  | Var _ => []
-  | Lit _ => []
-  | Comb _ _ es => concat (map varBindings es)
-  | Or e1 e2    => (varBindings e1) ++ (varBindings e2)
-  | Case _ e _ => varBindings e
-  | Typed e _  => varBindings e
-  end.
-
-Fixpoint varList (e : Expr) : list VarIndex :=
-  match e with
-  | Var i as v => [i]
-  | Lit _      => []
-  | Comb _ _ es => concat (map varList es)
-  | Or e1 e2    => (varList e1) ++ (varList e2)
-  | Let _ e    => varList e
-  | Free _ e   => varList e
-  | Case _ e _ => varList e
-  | Typed e _  => varList e
-  end.
-
-Fixpoint varFree (vbs vs : list VarIndex) : nat :=
-  match vs with
-  | []      => 0
-  | v :: vs => if (elem beq_nat v vbs) then (varFree vbs vs) else 1 + (varFree vbs vs)
-  end.
-
-Definition varCount (e : Expr) : nat :=
-  varFree ((varBindings e)) ((varList e)).
-  
-Definition varCountL (es : list Expr) : nat :=
-  fold_right Nat.add 0 (map varCount es).
 
 Definition length := Datatypes.length.
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
@@ -354,8 +209,8 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     Gamma |- (Let vexprs e) \in T
 
   | T_Free :      forall Gamma vis expr tyexprs T,
-                  Gamma |- expr \in T ->
-                  Forall2 (fun vi tyexpr => (vCon Gamma) vi = Some tyexpr) vis tyexprs ->
+                  let Omega := multiTypeUpdate Gamma (zip vis tyexprs)
+                    in Omega |- expr \in T ->
                   Gamma |- (Free vis expr) \in T
 
   | T_Or :        forall Gamma e1 e2 T,
@@ -363,15 +218,16 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     Gamma |- e2 \in T ->
                     Gamma |- (Or e1 e2) \in T
  (* Wunderschoen... -> TODO: Auslagerung in Funktion *)
-  | T_Case :      forall Gamma ctype e brexprs substTypesList T Tc,
+  | T_Case :      forall Gamma ctype e brexprs substTypes T Tc,
                     @length BranchExpr brexprs > 0 ->
                     let pattps := pattsSplit (brexprsToPatterns brexprs) in 
                     let qnames := map fst pattps in
-                    let consdecls := map (func_comp (fromOption defaultTyVars) (cCon Gamma)) qnames in
-                    let specTs := multiListTypeSubst qnames (map snd consdecls) substTypesList (map fst consdecls) in
+                    let consdecls := map (compose (fromOption defaultTyVars) (cCon Gamma)) qnames in
+                    let specTs := map (multiTypeSubst (snd (hd defaultTyVars consdecls)) substTypes) (map fst consdecls) in
                     let vistysl := zip (map snd pattps) (map funcTyList specTs) in
                     let Delta := multiListTypeUpdate Gamma vistysl in
                     Forall (hasType Delta T) (brexprsToExprs brexprs) ->
+                    Forall (fun ty => ty = Tc) (map ((flip funcPart) None) specTs) ->
                     Gamma |- e \in Tc ->
                     Gamma |- (Case ctype e brexprs) \in T
 
@@ -380,7 +236,6 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     Gamma |- (Typed e T) \in T
 
 where "Gamma '|-' t '\in' T" := (hasType Gamma T t).
-
 
 Section Examples.
   Definition con := parseProgram 
@@ -520,25 +375,26 @@ Qed.
   Qed.
 
   Definition free1 := (Free  [1] (Var 1)).
-  Example e8 : varUpdate empty 1 Int |- free1 \in Int.
+  Example e8 : con |- free1 \in Int.
   Proof. apply T_Free with (tyexprs := [Int]).
     apply T_Var. reflexivity.
-    simpl. intros. apply Forall2_cons. reflexivity.
-    apply Forall2_nil.
   Qed.
 
   Definition case1 := (Case Rigid (Var 1) [(Branch (Pattern ("test","Just") [2] )(Var 2));(Branch (Pattern ("test","Nothing") [] )(Lit (Intc 5)))] ).
-  Example e9 : (varUpdate con 1 Int) |- case1 \in Int.
+  Example e9 : (varUpdate con 1 (TCons ("test","Maybe") [Int] )) |- case1 \in Int.
   Proof.
-    apply T_Case with (substTypesList := [[Int]; [Int]]) (Tc := Int).
+    apply T_Case with (substTypes := [Int]) (Tc := (TCons ("test","Maybe") [Int] )).
     simpl. unfold gt. unfold lt. apply le_S. reflexivity.
     simpl. apply Forall_cons. apply T_Var. reflexivity.
     apply Forall_cons. apply T_Lit. reflexivity.
     apply Forall_nil.
-    apply T_Var. reflexivity.
+    simpl. apply Forall_cons. reflexivity.
+    apply Forall_cons. reflexivity.
+    apply Forall_nil.
+    apply T_Var. simpl. reflexivity.
   Qed. 
 End Examples.
 
 Notation "'Let' v0 := e0 , v1 := e1 'in' e" := (let v0 := e0 in (let v1 := e1 in e)) (at level 0).
 Eval compute in Let x := 1, y := 2 in (x + y).
-Fail Notation "'Let' v0 := e0 , .. , vn := en 'in' e" := (let v0 := e0 in .. (let vn := en in e) .. ) (at level 0).
+Fail Notation "'Let' v0 := e0 , .. , vn := en 'in' e" := (let v0 := e0 in .. (let vn := en  in e) .. ) (v0 closed binder, vn closed binder, at level 0).

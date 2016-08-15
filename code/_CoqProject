@@ -1,6 +1,7 @@
 -Q datatypes CQE
 
+datatypes/Basics.v
 datatypes/Maps.v
-datatypes/cuMin.v
-datatypes/type.v
-datatypes/flatCurry.v
+datatypes/CuMin.v
+datatypes/FlatCurry.v
+datatypes/FlatCurryType.v

@@ -81,15 +81,3 @@ Inductive FuncDecl : Type :=
 (* Type and constructor can't use identical names! *)
 Inductive TProg : Type := 
   | Prog : string -> list string -> list TypeDecl -> list FuncDecl -> list OpDecl -> TProg.
-
-(* Check  (Prog "test"
-  ["Prelude"]
-  []
-  [
-  (Func ("test","double") 1  Public 
-        (FuncType (TCons ("Prelude","Int") [] ) (TCons ("Prelude","Int") [] ))
-        (Rule  [1] (Comb FuncCall ("Prelude","+") [(Var 1),(Var 1)] )))
-  ]
-  [] 
- ).
-*)

@@ -1,4 +1,4 @@
-Require Import CQE.flatCurry EqNat.
+Require Import CQE.FlatCurry EqNat.
 
 Inductive id : Type :=
 | Id : nat -> id.

@@ -1,29 +1,6 @@
-Require Import CQE.Maps.
-Require Import EqNat Lists.List.
+Require Import CQE.Maps CQE.Basics.
+Require Import EqNat Lists.List Program.Basics.
 Import ListNotations.
-
-Section General.
-
-  (* Takes a list of option T and returns the Some values. *)
-  Fixpoint cat_options {T : Type} (l : list (option T)) : list T :=
-  match l with
-  | []             => []
-  | (Some x) :: ls => x :: (cat_options ls)
-  |  None    :: ls =>      (cat_options ls)
-  end.
-  
-  (* Takes two lists and returns a list of pairs *)
-  Fixpoint zip {U V : Type} (us : list U) (vs : list V) : (list (U * V)) :=
-  match us, vs with
-   | [], _  => [] 
-   | _ , [] => [] 
-   | (u :: us), (v :: vs) => (u, v) :: (zip us vs)
-  end.
-
-  Definition func_comp {A B C} (f : B -> C) (g : A -> B) : (A -> C) :=
-    (fun x => f (g x)).
-
-End General.
 
   (* Data types *)
   Inductive ty : Type :=
@@ -125,7 +102,7 @@ Section Functions.
   Definition fd_to_tys (Gamma : context) (fd : func_decl) : (list ty) :=
     match fd with
     | FDecl _ [] _ _ _ => []
-    | FDecl _ qs _ _ _ => cat_options (map (func_comp (typecon Gamma) qid)
+    | FDecl _ qs _ _ _ => cat_options (map (compose (typecon Gamma) qid)
                                            (filter is_star_tagged qs))
     end.
 
