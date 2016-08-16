@@ -1,11 +1,13 @@
 % LaTeX-Muster Seminararbeit
-\documentclass{scrreprt}
+\documentclass[fleqn]{scrreprt}
 
 \usepackage[T1]{fontenc}        % T1-Fonts
 \usepackage[utf8]{inputenc}     % Enkodierung
-\usepackage[ngerman]{babel}     % neue deutsche Rechtschreibung
+\usepackage[english]{babel}     % neue deutsche Rechtschreibung
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{proof}
+\usepackage{hyperref}
 
 % Kapitelüberschrift in der Kopfzeile
 \usepackage[automark]{scrpage2} % Schickerer Satzspiegel mit KOMA-Script
@@ -60,7 +62,7 @@
 
 \chapter{Preliminaries}
 \section{Coq}
-The formalization of Curry programs requires a language that allows us to express the code itself and the propositions we intend to prove. Coq\footnote{https://coq.inria.fr/} is an interactive proof management system that meets these requirements, thus it will be the main tool used in the following chapters.
+The formalization of Curry programs requires a language that allows us to express the code itself and the propositions we intend to prove. Coq\footnote{https://coq.inria.fr/} is an interactive proof management system that meets these requirements, hence it will be the main tool used in the following chapters.
 \todo{Kommasetzung?}
 \subsection{Data types and functions}
 Coq's predefined definitions, contrary to e.g. Haskell's Prelude, are very limited. However, being a functional language, there is a powerful mechanism for defining new data types. A definition of polymorphic lists could look like this:
@@ -69,16 +71,21 @@ Inductive list (X:Type) : Type :=
 | nil  : list X
 | cons : X -> list X -> list X.
 \end{minted}
-We defined a type named \coqinline{list} with two members: the constant \coqinline{nil}, which represents an empty list, and a binary constructor \coqinline{cons} that takes an element and a list of the same type as arguments. In fact, \coqinline{nil} and \coqinline{cons} have one additional argument, a type \coqinline{X}. This is required, because we want polymorphic lists -- but we do not want to explicitly state the type. Fortunately, Coq allows us to declare type arguments as implicit by enclosing them in curly brackets:
+We defined a type named \coqinline{list} with two constructors: the constant \coqinline{nil}, which represents an empty list, and a binary constructor \coqinline{cons} that takes an element and a list of the same type as arguments. In fact, \coqinline{nil} and \coqinline{cons} have one additional argument, a type \coqinline{X}. This is required, because we want polymorphic lists -- but we do not want to explicitly state the type. Fortunately, Coq allows us to declare type arguments as implicit by enclosing them in curly brackets:
 \begin{minted}{coq}
 Check (cons nat 8 (nil nat)). (*cons nat 8 (nil nat) : list nat*)
 Arguments nil {X}.
 Arguments cons {X} _ _.
 \end{minted}
-Coq's type inference system infers the type of a list automatically now.
+Coq's type inference system infers the type of a list automatically now if possible. In some cases this does not work, because there is not enough information about the implicit types present. 
 \begin{minted}{coq}
-Check (cons 2 (cons 4 nil)). (* cons 2 (cons 4 nil) : list nat *)
-Check (cons 2 (cons nil nil)). 
+Fail Definition double_cons x y z := (cons x (cons y z)).
+Definition double_cons {A} x y z := (@cons A x (@cons A y z)).
+\end{minted}
+The first definition does not work, as indicated by \coqinline{Fail}\footnote{\coqinline{Fail} checks if an expression does indeed cause an error and allows further processing of the file.}, because Coq cannot infer the implicit type variable of \coqinline{double_cons}, since \coqinline{cons} does not have an explicit type either. By prefixing at least one \coqinline{cons} with \coqinline{@}, we can tell Coq to accept explicit expressions for all implicit arguments. This allows us to pass the type of \coqinline{cons} on to \coqinline{double_cons}, again as an implicit argument.
+\begin{minted}{coq}
+Check double_cons 2 4 []. (* : list nat *)
+Fail Check (cons 2 (cons nil nil)). 
 (* Error: The term "cons nil nil" has type "list (list ?X0)"
 while it is expected to have type "list nat". *)
 \end{minted}
@@ -144,7 +151,7 @@ Qed.
 \end{minted}
 The proof begins by introducing type \coqinline{X}, followed by the \coqinline{induction} tactic applied to \coqinline{l}. Coq names newly introduced variables by itself, which can be done manually by adding \coqinline{as [c1|...|cn]} to the tactic. Each $c_{i}$ represents a sequence of variable names, which will be used when introducing variables in the corresponding case. Cases are ordered as listed in the \coqinline{Definition}.
 \par
-Now we need to prove two cases: the empty list and a cons construct. The first case does not require any new variable names, thus the first section in the squared brackets is empty. It is easily solved by applying \coqinline{reflexivity}, because of the definition of \coqinline{app}.
+Now we need to prove two cases: the empty list and a cons construct. The first case does not require any new variable names, therefore the first section in the squared brackets is empty. It is easily solved by applying \coqinline{reflexivity}, because of the definition of \coqinline{app}.
 The second case requires variables for the list's head and tail, which we call \coqinline{l} and \coqinline{ls} respectively. The variable name \coqinline{IH} identifies the induction hypothesis \coqinline{ls ++ [ ] = ls}, which Coq generates automatically. The goal changes as following:
 \begin{minted}{coq}
 (l :: ls) ++ [ ] = l :: ls
@@ -236,31 +243,127 @@ Proving the same example as before, we need new tactics to work with logical con
 The last option to describe this property is by using inductively defined propositions. As already mentioned before, inductively defined propositions consist of rules that describe how an argument can satisfy the proposition. A useful notation for representing these rules are \textit{inference rules}. They consist of an optional list of premises that needs to be fulfilled in order for the conclusion below the line to hold.
 \par
 We can describe \coqinline{In} with two rules:
-\begin{figure}
-	\begin{minipage}{.5 \linewidth}
-		\infer[1]{n \in (n :: l)}{}
+\begin{figure}[H]
+\begin{center}
+		\begin{minipage}{.45 \linewidth}
+		\infer[1]{\coqinline{In n (n :: l)}}{\phantom{premise}}
 	\end{minipage}
-	\begin{minipage}{.5 \linewidth}
-		\infer[2]{n \in (e :: l)}{n \in l}
+    \hspace{.1 \linewidth}
+	\begin{minipage}{.45 \linewidth}
+		\infer[2]{\coqinline{In n (e :: l)}}{\coqinline{In n l}}
 	\end{minipage}
+\end{center}
+\vspace*{-1em}
 \end{figure}
-	\todo{Unterschiedliche Höhe?...}
-Rule one states that the list's head is an element of the list. If the lists's head is not the element we want to find in the list, it has to be contained in the tail of the list, as described in the second rule. This definition can be transferred to Coq:
+Rule one states that the list's head is an element of the list. Additionally, if an element is contained in a list, it is also an element of the the same list, prefixed by another element, as described in the second rule. This definition can be transferred to Coq:
 \begin{minted}{coq}
 Inductive InInd : nat -> list nat -> Prop :=
-| Head : forall n l, n = hd n l -> InInd n l
+| Head : forall n l, InInd n (n :: l)
 | Tail : forall n l, InInd n (tl l) -> InInd n l.
-Example e7 : InInd 42 [1;2;42].
-Proof. apply Tail. simpl. apply Tail. simpl. apply Head. simpl. reflexivity. Qed.
 \end{minted}
-
+\begin{minted}{coq}
+Example e7 : InInd 42 [2;42].
+Proof. 
+  apply Tail.  (* InInd 42 (tl [2; 42]) *)
+  simpl.       (* InInd 42 [42] *)
+  apply Head.
+Qed.           
+\end{minted}
+The interesting part about this proof is the deductive approach. Previously we started with a proposition and constructed evidence of its truth. In this case we use \coqinline{InInd}'s rules "backwards": Because we want to show that \coqinline{42} is an element of \coqinline{[2;42]]}, we need to argue that it is contained within the list's tail. Since it is the head of \coqinline{[42]}, we can then apply \coqinline{Head} and conclude that the previous statement must also be true, because we required \coqinline{42} to be contained in the list's tail, which is true.
+\par
+Inductively defined propositions will play an important role in the following chapters, hence some more examples:
+\begin{minted}{coq}
+Inductive Forall (A : Type) (P : A -> Prop) : list A -> Prop :=
+| Forall_nil : Forall P [ ]
+| Forall_cons : forall (x : A) (l : list A), P x -> Forall P l -> Forall P (x :: l)
+\end{minted}
+We already used \coqinline{Forall} in the previous section without knowing the exact definition, the rules are fairly intuitive. According to \coqinline{Forall_nil}, a proposition is always true for the empty list. If the list is non-empty, the first element and the list's tail have to satisfy the proposition, as stated in \coqinline{Forall_cons}, in order for the whole list to satisfy the property. This pattern can be expanded to more complex inductive propositions, \coqinline{Forall2} takes a binary property plus two lists and checks if $P ~ a_{i} ~ b_{i}$ holds for every \coqinline{i < length l}.
 \begin{minted}{coq}
 Forall2 : forall A B : Type, (A -> B -> Prop) -> list A -> list B -> Prop
 \end{minted}
+\section{FlatCurry}
 
-\chapter{Wat?}
+\chapter{Theory}
+In functional languages a data type is a classification of applicable operators and properties of its members. There are primitive data types that store a single date and more complex types that may contain multiple constructors and type variables. Typing describes the process of assigning an expression to a corresponding type in order to avoid programming errors, for example calling an arithmetic function with a character.
+\par
+Typing an expression requires a context which contains data type definitions, function/constructor/operator declarations and a map that assigns types to variables.  Without a context, expressions do not have any useful meaning -- \coqinline{42} could be typed as a number, the character 'B', a string or the answer to everything. The majority of information in a context can be extracted from the source code of a program and is continually updated while typing expressions.
 \chapter{CuMin}
-\section{Typing}
+CuMin is a simplified sublanguage of Curry, which restricts the syntax to allow more concrete typing rules and data types. Although it requires some transformations to substitute missing constructs, CuMin can express the majority of Curry programs.
+\autoref{cumin:syntax} shows the syntax of CuMin in Backus–Naur Form:
+\begin{figure}[H]
+	\begin{align*}
+	P &::= D;P \:|\:D \\
+	D &::= f :: \kappa \tau; f \overline{x_{n}} = e\\
+	\kappa &::= \forall^{\epsilon} \alpha.\kappa \:|\: \forall^{*}\alpha.\kappa \:|\: \epsilon \\
+	\tau &::= \alpha \:|\: \text{Bool} \:|\: \text{Nat} \:|\: [\tau] \:|\: (\tau,\tau ') \:|\: \tau \rightarrow \tau ' \\
+	e &::= x \:|\: f_{\overline{\tau_{m}}} \:|\: e_{1}\: e_{2} \:|\: \text{let}\: x = e_{1} \:\text{in}\: e_{2} \:|\: n \:|\: e_{1} + e_{2} \:|\: e_{1} \circeq e_{2}\\
+	&\:|\: (e_{1},e_{2}) \:|\: \text{case}\: e \:\text{of}\: \langle (x,y) \rightarrow e_{1}\rangle\\
+	&\:|\: \text{True} \:|\: \text{False} \:|\: \text{case}\: e \:\text{of}\: \langle \text{True} \rightarrow e_{1};\:\text{False} \rightarrow e_{2}\rangle\\
+	&\:|\: \text{Nil}_{\tau} \:|\: \text{Cons}(e_{1}, e_{2}) \:|\: \text{case}\: e \:\text{of}\: \langle \text{Nil} \rightarrow e_{1};\:\text{Cons}(x,y) \rightarrow e_{2}\rangle\\
+	&\:|\: \text{failure}_{\tau} \:|\: \text{anything}_{\tau}
+	\end{align*}
+	\caption{Syntax of CuMin}
+	\label{cumin:syntax}
+\end{figure}
+\todo{Komisches 4-fach =}
+A program $P$ is a list of function declarations $D$, which contain a function name $f$, a list of quantifiers $\kappa$, a type $\tau$ and a function definition. Quantifiers have a tag $t \in \{\epsilon, *\}$ that determines the valid types of the variable $\alpha$. Star-tagged type variables can only be specialized to non-functional types, while $\epsilon$ allows every specialization. The notation $\overline{x_{n}}$ in function definitions represents $n$ variables $x_{1},...,x_{n}$ that occur after the function name and are followed by an expression $e$. A function's type $\tau$ can consist of type variables, primitive Bool or Nat types, lists, pairs and functions. An example for a CuMin function is \texttt{first}, which returns the first element of a pair:
+\begin{figure}[H]
+\begin{minipage}{.5 \linewidth}
+\begin{align*}
+&\text{first}::\forall^{\epsilon}\alpha.\forall^{\epsilon}\beta.(\alpha, \beta) \rightarrow\alpha\\
+&\text{first}\: p = \text{case}\: p\: \text{of}\: \langle(u,v) \rightarrow u\rangle
+\end{align*}
+\end{minipage}
+\begin{minipage}{.5 \linewidth}
+\begin{align*}
+&\text{one} :: \epsilon \: \text{Nat}\\
+&\text{one} = \text{first}_{Nat, Bool} (1, \text{True})
+\end{align*}
+\end{minipage}
+\end{figure}
+It is important to notice that polymorphic functions need to be explicitly specialized before they are applied to another expression, as shown in \texttt{one}, because there is no type inference.
+\par
+Besides function application, there are literal boolean values and natural numbers, variables, arithmetic expressions, let bindings and case constructs and constructors for pairs and lists. The two remaining expressions arise from Curry's logical parts: anything$_{\tau}$ represents every possible value of type $\tau$, similar to free variables. failure$_{\tau}$ represents a failed computation, for example $\text{fail} = \text{anything}_{Nat} \circeq \text{True}$. Since anything$_{Nat}$ can be evaluated to natural numbers only, the equation always fails because Nat and Bool are not comparable.
+\begin{figure}[H]
+\begin{minipage}[t]{.5 \linewidth}
+\begin{minted}{coq}
+Inductive tm : Type :=
+| tvar   : id -> tm
+| tapp   : tm -> tm -> tm
+| tfun   : id -> list ty -> tm
+| tlet   : tm -> tm -> tm -> tm
+| ttrue  : tm
+| tfalse : tm
+| tfail  : ty -> tm
+| tany   : ty -> tm
+| tzero  : tm
+| tsucc  : tm -> tm
+| tadd   : tm -> tm -> tm
+| teqn   : tm -> tm -> tm
+| tpair  : tm -> tm -> tm
+| tnil   : tm
+| tcons  : tm -> tm -> tm
+| tcasep : tm -> tm -> tm
+| tcaseb : tm -> tm -> tm -> tm
+| tcasel : tm -> tm -> tm -> tm.
+\end{minted}
+\end{minipage}
+\begin{minipage}[t]{.5 \linewidth}
+\begin{minted}{coq}
+Inductive tag : Type :=
+| tag_star  : tag
+| tag_empty : tag.
+  
+Inductive ty : Type :=
+| TVar  : id -> ty
+| TBool : ty
+| TNat  : ty
+| TList : ty -> ty
+| TPair : ty -> ty -> ty
+| TFun  : ty -> ty -> ty.
+\end{minted}
+\end{minipage}
+\end{figure}
 \chapter{Curry}
 \section{FlatCurry}
 \section{Typing}
