@@ -117,11 +117,12 @@ Definition brexprsToExprs (brexprs : list BranchExpr) : list Expr :=
 Definition brexprsToPatterns (brexprs : list BranchExpr) : list TPattern :=
   map (fun brexpr => match brexpr with (Branch p _) => p end) brexprs.
 
-Fixpoint pattsSplit (ps : list TPattern) : list (QName * (list VarIndex)) :=
-  match ps with
-  | [] => []
-  | (Pattern qn vis) :: ps => (qn,vis) :: (pattsSplit ps)
-  | (LPattern l)     :: ps => pattsSplit ps
+Definition pattSplit (p : TPattern) : (QName * list VarIndex) :=
+  match p with 
+  | (Pattern qn vis)      => (qn,vis)
+  | (LPattern (Intc n))   => (("Prelude","Int"), [])
+  | (LPattern (Charc c))  => (("Prelude","Char"), [])
+  | (LPattern (Floatc f)) => (("Prelude","Float"), [])
   end.
 
 Fixpoint replaceSnd {A B C : Type} (abs : list (A * B)) (cs : list C) : list (A * C) :=
@@ -219,24 +220,14 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                     Gamma |- e1 \in T ->
                     Gamma |- e2 \in T ->
                     Gamma |- (Or e1 e2) \in T
-(*
-  | T_Case' :      forall Gamma ctype e brexprs substTypes T Tc,
-                    @length BranchExpr brexprs > 0 ->
-                    let (qns, vis) := unzip (pattsSplit (brexprsToPatterns brexprs)) in
-                    let (pattys, pattvis) := unzip (map (compose (fromOption defaultTyVars) (cCon Gamma)) qns) in
-                    let specTs  := map (multiTypeSubst (hd [] pattvis) substTypes) pattys in
-                    let vistysl := zip vis (map (compose fst funcTyList) specTs) in
-                    let Delta := multiListTypeUpdate Gamma vistysl
-                    in Forall (hasType Delta T) (brexprsToExprs brexprs) ->
-                    Forall (fun ty => ty = Tc) (map ((flip funcPart) None) specTs) ->
-                    Gamma |- e \in Tc ->
-                    Gamma |- (Case ctype e brexprs) \in T *)
-  | T_Case :      forall Gamma ctype e brexprs substTypes T Tc,
-                    @length BranchExpr brexprs > 0 ->
-                    let pattps   := pattsSplit (brexprsToPatterns brexprs) in
+
+  | T_Case :      forall Gamma ctype e substTypes T Tc p vis brexprs',
+                    let brexprs  := Branch p vis :: brexprs' in
+                    let pattps   := (map pattSplit (brexprsToPatterns brexprs)) in
                     let contyvis := map (compose (fromOption defaultTyVars) (cCon Gamma))
                                         (map fst pattps) in
-                    let specTs   := map (multiTypeSubst (hd [] (map snd contyvis)) substTypes)
+                    let tvis     := snd (fromOption defaultTyVars (cCon Gamma (fst (pattSplit p)))) in
+                    let specTs   := map (multiTypeSubst tvis substTypes)
                                         (map fst contyvis) in
                     let vistysl  := zip (map snd pattps)
                                         (map (compose fst funcTyList) specTs) in
@@ -244,7 +235,7 @@ Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
                       in Forall (hasType Delta T) (brexprsToExprs brexprs) ->
                          Forall (fun ty => ty = Tc) (map ((flip funcPart) None) specTs) ->
                     Gamma |- e \in Tc ->
-                    Gamma |- (Case ctype e brexprs) \in T
+                    Gamma |- (Case ctype e (Branch p vis :: brexprs')) \in T
 
   | T_Typed :     forall Gamma e T,
                     Gamma |- e \in T ->
@@ -399,7 +390,7 @@ Qed.
   Example e9 : (varUpdate con 1 (TCons ("test","Maybe") [Int] )) |- case1 \in Int.
   Proof.
     apply T_Case with (substTypes := [Int]) (Tc := (TCons ("test","Maybe") [Int] )).
-    simpl. unfold gt. unfold lt. apply le_S. reflexivity.
+    simpl.
     simpl. apply Forall_cons. apply T_Var. reflexivity.
     apply Forall_cons. apply T_Lit. reflexivity.
     apply Forall_nil.
