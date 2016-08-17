@@ -284,10 +284,40 @@ Forall2 : forall A B : Type, (A -> B -> Prop) -> list A -> list B -> Prop
 \section{FlatCurry}
 
 \chapter{Theory}
-In functional languages a data type is a classification of applicable operators and properties of its members. There are primitive data types that store a single date and more complex types that may contain multiple constructors and type variables. Typing describes the process of assigning an expression to a corresponding type in order to avoid programming errors, for example calling an arithmetic function with a character.
+\label{theory}
+In functional languages a data type is a classification of applicable operators and properties of its members. There are base types that store a single date and more complex types that may have multiple constructors and type variables. Typing describes the process of assigning an expression to a corresponding type in order to avoid programming errors, for example calling an arithmetic function with a character.
 \par
 Typing an expression requires a context which contains data type definitions, function/constructor/operator declarations and a map that assigns types to variables.  Without a context, expressions do not have any useful meaning -- \coqinline{42} could be typed as a number, the character 'B', a string or the answer to everything. The majority of information in a context can be extracted from the source code of a program and is continually updated while typing expressions.
+\par
+In the following chapters we are going to formalize two representations of Curry programs. This process consists of:
+\begin{enumerate}
+	\item Creating \begin{itemize}
+		              \item a Coq data structure that represents the program.
+		              \item a context that contains all necessary information for typing expressions.
+		           \end{itemize}
+	\item Formalizing typing rules with inductively defined propositions.
+	\item Parsing Curry code to Coq programs automatically.
+\end{enumerate}
+To represent a program in Coq, we need to list all elements it can possibly contain and link them together in a meaningful way. In case of CuMin this is relatively easy; a program consists of several function declarations, which have a signature and a body. Signatures combine quantifiers and type variables, while the body contains variables and expressions. The resulting typing rules are straightforward, because types and expressions are very specific and some procedures are simplified, for example it is not allowed to supply more than one argument to a function at a time.
+\par
+While FlatCurry is designed to accurately represent Curry code and therefore has a more abstract program structure, the basic layout is similar. 
+\begin{minted}{coq}
+Definition total_map (K V : Type) := K -> V.
+
+Definition partial_map (K V : Type) := total_map K (option V).
+
+Definition tmap_empty {K V : Type} (v : V) : total_map K V := (fun _ => v).
+
+Definition emptymap {K V :Type} : partial_map K V := tmap_empty None.
+
+Definition t_update {K V : Type} (beq : K -> K -> bool) (m : total_map K V) (k : K) (v : V) :=
+fun k' => if beq k k' then v else m k'.
+
+Definition update {K V : Type} (beq : K -> K -> bool) (m : partial_map K V) (k : K) (v : V) :=
+t_update beq m k (Some v).
+\end{minted}
 \chapter{CuMin}
+\section{Syntax}
 CuMin is a simplified sublanguage of Curry, which restricts the syntax to allow more concrete typing rules and data types. Although it requires some transformations to substitute missing constructs, CuMin can express the majority of Curry programs.
 \autoref{cumin:syntax} shows the syntax of CuMin in Backus–Naur Form:
 \begin{figure}[H]
@@ -305,55 +335,39 @@ CuMin is a simplified sublanguage of Curry, which restricts the syntax to allow 
 	\caption{Syntax of CuMin}
 	\label{cumin:syntax}
 \end{figure}
-\todo{Komisches 4-fach =}
-A program $P$ is a list of function declarations $D$, which contain a function name $f$, a list of quantifiers $\kappa$, a type $\tau$ and a function definition. Quantifiers have a tag $t \in \{\epsilon, *\}$ that determines the valid types of the variable $\alpha$. Star-tagged type variables can only be specialized to non-functional types, while $\epsilon$ allows every specialization. The notation $\overline{x_{n}}$ in function definitions represents $n$ variables $x_{1},...,x_{n}$ that occur after the function name and are followed by an expression $e$. A function's type $\tau$ can consist of type variables, primitive Bool or Nat types, lists, pairs and functions. An example for a CuMin function is \texttt{first}, which returns the first element of a pair:
+A program $P$ is a list of function declarations $D$, which contain a function name $f$, a list of quantifiers $\kappa$, a type $\tau$ and a function definition. Quantifiers have a tag $t \in \{\epsilon, *\}$ that determines the valid types of the variable $\alpha$. Star-tagged type variables can only be specialized to non-functional types, while $\epsilon$ allows every specialization. The notation $\overline{x_{n}}$ in function definitions represents $n$ variables $x_{1},...,x_{n}$ that occur after the function name and are followed by an expression $e$. A function's type $\tau$ can consist of type variables, primitive Bool or Nat types, lists, pairs and functions. An example for a CuMin function is \texttt{fst}, which returns the first element of a pair:
 \begin{figure}[H]
 \begin{minipage}{.5 \linewidth}
 \begin{align*}
-&\text{first}::\forall^{\epsilon}\alpha.\forall^{\epsilon}\beta.(\alpha, \beta) \rightarrow\alpha\\
-&\text{first}\: p = \text{case}\: p\: \text{of}\: \langle(u,v) \rightarrow u\rangle
+&\text{fst}::\forall^{*}\alpha.\forall^{*}\beta.(\alpha, \beta) \rightarrow\alpha\\
+&\text{fst}\: p = \text{case}\: p\: \text{of}\: \langle(u,v) \rightarrow u\rangle
 \end{align*}
 \end{minipage}
 \begin{minipage}{.5 \linewidth}
 \begin{align*}
 &\text{one} :: \epsilon \: \text{Nat}\\
-&\text{one} = \text{first}_{Nat, Bool} (1, \text{True})
+&\text{one} = \text{fst}_{Nat, Bool} (1, \text{True})
 \end{align*}
 \end{minipage}
 \end{figure}
 It is important to notice that polymorphic functions need to be explicitly specialized before they are applied to another expression, as shown in \texttt{one}, because there is no type inference.
 \par
 Besides function application, there are literal boolean values and natural numbers, variables, arithmetic expressions, let bindings and case constructs and constructors for pairs and lists. The two remaining expressions arise from Curry's logical parts: anything$_{\tau}$ represents every possible value of type $\tau$, similar to free variables. failure$_{\tau}$ represents a failed computation, for example $\text{fail} = \text{anything}_{Nat} \circeq \text{True}$. Since anything$_{Nat}$ can be evaluated to natural numbers only, the equation always fails because Nat and Bool are not comparable.
+\par
+The Coq implementation follows the theoretical description closely. Variables, quantifiers, functions and programs are identified by an \coqinline{id} instead of a name, to simplify comparing values. Case expressions for lists and pairs have two \coqinline{id} arguments that represent the variables $x$ and $y$, the head/tail or left/right side of the term $e$.
 \begin{figure}[H]
 \begin{minipage}[t]{.5 \linewidth}
 \begin{minted}{coq}
-Inductive tm : Type :=
-| tvar   : id -> tm
-| tapp   : tm -> tm -> tm
-| tfun   : id -> list ty -> tm
-| tlet   : tm -> tm -> tm -> tm
-| ttrue  : tm
-| tfalse : tm
-| tfail  : ty -> tm
-| tany   : ty -> tm
-| tzero  : tm
-| tsucc  : tm -> tm
-| tadd   : tm -> tm -> tm
-| teqn   : tm -> tm -> tm
-| tpair  : tm -> tm -> tm
-| tnil   : tm
-| tcons  : tm -> tm -> tm
-| tcasep : tm -> tm -> tm
-| tcaseb : tm -> tm -> tm -> tm
-| tcasel : tm -> tm -> tm -> tm.
-\end{minted}
-\end{minipage}
-\begin{minipage}[t]{.5 \linewidth}
-\begin{minted}{coq}
+Inductive id : Type :=
+| Id : nat -> id.
+
 Inductive tag : Type :=
 | tag_star  : tag
 | tag_empty : tag.
-  
+
+Inductive quantifier : Type :=
+| for_all : id -> tag -> quantifier.
+
 Inductive ty : Type :=
 | TVar  : id -> ty
 | TBool : ty
@@ -361,9 +375,77 @@ Inductive ty : Type :=
 | TList : ty -> ty
 | TPair : ty -> ty -> ty
 | TFun  : ty -> ty -> ty.
+
+Definition program := list func_decl.
+Inductive func_decl : Type :=
+| FDecl : id -> list quantifier -> ty -> list id -> tm -> func_decl.
 \end{minted}
 \end{minipage}
+\begin{minipage}[t]{.5 \linewidth}
+	\begin{minted}{coq}
+Inductive tm : Type :=
+  | tvar   : id -> tm
+  | tapp   : tm -> tm -> tm
+  | tfun   : id -> list ty -> tm
+  | tlet   : tm -> tm -> tm -> tm
+  | ttrue  : tm
+  | tfalse : tm
+  | tfail  : ty -> tm
+  | tany   : ty -> tm
+  | tzero  : tm
+  | tsucc  : tm -> tm
+  | tadd   : tm -> tm -> tm
+  | teqn   : tm -> tm -> tm
+  | tpair  : tm -> tm -> tm
+  | tnil   : tm
+  | tcons  : tm -> tm -> tm
+  | tcaseb : tm -> tm -> tm -> tm
+  | tcasep : tm -> id -> id -> tm -> tm
+  | tcasel : tm -> id -> id -> tm -> tm -> tm.
+	\end{minted}
+\end{minipage}
 \end{figure}
+This \todo{label?}is the definition of \texttt{fst} in Coq syntax. All names are substituted by IDs, which do not necessarily need to be distinct from each other in general, but within their respective domain. Quantifier's IDs are used in the function's type to represent type variables, following the above definition. The argument IDs of the function need to appear in the following term, in this case \coqinline{Id 3} is passed to a case expression. The IDs \coqinline{Id 4} and \coqinline{Id 5} represent the left and right side of the pair \coqinline{Id 3}, of which at least one needs to occur in the next term, otherwise the function is constant.
+\begin{minted}{coq}
+FDecl (Id 0) 
+      [for_all (Id 1) tag_star; for_all (Id 2) tag_star] 
+      (TFun (TPair (TVar (Id 1)) (TVar (Id 2))) (TVar (Id 1)))
+      [Id 3]
+      (tcasep (tvar (Id 3)) (Id 4) (Id 5) (tvar (Id 4))).
+\end{minted}
+\section{Context}
+As mentioned in \autoref{theory}, we need a context in order to be able to type expressions. This basic version contains no program information and stores two partial maps: One maps type variable IDs to tags, the other variable IDs to types. 
+\begin{minted}{coq}
+Inductive context : Type := 
+| con : (partial_map id tag) -> (partial_map id ty) -> context.
+\end{minted}
+There are two selector functions \coqinline{tagcon} and \coqinline{typecon} to access the corresponding maps of a context and two update functions \coqinline{tag_update} and \coqinline{type_update} to update values.
+\todo{Mehr schreiben?}
+\section{Data types}
+CuMin does not allow data type constructs containing functions, for example a list of functions. Instead, data types can be constructed only by base types and lists or pairs.
+\begin{minted}{coq}
+Reserved Notation "Gamma '|-' T '\is_data_type'" (at level 40).
+Inductive is_data_type : context -> ty -> Prop :=
+  | D_Var  : forall Gamma n,
+               (tagcon Gamma) n  = Some tag_star ->
+               Gamma |- (TVar n) \is_data_type
+  | D_Bool : forall Gamma, Gamma |- TBool \is_data_type
+  | D_Nat  : forall Gamma, Gamma |- TNat \is_data_type
+  | D_List : forall Gamma T,
+               Gamma |- T \is_data_type ->
+               Gamma |- (TList T) \is_data_type
+  | D_Pair : forall Gamma T T', 
+               Gamma |- T \is_data_type ->
+               Gamma |- T' \is_data_type ->
+               Gamma |- (TPair T T') \is_data_type
+where "Gamma '|-' T '\is_data_type'" := (is_data_type Gamma T) : typing_scope.
+\end{minted}
+The inductively defined proposition \coqinline{is_data_type} takes a context plus a type and returns a proposition, which can be proven using the provided rules if the type is indeed a data type. Coq allows notations to be announced before they are actually defined by adding \coqinline{Reserved} to a notation. The definition is specified after the last rule, prefaced by \coqinline{where}.
+\par
+The basic rules \coqinline{D_Bool} and \coqinline{D_Nat} simply state that basic types are data types. Type variables need to have a star tag in order to be a data type, because as mentioned above, nested function types are not allowed. Lists and pairs are data types if their argument type(s) are data types.
+\par
+\todo{Unterschied type/data type?}
+\section{Typing}
 \chapter{Curry}
 \section{FlatCurry}
 \section{Typing}

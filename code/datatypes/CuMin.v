@@ -28,9 +28,9 @@ Import ListNotations.
     | tpair  : tm -> tm -> tm
     | tnil   : tm
     | tcons  : tm -> tm -> tm
-    | tcasep : tm -> tm -> tm
     | tcaseb : tm -> tm -> tm -> tm
-    | tcasel : tm -> tm -> tm -> tm.
+    | tcasep : tm -> id -> id -> tm -> tm
+    | tcasel : tm -> id -> id -> tm -> tm -> tm.
 
   (* Tags define the data types a type variable can be specialized to.
      Star-tagged variables can only be specialized to non-functional data types
@@ -155,11 +155,11 @@ Module Typing.
   (* Rules for being a data type *)
   Reserved Notation "Gamma '|-' T '\is_data_type'" (at level 40).
   Inductive is_data_type : context -> ty -> Prop :=
-    | D_Var :  forall Gamma n,
+    | D_Var  : forall Gamma n,
                 (tagcon Gamma) n  = Some tag_star ->
                 Gamma |- (TVar n) \is_data_type
     | D_Bool : forall Gamma, Gamma |- TBool \is_data_type
-    | D_Nat :  forall Gamma, Gamma |- TNat \is_data_type
+    | D_Nat  : forall Gamma, Gamma |- TNat \is_data_type
     | D_List : forall Gamma T,
                  Gamma |- T \is_data_type ->
                  Gamma |- (TList T) \is_data_type
@@ -220,11 +220,11 @@ Module Typing.
                    Gamma |- e1 \in T ->
                    (type_update 
                      (type_update Gamma h T') t (TList T')) |- e2 \in T ->
-                   Gamma |- (tcasel e e1 e2) \in T
+                   Gamma |- (tcasel e h t e1 e2) \in T
     | T_CaseP :  forall Gamma e e1 l r T T1 T2,
                    Gamma |- e \in (TPair T1 T2) ->
                    (type_update (type_update Gamma l T1) r T2) |- e1 \in T ->
-                   Gamma |- (tcasep e e1) \in T
+                   Gamma |- (tcasep e l r e1) \in T
     | T_CaseB :  forall Gamma e e1 e2 T,
                    Gamma |- e \in TBool ->
                    Gamma |- e1 \in T ->
@@ -261,10 +261,10 @@ Section Examples.
     apply T_Var. reflexivity.
   Qed.
 
-  Example t4 : empty |- (tcasel tnil tnil 
+  Example t4 : empty |- (tcasel tnil (Id 0) (Id 1) tnil
                                 (tcons (tsucc tzero) tnil)) \in (TList TNat).
   Proof.
-    apply T_CaseL with (T' := TNat) (h := Id 5) (t := Id 6).
+    apply T_CaseL with (T' := TNat).
     apply T_Nil.
     apply T_Nil.
     apply T_Cons.
@@ -272,10 +272,10 @@ Section Examples.
     apply T_Nil.
   Qed.
 
-  Example t5 : (type_update empty (Id 5) TBool) |- 
-               (tcasel (tcons ttrue tnil) tfalse (tvar (Id 5))) \in TBool.
+  Example t5 : empty |- 
+               (tcasel (tcons ttrue tnil) (Id 0) (Id 1) tfalse (tvar (Id 0))) \in TBool.
   Proof.
-    apply T_CaseL with (T' := TBool) (h := Id 6) (t := Id 7).
+    apply T_CaseL with (T' := TBool).
     apply T_Cons.
     apply T_True.
     apply T_Nil.
@@ -325,7 +325,7 @@ Section Examples.
       (Id 4) TNat)
     (Id 0) tag_star.
 
-  Definition union (t1 t2: tm) : tm := tcaseb (tany TNat) t1 t2.
+  Definition union (t1 t2: tm) : tm := tcaseb (tany TBool) t1 t2.
   Definition fun3 := FDecl (Id 1)
                        [for_all (Id 0) tag_star]
                        (TFun (TVar (Id 0)) (TFun (TVar (Id 0)) (TVar (Id 0))))
@@ -347,4 +347,10 @@ Section Examples.
     apply T_Var. reflexivity.
     apply T_Var. reflexivity.
   Qed.
+
+Check FDecl (Id 0) 
+      [for_all (Id 1) tag_star; for_all (Id 2) tag_star] 
+      (TFun (TPair (TVar (Id 1)) (TVar (Id 2))) (TVar (Id 1)))
+      [Id 3]
+      (tcasep (tvar (Id 3)) (Id 4) (Id 5) (tvar (Id 4))).
 End Examples.
