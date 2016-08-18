@@ -298,7 +298,7 @@ In the following chapters we are going to formalize two representations of Curry
 	\item Formalizing typing rules with inductively defined propositions.
 	\item Parsing Curry code to Coq programs automatically.
 \end{enumerate}
-To represent a program in Coq, we need to list all elements it can possibly contain and link them together in a meaningful way. In case of CuMin this is relatively easy; a program consists of several function declarations, which have a signature and a body. Signatures combine quantifiers and type variables, while the body contains variables and expressions. The resulting typing rules are straightforward, because types and expressions are very specific and some procedures are simplified, for example it is not allowed to supply more than one argument to a function at a time.
+To represent a program in Coq, we need to list all elements it can possibly contain and link them together in a meaningful way. In case of CuMin this is relatively easy; a program consists of several function declarations, which have a signature and a body. Signatures combine quantifiers and type variables, while the body contains variables and expressions. The resulting typing rules are straightforward, because types and expressions are very specific and some procedures are simplified, for example it is not allowed to supply more than one argument to a function at a time. 
 \par
 While FlatCurry is designed to accurately represent Curry code and therefore has a more abstract program structure, the basic layout is similar. 
 \begin{minted}{coq}
@@ -387,7 +387,7 @@ Inductive tm : Type :=
   | tvar   : id -> tm
   | tapp   : tm -> tm -> tm
   | tfun   : id -> list ty -> tm
-  | tlet   : tm -> tm -> tm -> tm
+  | tlet   : id -> tm -> tm -> tm
   | ttrue  : tm
   | tfalse : tm
   | tfail  : ty -> tm
@@ -397,7 +397,7 @@ Inductive tm : Type :=
   | tadd   : tm -> tm -> tm
   | teqn   : tm -> tm -> tm
   | tpair  : tm -> tm -> tm
-  | tnil   : tm
+  | tnil   : ty -> tm
   | tcons  : tm -> tm -> tm
   | tcaseb : tm -> tm -> tm -> tm
   | tcasep : tm -> id -> id -> tm -> tm
@@ -422,7 +422,7 @@ Inductive context : Type :=
 There are two selector functions \coqinline{tagcon} and \coqinline{typecon} to access the corresponding maps of a context and two update functions \coqinline{tag_update} and \coqinline{type_update} to update values.
 \todo{Mehr schreiben?}
 \section{Data types}
-CuMin does not allow data type constructs containing functions, for example a list of functions. Instead, data types can be constructed only by base types and lists or pairs.
+CuMin does not allow data type constructs containing functions, for example a list of functions. Instead, data types can be constructed only by combining base types, polymorphic variables and lists or pairs. There is no syntax for explicitly naming data types or creating new constructors, therefore data types exist only as part of a function signature. As a result, it is necessary to always state the full type.
 \begin{minted}{coq}
 Reserved Notation "Gamma '|-' T '\is_data_type'" (at level 40).
 Inductive is_data_type : context -> ty -> Prop :=
@@ -440,12 +440,103 @@ Inductive is_data_type : context -> ty -> Prop :=
                Gamma |- (TPair T T') \is_data_type
 where "Gamma '|-' T '\is_data_type'" := (is_data_type Gamma T) : typing_scope.
 \end{minted}
-The inductively defined proposition \coqinline{is_data_type} takes a context plus a type and returns a proposition, which can be proven using the provided rules if the type is indeed a data type. Coq allows notations to be announced before they are actually defined by adding \coqinline{Reserved} to a notation. The definition is specified after the last rule, prefaced by \coqinline{where}.
+The inductively defined proposition \coqinline{is_data_type} takes a context plus a type and returns a proposition, which can be proven using the provided rules if the type is indeed a data type. Coq allows notations to be announced before they are actually defined by adding \coqinline{Reserved} to a notation. The definition is specified after the last rule, prefaced by \coqinline{where}. The syntax used is $\Gamma \vdash \tau \: \text{\textbackslash is\_data\_type}$, which means that in the context $\Gamma$ the type $\tau$ is a data type.
 \par
-The basic rules \coqinline{D_Bool} and \coqinline{D_Nat} simply state that basic types are data types. Type variables need to have a star tag in order to be a data type, because as mentioned above, nested function types are not allowed. Lists and pairs are data types if their argument type(s) are data types.
+Rules follow a common structure: First, all occurring variables need to be quantified. Then conditions can be stated, followed by an assignment of a type to an expression.
+The rules \coqinline{D_Bool} and \coqinline{D_Nat} simply state that basic types are data types. \coqinline{D_Var} requires type variables to have a star tag in order to be a data type, because as mentioned above, nested function types are not allowed. Lists and pairs are data types if their argument type(s) are data types.
 \par
-\todo{Unterschied type/data type?}
 \section{Typing}
+We begin by introducing an inductively defined proposition similar to \texttt{\textbackslash is\_data\_type} with an additional argument. Since we want to assign types $\tau$ to expressions $e$ within a context $\Gamma$, we need a ternary proposition \coqinline{has_type} with the notation $\Gamma \vdash e :: \tau$. Since \coqinline{::} is the \coqinline{cons} constructor in Coq, we will use \textbackslash in instead.
+\begin{minted}{coq}
+Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
+Inductive has_type : context -> tm -> ty -> Prop :=
+  | T_Var : forall Gamma x T, (typecon Gamma) x = Some T ->
+              Gamma |- tvar x \in T
+  | ...
+where "Gamma '|-' t '\in' T" := (has_type Gamma t T) : typing_scope.
+\end{minted}
+\coqinline{T_Var} represents the typing rule $\Gamma, x :: \tau \vdash x :: \tau$, which states that a variable $x$ has a type $\tau$ if $\Gamma$ maps $x$ to $\tau$. These variable bindings can occur in \coqinline{let} and \coqinline{case} expressions. Boolean and natural literals have their respective types unconditionally, while a successor of a natural number is a Nat if its predecessor is.
+\begin{minted}{coq}
+T_Zero : forall Gamma, Gamma |- tzero \in TNat
+T_Succ : forall Gamma e, Gamma |- e \in TNat -> Gamma |- (tsucc e) \in TNat
+\end{minted}
+Since there is an empty list of every type $\tau$, \coqinline{nil} $\tau$ is a \coqinline{TList} $\tau$. A valid non-empty list consists of a head $e_{1}$ and a tail $e_{2}$ with the requirement, that if $e_{1}$ is of type $\tau$, $e_{2}$ needs to be a \coqinline{TList} $\tau$, because every element of a list needs to have the same type. 
+\begin{minted}{coq}
+T_Nil : forall Gamma T, Gamma |- (tnil T) \in (TList T)
+T_Cons: forall Gamma e1 e2 T, Gamma |- e1 \in T -> Gamma |- e2 \in (TList T) -> 
+          Gamma |- (tcons e1 e2) \in (TList T)
+\end{minted}
+Arithmetic expressions like \coqinline{tadd} and \coqinline{teqn} require both arguments have type the type \coqinline{TNat}.
+\begin{minted}{coq}
+T_Add : forall Gamma e1 e2, Gamma |- e1 \in TNat -> Gamma |- e2 \in TNat ->
+          Gamma |- (tadd e1 e2) \in TNat
+\end{minted}
+Supplying arguments to a function is limited to one at a time, hence we apply an expression $e_{2} :: \tau_{1}$ to a functional expression $e_{1} :: \tau_{1} \rightarrow \tau_{2}$. Because we supplied $e_{2}$ with its first argument, the resulting type is the return type of the function, which may be of functional type itself, since a recursive definition is possible.
+\begin{minted}{coq}
+T_App : forall Gamma e1 e2 T1 T2,
+          Gamma |- e1 \in (TFun T1 T2) -> Gamma |- e2 \in T1 ->
+          Gamma |- (tapp e1 e2) \in T2
+\end{minted}
+The \coqinline{tlet} expression has three arguments: an ID that represents the variable bound to the expression $e_{1}$ in $e_{2}$. Because we introduce a new variable that occurs in $e_{2}$, we need to update $\Gamma$ to map the variable to the type of $e_{1}$, for instance the expression \coqinline{tlet (Id 0) 4 (tadd (tvar (Id 0) 8))} is only typeable if $\Gamma \:(\text{Id}\: 0) = \text{TNat}$.
+\begin{minted}{coq}
+T_Let :    forall Gamma e1 e2 x T1 T2,
+             Gamma |- e1 \in T1 -> (type_update Gamma x T1) |- e2 \in T2 ->
+             Gamma |- (tlet x e1 e2) \in T2
+\end{minted}
+There are case expressions for bools, lists and pairs. The boolean case works like a if-then-else construct that returns $e_{1}$ if $e$ is true and $e_{2}$ otherwise. Both expressions must have the same type, since the case expression would otherwise have multiple types, depending on the condition. \coqinline{T_CaseP} is no usual case expression, because there is only one case, $e_{1}$. This construct is useful to access the first and second component of a pair by introducing variables, similar to the \coqinline{tlet} expression. The last case expression works with lists and returns $e1$ if $e$ is the empty list. In case of a non-empty list, two variables for the list's head and tail are introduced and $e_{2}$ is return. Since there are no possible variables in \coqinline{nil}, this is only necessary for typing $e_{2}$.
+\begin{minted}{coq}
+T_CaseB : forall Gamma e e1 e2 T,
+            Gamma |- e \in TBool -> Gamma |- e1 \in T -> Gamma |- e2 \in T ->
+            Gamma |- (tcaseb e e1 e2) \in T
+T_CaseP : forall Gamma e e1 fst snd T T1 T2,
+            Gamma |- e \in (TPair T1 T2) ->
+            (type_update (type_update Gamma fst T1) snd T2) |- e1 \in T ->
+            Gamma |- (tcasep fst snd r e1) \in T
+T_CaseL : forall Gamma e e1 e2 h t T T',
+            Gamma |- e \in (TList T') -> Gamma |- e1 \in T ->
+            (type_update (type_update Gamma h T') t (TList T')) |- e2 \in T ->
+            Gamma |- (tcasel e h t e1 e2) \in T
+\end{minted}
+Function specialization is the most complex rule, since it involves looking up the function's declaration in a program and checking the specialized type.
+\begin{minted}{coq}
+T_Fun : forall Gamma P id fd tys T,
+          lookup_func P id = Some fd ->
+          specialize_func fd tys = Some T ->
+          Forall (is_data_type Gamma) (fd_to_tys Gamma fd) ->
+          Gamma |- (tfun id tys) \in T
+\end{minted}
+The lookup function uses the predefined \coqinline{find}, which takes a boolean predicate plus a list and returns all elements that fulfill the condition. An anonymous function is used to compare the function's ID to every entry's ID until a match is found. Because  the search is not guaranteed to succeed, an \coqinline{option func_decl} is returned.
+\begin{minted}{coq}
+Definition lookup_func (p : program) (i : id) : (option func_decl) :=
+  find (fun fd => match fd with (FDecl j _ _ _ _) => (beq_id i j) end) p.
+\end{minted}
+
+\begin{minted}{coq}
+Fixpoint ty_subst (k: id) (t: ty) (t': ty) : ty :=
+  match t' with
+  | TVar i      => if (beq_id i k) then t else TVar i
+  | TBool       => TBool
+  | TNat        => TNat
+  | TList T     => TList (ty_subst k t T)
+  | TPair TF TS => TPair (ty_subst k t TF) (ty_subst k t TS)
+  | TFun  TA TR => TFun  (ty_subst k t TA) (ty_subst k t TR)
+  end.
+\end{minted}
+
+\begin{minted}{coq}
+Definition multi_ty_subst (qtys : list (quantifier * ty)) (t : ty) : ty := 
+  fold_right (fun qty t => match qty with (for_all id _, ty) => ty_subst id ty t end)
+             t qtys.
+\end{minted}
+
+\begin{minted}{coq}
+Definition specialize_func (fd : func_decl) (tys : list ty) : option ty := 
+  match fd with
+  | (FDecl _ qs t _ _) => if (beq_nat (length qs) (length tys))
+  then Some (multi_ty_subst (zip qs tys) t)
+  else None
+  end.
+\end{minted}
 \chapter{Curry}
 \section{FlatCurry}
 \section{Typing}

@@ -16,7 +16,7 @@ Import ListNotations.
     | tvar   : id -> tm
     | tapp   : tm -> tm -> tm
     | tfun   : id -> list ty -> tm
-    | tlet   : tm -> tm -> tm -> tm
+    | tlet   : id -> tm -> tm -> tm
     | ttrue  : tm
     | tfalse : tm
     | tfail  : ty -> tm
@@ -26,7 +26,7 @@ Import ListNotations.
     | tadd   : tm -> tm -> tm
     | teqn   : tm -> tm -> tm
     | tpair  : tm -> tm -> tm
-    | tnil   : tm
+    | tnil   : ty -> tm
     | tcons  : tm -> tm -> tm
     | tcaseb : tm -> tm -> tm -> tm
     | tcasep : tm -> id -> id -> tm -> tm
@@ -185,7 +185,7 @@ Module Typing.
                    Gamma |- e \in TNat -> 
                    Gamma |- (tsucc e) \in TNat
     | T_Nil :    forall Gamma T, 
-                   Gamma |- tnil \in (TList T)
+                   Gamma |- (tnil T) \in (TList T)
     | T_App :    forall Gamma e1 e2 T1 T2,
                    Gamma |- e1 \in (TFun T1 T2) ->
                    Gamma |- e2 \in T1 ->
@@ -193,7 +193,7 @@ Module Typing.
     | T_Let :    forall Gamma e1 e2 x T1 T2,
                    Gamma |- e1 \in T1 ->
                    (type_update Gamma x T1) |- e2 \in T2 ->
-                   Gamma |- (tlet (tvar x) e1 e2) \in T2
+                   Gamma |- (tlet x e1 e2) \in T2
     | T_Fun :    forall Gamma P id fd tys T,
                    lookup_func P id = Some fd ->
                    specialize_func fd tys = Some T ->
@@ -251,7 +251,7 @@ Section Examples.
   Example t2 : c |- (tvar (Id 5)) \in TNat.
   Proof. apply T_Var. reflexivity. Qed.
 
-  Example t3 : empty |- (tlet (tvar (Id 5)) tzero 
+  Example t3 : empty |- (tlet (Id 5) tzero 
                         (tadd (tsucc tzero) (tvar (Id 5)))) \in TNat.
   Proof. 
     apply T_Let with (T1 := TNat).
@@ -261,8 +261,8 @@ Section Examples.
     apply T_Var. reflexivity.
   Qed.
 
-  Example t4 : empty |- (tcasel tnil (Id 0) (Id 1) tnil
-                                (tcons (tsucc tzero) tnil)) \in (TList TNat).
+  Example t4 : empty |- (tcasel (tnil TNat) (Id 0) (Id 1) (tnil TNat)
+                                (tcons (tsucc tzero) (tnil TNat))) \in (TList TNat).
   Proof.
     apply T_CaseL with (T' := TNat).
     apply T_Nil.
@@ -273,7 +273,7 @@ Section Examples.
   Qed.
 
   Example t5 : empty |- 
-               (tcasel (tcons ttrue tnil) (Id 0) (Id 1) tfalse (tvar (Id 0))) \in TBool.
+               (tcasel (tcons ttrue (tnil TBool)) (Id 0) (Id 1) tfalse (tvar (Id 0))) \in TBool.
   Proof.
     apply T_CaseL with (T' := TBool).
     apply T_Cons.
