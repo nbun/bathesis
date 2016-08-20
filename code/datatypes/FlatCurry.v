@@ -52,11 +52,6 @@ Inductive CombType : Type :=
   | FuncPartCall : nat -> CombType 
   | ConsPartCall : nat -> CombType.
 
-(* Type and constructor can't use identical names! *)
-Inductive TPattern : Type := 
-  | Pattern : QName -> list VarIndex -> TPattern
-  | LPattern : Literal -> TPattern.
-
 Inductive Expr : Type := 
   | Var   : VarIndex -> Expr
   | Lit   : Literal -> Expr
@@ -68,7 +63,11 @@ Inductive Expr : Type :=
   | Typed : Expr -> TypeExpr -> Expr
 with
 BranchExpr :=
-  | Branch : TPattern -> Expr -> BranchExpr.
+  | Branch : TPattern -> Expr -> BranchExpr
+with
+TPattern : Type := 
+  | Pattern : QName -> list VarIndex -> TPattern
+  | LPattern : Literal -> TPattern.
 
 (* Type and constructor can't use identical names! *)
 Inductive TRule : Type := 

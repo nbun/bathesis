@@ -92,6 +92,7 @@ Section Functions.
      * the term that the function evaluates to *)
   Inductive func_decl : Type :=
     FDecl : id -> list quantifier -> ty -> (list id) -> tm -> func_decl.
+  Definition default_fd := FDecl (Id 42) [] TNat [] tzero.
 
   (* Returns a function declaration's list of quantifiers. *)
   Definition fd_qs (fd : func_decl) := match fd with FDecl _ qs _ _ _ => qs end.
@@ -149,9 +150,8 @@ Section Functions.
     end.
 
 End Functions.
-
-Module Typing.
-
+Section Typing.
+  Variable Prog : program.
   (* Rules for being a data type *)
   Reserved Notation "Gamma '|-' T '\is_data_type'" (at level 40).
   Inductive is_data_type : context -> ty -> Prop :=
@@ -194,8 +194,8 @@ Module Typing.
                    Gamma |- e1 \in T1 ->
                    (type_update Gamma x T1) |- e2 \in T2 ->
                    Gamma |- (tlet x e1 e2) \in T2
-    | T_Fun :    forall Gamma P id fd tys T,
-                   lookup_func P id = Some fd ->
+    | T_Fun :    forall Gamma id tys T,
+                   let fd := fromOption default_fd (lookup_func Prog id) in 
                    specialize_func fd tys = Some T ->
                    Forall (is_data_type Gamma) (fd_to_tys Gamma fd) ->
                    Gamma |- (tfun id tys) \in T
@@ -236,23 +236,27 @@ Module Typing.
                    Gamma |- T \is_data_type ->
                    Gamma |- (tany T) \in T
   where "Gamma '|-' t '\in' T" := (has_type Gamma t T) : typing_scope.
-
 End Typing.
 
-Import Typing.
+Module TypingNotation.
+Notation "Prog > Gamma '|-' t '\in' T" := (has_type Prog Gamma t T) (at level 40) : typing_scope.
+End TypingNotation.
+
+
+Import TypingNotation.
 Open Scope typing_scope.
-  
 Section Examples.
-  Example t1 : empty |- ttrue \in TBool.
+  Definition e_prog := @nil func_decl.
+  Example t1 : e_prog > empty |- ttrue \in TBool.
   Proof. apply T_True. Qed.
 
   Definition c := (type_update empty (Id 5) TNat).
 
-  Example t2 : c |- (tvar (Id 5)) \in TNat.
+  Example t2 : e_prog > c |- (tvar (Id 5)) \in TNat.
   Proof. apply T_Var. reflexivity. Qed.
 
-  Example t3 : empty |- (tlet (Id 5) tzero 
-                        (tadd (tsucc tzero) (tvar (Id 5)))) \in TNat.
+  Example t3 : e_prog > empty |- (tlet (Id 5) tzero 
+                                (tadd (tsucc tzero) (tvar (Id 5)))) \in TNat.
   Proof. 
     apply T_Let with (T1 := TNat).
     apply T_Zero.
@@ -261,8 +265,8 @@ Section Examples.
     apply T_Var. reflexivity.
   Qed.
 
-  Example t4 : empty |- (tcasel (tnil TNat) (Id 0) (Id 1) (tnil TNat)
-                                (tcons (tsucc tzero) (tnil TNat))) \in (TList TNat).
+  Example t4 : e_prog > empty |- (tcasel (tnil TNat) (Id 0) (Id 1) (tnil TNat)
+                                        (tcons (tsucc tzero) (tnil TNat))) \in (TList TNat).
   Proof.
     apply T_CaseL with (T' := TNat).
     apply T_Nil.
@@ -272,7 +276,7 @@ Section Examples.
     apply T_Nil.
   Qed.
 
-  Example t5 : empty |- 
+  Example t5 : e_prog > empty |- 
                (tcasel (tcons ttrue (tnil TBool)) (Id 0) (Id 1) tfalse (tvar (Id 0))) \in TBool.
   Proof.
     apply T_CaseL with (T' := TBool).
@@ -290,7 +294,7 @@ Section Examples.
         (Id 51) TBool)
       (Id 2) (TVar (Id 1)).
 
-  Example t6 : aContext |- tvar (Id 2) \in TVar (Id 1).
+  Example t6 : e_prog > aContext |- tvar (Id 2) \in TVar (Id 1).
   Proof. apply T_Var. reflexivity. Qed.
 
   Example multi_t1 : multi_ty_subst 
@@ -311,9 +315,8 @@ Section Examples.
                               (tvar (Id 1)).
   Definition prog := [prog_fd].
 
-  Example fun1 : aContext |- (tfun (Id 1) [TNat]) \in (TFun TNat TNat).
-  Proof. apply T_Fun with (P := prog) (fd := prog_fd).
-    reflexivity.
+  Example fun1 : prog > aContext |- (tfun (Id 1) [TNat]) \in (TFun TNat TNat).
+  Proof. apply T_Fun.
     reflexivity.
     simpl. apply Forall_cons. apply D_Nat. apply Forall_nil.
   Qed.
@@ -332,25 +335,23 @@ Section Examples.
                        [Id 42;Id 43]
                        (union (tvar (Id 42)) (tvar (Id 43))).
   Definition prog3 := [fun3].
-
-  Example t7 :
-    aContext2 |- tapp
-              (tapp (tfun (Id 1)
-                          (cons (TNat) nil))
-                    (tvar (Id 3)))
-              (tvar (Id 4)) \in TNat.
-  Proof. apply T_App with (T1 := TNat). apply T_App with (T1 := TNat).
-    apply T_Fun with (P := prog3) (fd := fun3).
-    reflexivity.
+  
+  Definition app1 := tapp
+                      (tapp (tfun (Id 1) (cons (TNat) nil))
+                            (tvar (Id 3)))
+                      (tvar (Id 4)).
+  Example t7 : prog3 > aContext2 |- app1 \in TNat.
+  Proof.
+   apply T_App with (T1 := TNat). apply T_App with (T1 := TNat).
+    apply T_Fun.
     reflexivity.
     simpl. apply Forall_nil.
     apply T_Var. reflexivity.
     apply T_Var. reflexivity.
   Qed.
 
-Check FDecl (Id 0) 
-      [for_all (Id 1) tag_star; for_all (Id 2) tag_star] 
-      (TFun (TPair (TVar (Id 1)) (TVar (Id 2))) (TVar (Id 1)))
-      [Id 3]
-      (tcasep (tvar (Id 3)) (Id 4) (Id 5) (tvar (Id 4))).
+  Example t7a : prog3 > aContext2 |- app1 \in TNat.
+  Proof.
+    repeat econstructor. (* Unlimited power! *)
+  Qed.
 End Examples.

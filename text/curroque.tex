@@ -8,6 +8,7 @@
 \usepackage{amssymb}
 \usepackage{proof}
 \usepackage{hyperref}
+\usepackage{subcaption}
 
 % Kapitelüberschrift in der Kopfzeile
 \usepackage[automark]{scrpage2} % Schickerer Satzspiegel mit KOMA-Script
@@ -244,16 +245,16 @@ The last option to describe this property is by using inductively defined propos
 \par
 We can describe \coqinline{In} with two rules:
 \begin{figure}[H]
-\begin{center}
+	\begin{center}
 		\begin{minipage}{.45 \linewidth}
-		\infer[1]{\coqinline{In n (n :: l)}}{\phantom{premise}}
-	\end{minipage}
-    \hspace{.1 \linewidth}
-	\begin{minipage}{.45 \linewidth}
-		\infer[2]{\coqinline{In n (e :: l)}}{\coqinline{In n l}}
-	\end{minipage}
-\end{center}
-\vspace*{-1em}
+			\infer[1]{\coqinline{In n (n :: l)}}{\phantom{premise}}
+		\end{minipage}
+		\hspace{.1 \linewidth}
+		\begin{minipage}{.45 \linewidth}
+			\infer[2]{\coqinline{In n (e :: l)}}{\coqinline{In n l}}
+		\end{minipage}
+	\end{center}
+	\vspace*{-1em}
 \end{figure}
 Rule one states that the list's head is an element of the list. Additionally, if an element is contained in a list, it is also an element of the the same list, prefixed by another element, as described in the second rule. This definition can be transferred to Coq:
 \begin{minted}{coq}
@@ -282,7 +283,6 @@ We already used \coqinline{Forall} in the previous section without knowing the e
 Forall2 : forall A B : Type, (A -> B -> Prop) -> list A -> list B -> Prop
 \end{minted}
 \section{FlatCurry}
-
 \chapter{Theory}
 \label{theory}
 In functional languages a data type is a classification of applicable operators and properties of its members. There are base types that store a single date and more complex types that may have multiple constructors and type variables. Typing describes the process of assigning an expression to a corresponding type in order to avoid programming errors, for example calling an arithmetic function with a character.
@@ -337,18 +337,18 @@ CuMin is a simplified sublanguage of Curry, which restricts the syntax to allow 
 \end{figure}
 A program $P$ is a list of function declarations $D$, which contain a function name $f$, a list of quantifiers $\kappa$, a type $\tau$ and a function definition. Quantifiers have a tag $t \in \{\epsilon, *\}$ that determines the valid types of the variable $\alpha$. Star-tagged type variables can only be specialized to non-functional types, while $\epsilon$ allows every specialization. The notation $\overline{x_{n}}$ in function definitions represents $n$ variables $x_{1},...,x_{n}$ that occur after the function name and are followed by an expression $e$. A function's type $\tau$ can consist of type variables, primitive Bool or Nat types, lists, pairs and functions. An example for a CuMin function is \texttt{fst}, which returns the first element of a pair:
 \begin{figure}[H]
-\begin{minipage}{.5 \linewidth}
-\begin{align*}
-&\text{fst}::\forall^{*}\alpha.\forall^{*}\beta.(\alpha, \beta) \rightarrow\alpha\\
-&\text{fst}\: p = \text{case}\: p\: \text{of}\: \langle(u,v) \rightarrow u\rangle
-\end{align*}
-\end{minipage}
-\begin{minipage}{.5 \linewidth}
-\begin{align*}
-&\text{one} :: \epsilon \: \text{Nat}\\
-&\text{one} = \text{fst}_{Nat, Bool} (1, \text{True})
-\end{align*}
-\end{minipage}
+	\begin{minipage}{.5 \linewidth}
+		\begin{align*}
+		&\text{fst}::\forall^{*}\alpha.\forall^{*}\beta.(\alpha, \beta) \rightarrow\alpha\\
+		&\text{fst}\: p = \text{case}\: p\: \text{of}\: \langle(u,v) \rightarrow u\rangle
+		\end{align*}
+	\end{minipage}
+	\begin{minipage}{.5 \linewidth}
+		\begin{align*}
+		&\text{one} :: \epsilon \: \text{Nat}\\
+		&\text{one} = \text{fst}_{Nat, Bool} (1, \text{True})
+		\end{align*}
+	\end{minipage}
 \end{figure}
 It is important to notice that polymorphic functions need to be explicitly specialized before they are applied to another expression, as shown in \texttt{one}, because there is no type inference.
 \par
@@ -446,6 +446,110 @@ Rules follow a common structure: First, all occurring variables need to be quant
 The rules \coqinline{D_Bool} and \coqinline{D_Nat} simply state that basic types are data types. \coqinline{D_Var} requires type variables to have a star tag in order to be a data type, because as mentioned above, nested function types are not allowed. Lists and pairs are data types if their argument type(s) are data types.
 \par
 \section{Typing}
+\begin{figure}[H]
+	\begin{scriptsize}
+		\begin{center}
+			\begin{subfigure}[t]{.19 \textwidth}
+				\centering
+				$\Gamma, \: x :: \tau \vdash x :: \tau$
+			\end{subfigure}
+			\begin{subfigure}[t]{.19 \textwidth}
+				\centering
+				$\Gamma \vdash \text{True} :: \text{Bool}$
+			\end{subfigure}
+			\begin{subfigure}[t]{.19 \textwidth}
+				\centering
+				$\Gamma \vdash \text{False} :: \text{Bool}$
+			\end{subfigure}
+			\begin{subfigure}[t]{.19 \textwidth}
+				\centering
+				$\Gamma \vdash n :: \text{Nat}$
+			\end{subfigure}
+			\begin{subfigure}[t]{.19 \textwidth}
+				\centering
+				$\Gamma \vdash \text{Nil}_{\tau} :: [\tau]$
+			\end{subfigure}\\
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			\vspace*{1em}
+			\mbox{
+				\begin{subfigure}[t]{.3 \linewidth}
+					\centering
+					\infer{\Gamma \vdash e_{1} e_{2} :: \tau_{2}}
+					{\Gamma \vdash e_{1} :: \tau_{1} \rightarrow \tau_{2} & \Gamma \vdash e_{2} :: \tau_{1}}
+				\end{subfigure}
+				\hspace{.02 \linewidth}
+				\begin{subfigure}[t]{.3 \linewidth}
+					\centering
+					\infer{\Gamma \vdash \text{let}\: x = e_{1} \:\text{in}\: e_{2} ::  \tau}
+					{\Gamma \vdash e_{1} :: \tau_{1} & \Gamma, x :: \tau_{1} \vdash e_{2} :: \tau}
+				\end{subfigure}
+				\hspace{.02 \linewidth}
+				\begin{subfigure}[t]{.3 \linewidth}
+					\centering
+					\infer{\Gamma \vdash f_{\overline{\tau_{m}}} :: \tau      [\overline{\tau_{m}/\alpha_{m}}]}
+					{(f :: \forall^{v_{1}} \alpha_{1}.\dotsb \forall^{v_{m}}\alpha_{m}.\tau; f \overline{x_{n}} = e) \in P}
+				\end{subfigure}
+				\begin{subfigure}[b]{.2 \linewidth}
+					if for all $i$ with\\ $v_{i} = *$ we have\\ $\Gamma \vdash \tau_{i} \in \text{Data}$
+				\end{subfigure}}\\
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				\vspace*{1em}
+				\mbox{
+					\begin{subfigure}[t]{.25 \linewidth}
+						\centering
+						\infer{\Gamma \vdash e_{1} + e_{2} :: \text{Nat}}
+						{\Gamma \vdash e_{1} :: \text{Nat} & \Gamma \vdash e_{2} :: \text{Nat}}
+					\end{subfigure}
+					\hspace{.01 \linewidth}
+					\begin{subfigure}[t]{.25 \linewidth}
+						\centering
+						\infer{\Gamma \vdash e_{1} \circeq e_{2} :: \text{Nat}}
+						{\Gamma \vdash e_{1} :: \text{Nat} & \Gamma \vdash e_{2} :: \text{Nat}}
+					\end{subfigure}
+					\hspace{.01 \linewidth}
+					\begin{subfigure}[t]{.25 \linewidth}
+						\centering
+						\infer{\Gamma \vdash (e_{1}, e_{2}) :: (\tau_{1}, \tau_{2})}
+						{\Gamma \vdash e_{1} :: \tau_{1} & \Gamma \vdash e_{2} :: \tau_{2}}
+					\end{subfigure}
+					\hspace{.01 \linewidth}
+					\begin{subfigure}[t]{.25 \linewidth}
+						\centering
+						\infer{\Gamma \vdash \text{Cons}(e_{1}, e_{2})}
+						{\Gamma \vdash e_{1} :: \tau & \Gamma \vdash e_{2} ::[\tau]}
+					\end{subfigure}}\\
+					%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+					\vspace{1em}
+					\begin{subfigure}[t]{.5 \linewidth}
+						\centering
+						\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle \text{Nil} \rightarrow e_{1}; \text{Cons} (h, t) \rightarrow e_{2} \rangle :: \tau}
+						{\Gamma \vdash e :: [\tau'] & \Gamma \vdash e_{1} :: \tau & \Gamma, h :: \tau', t :: [\tau'] \vdash e_{2} :: \tau}
+					\end{subfigure}
+					\hspace{.02 \linewidth}
+					\begin{subfigure}[t]{.5 \linewidth}
+						\centering
+						\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle (l,r) \rightarrow e_{1} :: \tau}
+						{\Gamma \vdash e :: (\tau_{1}, \tau_{2}) & \Gamma, l :: \tau_{1}, r:: \tau_{2} \vdash e_{1} \rangle :: \tau)}
+					\end{subfigure}\\
+					%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+					\vspace{1em}
+					\begin{subfigure}[t]{.33 \linewidth}
+						\centering
+						\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle \text{True} \rightarrow e_{1}; \text{False} \rightarrow e_{2} \rangle :: \tau}
+						{\Gamma \vdash e :: \: \text{Bool} & \Gamma \vdash e_{1} :: \tau & \Gamma \vdash e_{2} :: \tau}
+					\end{subfigure}
+					\begin{subfigure}[t]{.25 \linewidth}
+						\centering
+						$\Gamma \vdash \text{failure}_{\tau} :: \tau$
+					\end{subfigure}
+					\begin{subfigure}[t]{.33 \linewidth}
+						\centering
+						\infer{\Gamma \vdash \text{anything}_{\tau} :: \tau}
+						{\Gamma \vdash \tau \in \text{Data}}
+					\end{subfigure}
+				\end{center}
+			\end{scriptsize}
+		\end{figure}
 We begin by introducing an inductively defined proposition similar to \texttt{\textbackslash is\_data\_type} with an additional argument. Since we want to assign types $\tau$ to expressions $e$ within a context $\Gamma$, we need a ternary proposition \coqinline{has_type} with the notation $\Gamma \vdash e :: \tau$. Since \coqinline{::} is the \coqinline{cons} constructor in Coq, we will use \textbackslash in instead.
 \begin{minted}{coq}
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
