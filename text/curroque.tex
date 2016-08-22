@@ -6,7 +6,7 @@
 \usepackage[english]{babel}     % neue deutsche Rechtschreibung
 \usepackage{amsmath}
 \usepackage{amssymb}
-\usepackage{proof}
+\usepackage{proof} % http://www.logicmatters.net/resources/ndexamples/proofsty.html
 \usepackage{hyperref}
 \usepackage{subcaption}
 
@@ -241,7 +241,7 @@ Qed.
 \end{minted}
 Proving the same example as before, we need new tactics to work with logical connectives. By simplifying the original statement we get a disjunction of equations for every element in the list. If we want to show that a disjunction is true, we need to choose a side we believe to be true and prove it. \coqinline{left} and \coqinline{right} keep only the respective side as the current goal, discarding the other one. A similar tactic exists for the logical conjunction \coqinline{/\ }, with the difference that \coqinline{split} keeps both sides as subgoals, since a conjunction is only true if both sides are true.
 \par
-The last option to describe this property is by using inductively defined propositions. As already mentioned before, inductively defined propositions consist of rules that describe how an argument can satisfy the proposition. A useful notation for representing these rules are \textit{inference rules}. They consist of an optional list of premises that needs to be fulfilled in order for the conclusion below the line to hold.
+The last option to describe this property is by using inductively defined propositions. As already mentioned before, inductively defined propositions consist of rules that describe how an argument can satisfy the proposition. A useful notation for representing these rules are \textit{inference rules} \label{infrules}. They consist of an optional list of premises that needs to be fulfilled in order for the conclusion below the line to hold.
 \par
 We can describe \coqinline{In} with two rules:
 \begin{figure}[H]
@@ -443,9 +443,10 @@ where "Gamma '|-' T '\is_data_type'" := (is_data_type Gamma T) : typing_scope.
 The inductively defined proposition \coqinline{is_data_type} takes a context plus a type and returns a proposition, which can be proven using the provided rules if the type is indeed a data type. Coq allows notations to be announced before they are actually defined by adding \coqinline{Reserved} to a notation. The definition is specified after the last rule, prefaced by \coqinline{where}. The syntax used is $\Gamma \vdash \tau \: \text{\textbackslash is\_data\_type}$, which means that in the context $\Gamma$ the type $\tau$ is a data type.
 \par
 Rules follow a common structure: First, all occurring variables need to be quantified. Then conditions can be stated, followed by an assignment of a type to an expression.
-The rules \coqinline{D_Bool} and \coqinline{D_Nat} simply state that basic types are data types. \coqinline{D_Var} requires type variables to have a star tag in order to be a data type, because as mentioned above, nested function types are not allowed. Lists and pairs are data types if their argument type(s) are data types.
+The rules \coqinline{D_Bool} and \coqinline{D_Nat} simply state that basic types are data types. \coqinline{D_Var} requires type variables to have a star tag in order to be a data type, because as mentioned above, nested function types are not allowed. Lists and pairs are data types if their argument type(s) are data types. 
 \par
 \section{Typing}
+Typing requires a set of rules that covers every valid expression and assigns corresponding types. The following inference rules \cite{p19mehner} are composed of typing relations $\Gamma \vdash e :: \tau$ that state the type $\tau$ of an expression $e$ in a context $\Gamma$. The notation $\Gamma, e_{1} :: \tau_{1} \vdash e_{2} :: \tau_{2}$ means that $e_{2}$ can only be typed to $\tau_{2}$ if $\Gamma$ contains the information $e_{1} :: \tau_{1}$. As mentioned in \autoref{infrules}, the premises of an inference rule above the line need to be fulfilled in order for to conclusion below to hold.
 \begin{figure}[H]
 	\begin{scriptsize}
 		\begin{center}
@@ -474,13 +475,13 @@ The rules \coqinline{D_Bool} and \coqinline{D_Nat} simply state that basic types
 			\mbox{
 				\begin{subfigure}[t]{.3 \linewidth}
 					\centering
-					\infer{\Gamma \vdash e_{1} e_{2} :: \tau_{2}}
+					\infer{\Gamma \vdash e_{1} e_{2} :: \tau_{2} \phantom{\overline{]}}}
 					{\Gamma \vdash e_{1} :: \tau_{1} \rightarrow \tau_{2} & \Gamma \vdash e_{2} :: \tau_{1}}
 				\end{subfigure}
 				\hspace{.02 \linewidth}
 				\begin{subfigure}[t]{.3 \linewidth}
 					\centering
-					\infer{\Gamma \vdash \text{let}\: x = e_{1} \:\text{in}\: e_{2} ::  \tau}
+					\infer{\Gamma \vdash \text{let}\: x = e_{1} \:\text{in}\: e_{2} ::  \tau \phantom{\overline{]}}}
 					{\Gamma \vdash e_{1} :: \tau_{1} & \Gamma, x :: \tau_{1} \vdash e_{2} :: \tau}
 				\end{subfigure}
 				\hspace{.02 \linewidth}
@@ -492,88 +493,85 @@ The rules \coqinline{D_Bool} and \coqinline{D_Nat} simply state that basic types
 				\begin{subfigure}[b]{.2 \linewidth}
 					if for all $i$ with\\ $v_{i} = *$ we have\\ $\Gamma \vdash \tau_{i} \in \text{Data}$
 				\end{subfigure}}\\
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				\vspace*{1em}
-				\mbox{
-					\begin{subfigure}[t]{.25 \linewidth}
-						\centering
-						\infer{\Gamma \vdash e_{1} + e_{2} :: \text{Nat}}
-						{\Gamma \vdash e_{1} :: \text{Nat} & \Gamma \vdash e_{2} :: \text{Nat}}
-					\end{subfigure}
-					\hspace{.01 \linewidth}
-					\begin{subfigure}[t]{.25 \linewidth}
-						\centering
-						\infer{\Gamma \vdash e_{1} \circeq e_{2} :: \text{Nat}}
-						{\Gamma \vdash e_{1} :: \text{Nat} & \Gamma \vdash e_{2} :: \text{Nat}}
-					\end{subfigure}
-					\hspace{.01 \linewidth}
-					\begin{subfigure}[t]{.25 \linewidth}
-						\centering
-						\infer{\Gamma \vdash (e_{1}, e_{2}) :: (\tau_{1}, \tau_{2})}
-						{\Gamma \vdash e_{1} :: \tau_{1} & \Gamma \vdash e_{2} :: \tau_{2}}
-					\end{subfigure}
-					\hspace{.01 \linewidth}
-					\begin{subfigure}[t]{.25 \linewidth}
-						\centering
-						\infer{\Gamma \vdash \text{Cons}(e_{1}, e_{2})}
-						{\Gamma \vdash e_{1} :: \tau & \Gamma \vdash e_{2} ::[\tau]}
-					\end{subfigure}}\\
-					%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-					\vspace{1em}
-					\begin{subfigure}[t]{.5 \linewidth}
-						\centering
-						\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle \text{Nil} \rightarrow e_{1}; \text{Cons} (h, t) \rightarrow e_{2} \rangle :: \tau}
-						{\Gamma \vdash e :: [\tau'] & \Gamma \vdash e_{1} :: \tau & \Gamma, h :: \tau', t :: [\tau'] \vdash e_{2} :: \tau}
-					\end{subfigure}
-					\hspace{.02 \linewidth}
-					\begin{subfigure}[t]{.5 \linewidth}
-						\centering
-						\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle (l,r) \rightarrow e_{1} :: \tau}
-						{\Gamma \vdash e :: (\tau_{1}, \tau_{2}) & \Gamma, l :: \tau_{1}, r:: \tau_{2} \vdash e_{1} \rangle :: \tau)}
-					\end{subfigure}\\
-					%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-					\vspace{1em}
-					\begin{subfigure}[t]{.33 \linewidth}
-						\centering
-						\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle \text{True} \rightarrow e_{1}; \text{False} \rightarrow e_{2} \rangle :: \tau}
-						{\Gamma \vdash e :: \: \text{Bool} & \Gamma \vdash e_{1} :: \tau & \Gamma \vdash e_{2} :: \tau}
-					\end{subfigure}
-					\begin{subfigure}[t]{.25 \linewidth}
-						\centering
-						$\Gamma \vdash \text{failure}_{\tau} :: \tau$
-					\end{subfigure}
-					\begin{subfigure}[t]{.33 \linewidth}
-						\centering
-						\infer{\Gamma \vdash \text{anything}_{\tau} :: \tau}
-						{\Gamma \vdash \tau \in \text{Data}}
-					\end{subfigure}
-				\end{center}
-			\end{scriptsize}
-		\end{figure}
-We begin by introducing an inductively defined proposition similar to \texttt{\textbackslash is\_data\_type} with an additional argument. Since we want to assign types $\tau$ to expressions $e$ within a context $\Gamma$, we need a ternary proposition \coqinline{has_type} with the notation $\Gamma \vdash e :: \tau$. Since \coqinline{::} is the \coqinline{cons} constructor in Coq, we will use \textbackslash in instead.
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			\vspace*{1em}
+			\mbox{
+				\begin{subfigure}[t]{.25 \linewidth}
+					\centering
+					\infer{\Gamma \vdash e_{1} + e_{2} :: \text{Nat}}
+					{\Gamma \vdash e_{1} :: \text{Nat} & \Gamma \vdash e_{2} :: \text{Nat}}
+				\end{subfigure}
+				\hspace{.01 \linewidth}
+				\begin{subfigure}[t]{.25 \linewidth}
+					\centering
+					\infer{\Gamma \vdash e_{1} \circeq e_{2} :: \text{Bool}}
+					{\Gamma \vdash e_{1} :: \text{Nat} & \Gamma \vdash e_{2} :: \text{Nat}}
+				\end{subfigure}
+				\hspace{.01 \linewidth}
+				\begin{subfigure}[t]{.25 \linewidth}
+					\centering
+					\infer{\Gamma \vdash (e_{1}, e_{2}) :: (\tau_{1}, \tau_{2})}
+					{\Gamma \vdash e_{1} :: \tau_{1} & \Gamma \vdash e_{2} :: \tau_{2}}
+				\end{subfigure}
+				\hspace{.01 \linewidth}
+				\begin{subfigure}[t]{.25 \linewidth}
+					\centering
+					\infer{\Gamma \vdash \text{Cons}(e_{1}, e_{2})}
+					{\Gamma \vdash e_{1} :: \tau & \Gamma \vdash e_{2} ::[\tau]}
+				\end{subfigure}}\\
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			\vspace{1em}
+			\begin{subfigure}[t]{.5 \linewidth}
+				\centering
+				\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle \text{Nil} \rightarrow e_{1}; \text{Cons} (h, t) \rightarrow e_{2} \rangle :: \tau}
+				{\Gamma \vdash e :: [\tau'] & \Gamma \vdash e_{1} :: \tau & \Gamma, h :: \tau', t :: [\tau'] \vdash e_{2} :: \tau}
+			\end{subfigure}
+			\hspace{.02 \linewidth}
+			\begin{subfigure}[t]{.5 \linewidth}
+				\centering
+				\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle (l,r) \rightarrow e_{1} :: \tau}
+				{\Gamma \vdash e :: (\tau_{1}, \tau_{2}) & \Gamma, l :: \tau_{1}, r:: \tau_{2} \vdash e_{1} \rangle :: \tau)}
+			\end{subfigure}\\
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			\vspace{1em}
+			\begin{subfigure}[t]{.33 \linewidth}
+				\centering
+				\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle \text{True} \rightarrow e_{1}; \text{False} \rightarrow e_{2} \rangle :: \tau}
+				{\Gamma \vdash e :: \: \text{Bool} & \Gamma \vdash e_{1} :: \tau & \Gamma \vdash e_{2} :: \tau}
+			\end{subfigure}
+			\begin{subfigure}[t]{.25 \linewidth}
+				\centering
+				$\Gamma \vdash \text{failure}_{\tau} :: \tau$
+			\end{subfigure}
+			\begin{subfigure}[t]{.33 \linewidth}
+				\centering
+				\infer{\Gamma \vdash \text{anything}_{\tau} :: \tau}
+			     	  {\Gamma \vdash \tau \in \text{Data}}
+			\end{subfigure}
+		\end{center}
+	\end{scriptsize}
+	\caption{Typing rules for CuMin}
+\end{figure}
+The first row of rules holds unconditionally, basic expressions like boolean values and natural numbers have the type \texttt{Bool} and \texttt{Nat} respectively, there is also an empty list of every type. Variables can only get typed if there is an entry in the context that binds the variable to a type; these bindings are created in \texttt{let} and \texttt{case} expressions.
+\par
+The second row begins with the application of two expressions, which requires the first one to have a functional type and the second term to match the function's argument type. The resulting type may be another function or a basic type, depending on the arity of the original function.
+A \texttt{let} construct binds a variable $x$ to an expression $e_{1}$, which is used within the expression $e_{2}$ and needs to be added to the context in order to type $e_{2}$. The row's last inference rule describes typing a function call with specific types $\overline{\tau_{m}}$. The program $P$ needs to contain a matching function declaration with a list of quantified type variables $\overline{\alpha_{m}}$. For every $\alpha_{i}$ the corresponding $\tau_{i}$ needs to be a data type if their quantifier has a star tag, because we must ensure that these variables are replaced by non-functional types, which data types fulfill by definition. The type of a function call is represented by the expression $\tau [\overline{\tau_{m}/\alpha_{m}}]$, which is a type substitution of every occurrence of $\alpha_{i}$ in $\tau$ with $\tau_{i}$.
+\par
+The third row contains arithmetic operations and constructors. Both $+$ and $\circeq$ can only be applied to natural numbers, while the first returns a \texttt{Nat} and the latter a \texttt{Bool}. In aspect of constructors, pairs can be constructed from two expressions of arbitrary types $\tau_{1}$ and $\tau_{2}$, the resulting type is a pair $(\tau_{1}, \tau_{2})$. The list constructor \texttt{Cons} takes two expressions $e_{1}$ and $e_{2}$, the first of which needs to be a head element of type $\tau$ and the second a tail list of type $[\tau]$, which results in a list of $\tau$.
+\par
+Case expressions work similarly but have type specific properties. The first argument has to be of the case's type, for example \texttt{Bool} for the boolean case expressions. Depending on the form of the term, the corresponding branch expression, all of which need to have the same type, is returned. The list case returns either $e_{1}$, if the list is empty, or $e_{2}$ otherwise. In the latter case, bindings for the list's head and tail need to be added to the context in order to type $e_{2}$. This is also necessary in the pair case, however, since there is only one constructor, there is no choice of different terms to return. While this may be unusual for case expressions, the construct serves a purpose nevertheless: accessing a pair's individual components. The last case expression for boolean values works like an if-then-else construct. Depending on the first argument, either $e_{1}$ or $e_{2}$ is returned.
+\par
+Finally, there is a \texttt{failure} of every type, that can be returned in place of a value if the computation fails and an \texttt{anything} of every data type. The restriction to non-functional types is necessary, because functions are not enumerable.\\
+\par \todo{Redundanzen entfernen}
+To implement the above rules, we begin by introducing an inductively defined proposition similar to \texttt{\textbackslash is\_data\_type} with an additional argument. Since we want to assign types $\tau$ to expressions $e$ within a context $\Gamma$, we use a ternary proposition \coqinline{has_type}$\; \Gamma \; e \; \tau$ which represents the typing relation $\Gamma \vdash e :: \tau$ used above. Since \coqinline{::} is the \coqinline{cons} constructor in Coq, we will use \textbackslash in instead. Another interesting detail is the usage of a \coqinline{Variable} to represent the program. Variables are locally declared within a \coqinline{Section} and can be used like any other defined identifier. When a definition containing a variable is used outside of the section, the variable will be appended to the type, for example \coqinline{has_type} has the type \coqinline{program -> context -> tm -> ty -> Prop}, although the below definition is missing the \coqinline{program}.
 \begin{minted}{coq}
+Variable Prog : program.
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
 Inductive has_type : context -> tm -> ty -> Prop :=
   | T_Var : forall Gamma x T, (typecon Gamma) x = Some T ->
               Gamma |- tvar x \in T
   | ...
 where "Gamma '|-' t '\in' T" := (has_type Gamma t T) : typing_scope.
-\end{minted}
-\coqinline{T_Var} represents the typing rule $\Gamma, x :: \tau \vdash x :: \tau$, which states that a variable $x$ has a type $\tau$ if $\Gamma$ maps $x$ to $\tau$. These variable bindings can occur in \coqinline{let} and \coqinline{case} expressions. Boolean and natural literals have their respective types unconditionally, while a successor of a natural number is a Nat if its predecessor is.
-\begin{minted}{coq}
-T_Zero : forall Gamma, Gamma |- tzero \in TNat
-T_Succ : forall Gamma e, Gamma |- e \in TNat -> Gamma |- (tsucc e) \in TNat
-\end{minted}
-Since there is an empty list of every type $\tau$, \coqinline{nil} $\tau$ is a \coqinline{TList} $\tau$. A valid non-empty list consists of a head $e_{1}$ and a tail $e_{2}$ with the requirement, that if $e_{1}$ is of type $\tau$, $e_{2}$ needs to be a \coqinline{TList} $\tau$, because every element of a list needs to have the same type. 
-\begin{minted}{coq}
-T_Nil : forall Gamma T, Gamma |- (tnil T) \in (TList T)
-T_Cons: forall Gamma e1 e2 T, Gamma |- e1 \in T -> Gamma |- e2 \in (TList T) -> 
-          Gamma |- (tcons e1 e2) \in (TList T)
-\end{minted}
-Arithmetic expressions like \coqinline{tadd} and \coqinline{teqn} require both arguments have type the type \coqinline{TNat}.
-\begin{minted}{coq}
-T_Add : forall Gamma e1 e2, Gamma |- e1 \in TNat -> Gamma |- e2 \in TNat ->
-          Gamma |- (tadd e1 e2) \in TNat
 \end{minted}
 Supplying arguments to a function is limited to one at a time, hence we apply an expression $e_{2} :: \tau_{1}$ to a functional expression $e_{1} :: \tau_{1} \rightarrow \tau_{2}$. Because we supplied $e_{2}$ with its first argument, the resulting type is the return type of the function, which may be of functional type itself, since a recursive definition is possible.
 \begin{minted}{coq}
@@ -592,10 +590,6 @@ There are case expressions for bools, lists and pairs. The boolean case works li
 T_CaseB : forall Gamma e e1 e2 T,
             Gamma |- e \in TBool -> Gamma |- e1 \in T -> Gamma |- e2 \in T ->
             Gamma |- (tcaseb e e1 e2) \in T
-T_CaseP : forall Gamma e e1 fst snd T T1 T2,
-            Gamma |- e \in (TPair T1 T2) ->
-            (type_update (type_update Gamma fst T1) snd T2) |- e1 \in T ->
-            Gamma |- (tcasep fst snd r e1) \in T
 T_CaseL : forall Gamma e e1 e2 h t T T',
             Gamma |- e \in (TList T') -> Gamma |- e1 \in T ->
             (type_update (type_update Gamma h T') t (TList T')) |- e2 \in T ->
@@ -603,44 +597,19 @@ T_CaseL : forall Gamma e e1 e2 h t T T',
 \end{minted}
 Function specialization is the most complex rule, since it involves looking up the function's declaration in a program and checking the specialized type.
 \begin{minted}{coq}
-T_Fun : forall Gamma P id fd tys T,
-          lookup_func P id = Some fd ->
+T_Fun : forall Gamma id tys T,
+          let fd := fromOption default_fd (lookup_func Prog id) in 
           specialize_func fd tys = Some T ->
           Forall (is_data_type Gamma) (fd_to_tys Gamma fd) ->
           Gamma |- (tfun id tys) \in T
 \end{minted}
-The lookup function uses the predefined \coqinline{find}, which takes a boolean predicate plus a list and returns all elements that fulfill the condition. An anonymous function is used to compare the function's ID to every entry's ID until a match is found. Because  the search is not guaranteed to succeed, an \coqinline{option func_decl} is returned.
-\begin{minted}{coq}
-Definition lookup_func (p : program) (i : id) : (option func_decl) :=
-  find (fun fd => match fd with (FDecl j _ _ _ _) => (beq_id i j) end) p.
-\end{minted}
-
-\begin{minted}{coq}
-Fixpoint ty_subst (k: id) (t: ty) (t': ty) : ty :=
-  match t' with
-  | TVar i      => if (beq_id i k) then t else TVar i
-  | TBool       => TBool
-  | TNat        => TNat
-  | TList T     => TList (ty_subst k t T)
-  | TPair TF TS => TPair (ty_subst k t TF) (ty_subst k t TS)
-  | TFun  TA TR => TFun  (ty_subst k t TA) (ty_subst k t TR)
-  end.
-\end{minted}
-
-\begin{minted}{coq}
-Definition multi_ty_subst (qtys : list (quantifier * ty)) (t : ty) : ty := 
-  fold_right (fun qty t => match qty with (for_all id _, ty) => ty_subst id ty t end)
-             t qtys.
-\end{minted}
-
-\begin{minted}{coq}
-Definition specialize_func (fd : func_decl) (tys : list ty) : option ty := 
-  match fd with
-  | (FDecl _ qs t _ _) => if (beq_nat (length qs) (length tys))
-  then Some (multi_ty_subst (zip qs tys) t)
-  else None
-  end.
-\end{minted}
+The lookup function uses the predefined \coqinline{find}, which takes a boolean predicate plus a list and returns all elements that fulfill the condition. An anonymous function is used to compare the function's ID to every entry's ID until a match is found. Because the search is not guaranteed to succeed, an \coqinline{option func_decl} is returned. At this point there are two options to handle variables: quantification or let expressions. Via \coqinline{forall} quantified variables are easy to work with and allow limited pattern matching, for instance \coqinline{forall id fd, lookup_func Prog id = Some fd -> ...} This definitions ensures that \coqinline{lookup_func} succeeds and binds the function declaration to \coqinline{fd}, which saves us from using \coqinline{fromOption} to extract the optional value.
+\par
+ The big disadvantage of this solution is the effort and redundancy arising from using quantified variables: If a variable is not found explicitly in the conclusion of a rule, \coqinline{Gamma |- e \in T}, it needs to be instantiated manually when applying the rule in a proof.\footnote{This is actually not completely true, there are automated tactics that are able to infer this information. See...} \todo{Verlinkung in Fußnote} This is especially cumbersome for function declarations, since this information is already contained in the program. Because of this limitation, we will use \coqinline{let} instead, which is not as comfortable, but makes proofs significantly shorter.
+ \par
+ The next step is to specialize the function with \coqinline{specialize_func}. It takes a function declaration plus a list of types and checks if the length of the list of quantified type variables in the function declaration matches the length of the provided type list. Subsequently the substitution begins: for every pair $(\forall^{t}\alpha_{i}, \tau_{i})$ the type variable $\alpha_{i}$ is replaced with $\tau_{i}$ in the function type $\tau$. The substitution itself is a recursive function that takes an ID, a replacement type $\tau$ and the type $\tau'$. Basic types and type variables with a different ID in $\tau'$ remain unchanged. If the ID of a type variable matches the provided ID, it is replaced by $\tau$. Because types are nested structures, the substitution of functions, lists and pairs is recursively applied to the argument types. Technically, this can produce invalid substitutions, since matching variables are replaced, regardless of their tag. Hence, this requirement is checked by the next premise.\\
+ \par
+ 
 \chapter{Curry}
 \section{FlatCurry}
 \section{Typing}
@@ -655,7 +624,7 @@ Definition specialize_func (fd : func_decl) (tys : list ty) : option ty :=
 %\todo{Fehlt noch!}
 
 % Literatur
-\bibliographystyle{alphadin}
-\bibliography{seminar} % Datei: seminar.bib
+\bibliographystyle{abbrv}
+\bibliography{curroqe.bib} % Datei: seminar.bib
 
 \end{document}
