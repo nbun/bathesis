@@ -98,13 +98,14 @@ Section Functions.
   Definition fd_qs (fd : func_decl) := match fd with FDecl _ qs _ _ _ => qs end.
 
 
-  (* Takes a context and function declaration and returns the type of
-     all *star-tagged* type variables according to the context. *)
-  Definition fd_to_tys (Gamma : context) (fd : func_decl) : (list ty) :=
+  (* Takes function declaration plus a list of types and returns all types
+     that have a star-tagged quantifier. *)
+  Definition fd_to_star_tys (fd : func_decl) (tys : list ty) : (list ty) :=
     match fd with
     | FDecl _ [] _ _ _ => []
-    | FDecl _ qs _ _ _ => cat_options (map (compose (typecon Gamma) qid)
-                                           (filter is_star_tagged qs))
+    | FDecl _ qs _ _ _ =>  map snd 
+                               (filter (fun qty => match qty with (q,ty) => (is_star_tagged q) end)
+                                       (zip qs tys))
     end.
 
   (* Boolean equality between two function declarations. *)
@@ -197,7 +198,7 @@ Section Typing.
     | T_Fun :    forall Gamma id tys T,
                    let fd := fromOption default_fd (lookup_func Prog id) in 
                    specialize_func fd tys = Some T ->
-                   Forall (is_data_type Gamma) (fd_to_tys Gamma fd) ->
+                   Forall (is_data_type Gamma) (fd_to_star_tys fd tys) ->
                    Gamma |- (tfun id tys) \in T
     | T_Add :    forall Gamma e1 e2,
                    Gamma |- e1 \in TNat ->
@@ -246,6 +247,7 @@ End TypingNotation.
 Import TypingNotation.
 Open Scope typing_scope.
 Section Examples.
+
   Definition e_prog := @nil func_decl.
   Example t1 : e_prog > empty |- ttrue \in TBool.
   Proof. apply T_True. Qed.
@@ -320,7 +322,7 @@ Section Examples.
     reflexivity.
     simpl. apply Forall_cons. apply D_Nat. apply Forall_nil.
   Qed.
-
+Check is_data_type empty.
   Definition aContext2 :=
   tag_update
     (type_update
@@ -345,7 +347,8 @@ Section Examples.
    apply T_App with (T1 := TNat). apply T_App with (T1 := TNat).
     apply T_Fun.
     reflexivity.
-    simpl. apply Forall_nil.
+    simpl. apply Forall_cons. apply D_Nat.
+    apply Forall_nil.
     apply T_Var. reflexivity.
     apply T_Var. reflexivity.
   Qed.
