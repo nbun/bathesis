@@ -61,12 +61,11 @@
 %   \include{chapter/fundamentals}
 % oder direkt:
 
-
-\chapter{Preliminaries}
-\section{Coq}
+\chapter{Introduction}
+\chapter{Coq}
 The formalization of Curry programs requires a language that allows us to express the code itself and the propositions we intend to prove. Coq\footnote{https://coq.inria.fr/} is an interactive proof management system that meets these requirements, hence it will be the main tool used in the following chapters.
 \todo{Kommasetzung?}
-\subsection{Data types and functions}
+\section{Data types and functions}
 Coq's predefined definitions, contrary to e.g. Haskell's Prelude, are very limited. Nevertheless, being a functional language, there is a powerful mechanism for defining new data types. A definition of polymorphic lists could look like this:
 \begin{minted}{coq}
 Inductive list (X:Type) : Type :=
@@ -120,7 +119,7 @@ Notation "[ x ; .. ; y ]" := (cons x .. (cons y []) ..).
 Notation "x ++ y" := (app x y) (at level 60, right associativity).
 \end{minted}
 
-\subsection{Propositions and proofs}
+\section{Propositions and proofs}
 Every claim that we state or prove has the type \coqinline{Prop}. Propositions can be any statement, regardless of its truth. A few examples:
 \begin{minted}{coq}
 Check 1 + 1 = 2. (* : Prop *)
@@ -185,7 +184,7 @@ By applying \coqinline{inversion} to the hypothesis \coqinline{2 = 1} we tell Co
 
 Besides directly supplying arguments to functions that return propositions, there are other interesting applications for them, that we will discuss in the next section.
 
-\subsection{Higher-order constructs}
+\section{Higher-order constructs}
 Functions can be passed as arguments to other functions or returned as a result, they are first-class citizens in Coq. This allows us create higher-order functions, such as \coqinline{map} or \coqinline{fold}.
 \todo{minted bug?}
 \begin{minted}{coq}
@@ -211,7 +210,7 @@ apply Forall_nil.
 Qed.
 \end{minted}
 \coqinline{Forall} is an inductively defined proposition, which requires rules to be applied in order to prove a certain goal. This will be further explained in the next section, for now it sufficient to know that \coqinline{Forall} can be proven by applying the rules \coqinline{Forall_cons} and \coqinline{Forall_nil}, depending on the remaining list. Because we begin with a non-empty list, we have to apply \coqinline{Forall_cons}. The goal changes to \coqinline{2 <> 8}, the head of the list applied to the property. We have already proven this type of inequality before, \coqinline{inversion} is actually able to do most of the work we did manually by itself. Next the same procedure needs to be done for the list's tail \coqinline{[4]}, which works exactly the same as before. To conclude the proof, we need to show that the property is satisfied by the empty list. \coqinline{Forall_nil} covers this case, which is trivially fulfilled.
-\subsection{Inductively defined propositions}
+\section{Inductively defined propositions}
 Properties of a data type can be written in multiple ways, two of which we already discussed: Boolean equations of the form \coqinline{b x = true} and functions that return propositions. For example the function \coqinline{InB} returns \coqinline{true} if a \coqinline{nat} is contained in a list, the boolean function could look like this:
 \begin{minted}{coq}
 Fixpoint InB (x : nat) (l : list nat) : bool :=
@@ -283,12 +282,11 @@ We already used \coqinline{Forall} in the previous section without knowing the e
 \begin{minted}{coq}
 Forall2 : forall A B : Type, (A -> B -> Prop) -> list A -> list B -> Prop
 \end{minted}
-\section{FlatCurry}
 \chapter{Theory}
 \label{theory}
 In functional languages a data type is a classification of applicable operators and properties of its members. There are base types that store a single date and more complex types that may have multiple constructors and type variables. Typing describes the process of assigning an expression to a corresponding type in order to avoid programming errors, for example calling an arithmetic function with a character.
 \par
-Typing an expression requires a context which contains data type definitions, function/constructor/operator declarations and a map that assigns types to variables.  Without a context, expressions do not have any useful meaning -- \coqinline{42} could be typed as a number, the character 'B', a string or the answer to everything. The majority of information in a context can be extracted from the source code of a program and is continually updated while typing expressions.
+Typing an expression requires a context that contains data type definitions, function/constructor/operator declarations and a map that assigns types to variables.  Without a context, expressions do not have any useful meaning -- \coqinline{42} could be typed as a number, the character 'B', a string or the answer to everything. The majority of information in a context can be extracted from the source code of a program and is continually updated while typing expressions.
 \par
 In the following chapters we are going to formalize two representations of Curry programs. This process consists of:
 \begin{enumerate}
@@ -593,7 +591,7 @@ Typing requires a set of rules that covers every valid expression and assigns co
 	\end{scriptsize}
 	\caption{Typing rules for CuMin}
 \end{figure}
-The first row of rules holds unconditionally, basic expressions like boolean values and natural numbers have the type \texttt{Bool} and \texttt{Nat} respectively, there is also an empty list of every type. Variables can only get typed if there is an entry in the context that binds the variable to a type; these bindings are created in \texttt{let} and \texttt{case} expressions.
+The first row of rules holds unconditionally, basic expressions like boolean values and natural numbers have the type \texttt{Bool} and \texttt{Nat} respectively, there is also an empty list of every type. Variables can only be typed if there is an entry in the context that binds the variable to a type; these bindings are created in \texttt{let} and \texttt{case} expressions.
 \par
 The second row begins with the application of two expressions, which requires the first one to have a functional type and the second term to match the function's argument type. The resulting type may be another function or a basic type, depending on the arity of the original function.
 A \texttt{let} construct binds a variable $x$ to an expression $e_{1}$, which is used within the expression $e_{2}$ and needs to be added to the context in order to type $e_{2}$. The row's last inference rule describes typing a function call with specific types $\overline{\tau_{m}}$. The program $P$ needs to contain a matching function declaration with a list of quantified type variables $\overline{\alpha_{m}}$. For every $\alpha_{i}$ the corresponding $\tau_{i}$ needs to be a data type if their quantifier has a star tag, because we must ensure that these variables are replaced by non-functional types, which data types fulfill by definition. The type of a function call is represented by the expression $\tau [\overline{\tau_{m}/\alpha_{m}}]$, which is a type substitution of every occurrence of $\alpha_{i}$ in $\tau$ with $\tau_{i}$.
@@ -604,7 +602,7 @@ Case expressions work similarly but have type specific properties. The first arg
 \par
 Finally, there is a \texttt{failure} of every type, that can be returned in place of a value if the computation fails and an \texttt{anything} of every data type. The restriction to non-functional types is necessary, because functions are not enumerable.\\
 \par \todo{Redundanzen entfernen}
-To implement the above rules, we begin by introducing an inductively defined proposition similar to \texttt{\textbackslash is\_data\_type} with an additional argument. Since we want to assign types $\tau$ to expressions $e$ within a context $\Gamma$, we use a ternary proposition \coqinline{has_type}$\; \Gamma \; e \; \tau$ which represents the typing relation $\Gamma \vdash e :: \tau$ used above. Since \coqinline{::} is the \coqinline{cons} constructor in Coq, we will use \textbackslash in instead. Another detail is the usage of a \coqinline{Variable} to represent the program. As mentioned earlier, variables are appended to a definition's type, that is, \coqinline{has_type} has the type \coqinline{program -> context -> tm -> ty -> Prop}, although the below definition is missing the \coqinline{program}.
+To implement the above rules, we begin by introducing an inductively defined proposition similar to \texttt{\textbackslash is\_data\_type} with an additional argument. Since we want to assign types $\tau$ to expressions $e$ within a context $\Gamma$, we use a ternary proposition \coqinline{has_type}$\; \Gamma \; e \; \tau$ that represents the typing relation $\Gamma \vdash e :: \tau$ used above. Since \coqinline{::} is the \coqinline{cons} constructor in Coq, we will use \textbackslash in instead. Another detail is the usage of a \coqinline{Variable} to represent the program. As mentioned earlier, variables are appended to a definition's type, that is, \coqinline{has_type} has the type \coqinline{program -> context -> tm -> ty -> Prop}, although the below definition is missing the \coqinline{program}.
 \begin{minted}{coq}
 Variable Prog : program.
 Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
@@ -691,52 +689,78 @@ The first example proves that \texttt{let x = 0 in 1 + x} is a natural number. B
 	\caption{Matching quantified variables with arguments}
 	\label{letmatch}
 \end{figure}
-The application of \coqinline{T_Let} needs manually specified arguments, because \coqinline{T1} is not explicitly stated in the expression. Since \coqinline{tzero} is of type \coqinline{TNat}, we can tell Coq to assume the type of \coqinline{T1} by writing \coqinline{with (T1 := TNat)} behind the tactic. In the following proof we need to show that 0, 1 and the addition $1 + x$ are \coqinline{TNat}s, which is mostly done by applying the corresponding rules. Since \coqinline{T_Let} adds a binding of $x$ (\coqinline{Id 5} in Coq) to the type of $e_{1}$ to the context, we can apply \coqinline{T_Var} successfully in the context \coqinline{type_update empty (Id 5) TNat}.
+The application of \coqinline{T_Let} needs manually specified arguments, because \coqinline{T1} is not explicitly stated in the expression. Since \coqinline{tzero} is of type \coqinline{TNat}, we can tell Coq to assume the type of \coqinline{T1} by writing \coqinline{with (T1 := TNat)} behind the tactic. In the following proof we need to show that 0, 1 and the addition $1 + x$ are \coqinline{TNat}s, which is mostly done by applying the corresponding rules. Since \coqinline{T_Let} adds a binding of $x$ (\coqinline{Id 5} in Coq) to the type of $e_{1}$ to the context, we can apply \coqinline{T_Var} successfully in the context \coqinline{type_update empty (Id 5) TNat}.\\
+\par 
+The next example demonstrates the application $\text{app} = (\text{union}_{[Nat]} \: u) \: v \:$of two variables to the function \texttt{union}. We do not consider the creation of the variable bindings, they are assumed to be natural numbers, that is, $\Gamma, u :: \text{Nat}, v :: \text{Nat}, t_{\alpha} = * \vdash \text{app} :: \text{Nat}$.
+\begin{align*}
+&\text{union}::\forall^{*}\alpha.(\alpha \rightarrow (\alpha \rightarrow \alpha))\\
+&\text{union}\: x \: y = \text{case}\: \text{anything}_{\text{Bool}} \; \text{of}\: \langle \text{True} \rightarrow x; \text{False} \rightarrow y\rangle
+\end{align*}
+The function \texttt{union} is comparable to Curry's \texttt{?} operator, since anything$_{Bool}$ can be either \texttt{True} or \texttt{False}; the boolean case expression becomes a non-deterministic choice between both arguments. Now we want to prove that applying two \texttt{Nat} expressions to \texttt{union} results in a natural number.
 \begin{minted}{coq}
-Example t5 : e_prog > empty |- 
-(tcasel (tcons ttrue (tnil TBool)) (Id 0) (Id 1) tfalse (tvar (Id 0))) \in TBool.
+Definition app := tapp (tapp (tfun (Id 1) [TNat])
+                             (tvar (Id 3)))
+                       (tvar (Id 4)).    
+Example t7 : prog > cntxt |- app1 \in TNat.              
 Proof.
-  apply T_CaseL with (T' := TBool).
-  apply T_Cons.
-  apply T_True.
-  apply T_Nil.
-  apply T_False.
-  apply T_Var. reflexivity.
+ apply T_App with (T1 := TNat). apply T_App with (T1 := TNat).
+   * apply T_Fun.
+     - reflexivity.
+     - apply Forall_cons.
+       -- apply D_Nat.
+       -- apply Forall_nil.
+   * apply T_Var. reflexivity.
+   * apply T_Var. reflexivity.
 Qed.
 \end{minted}
+Proofs can be structured using bullet points, which makes it easier to follow the reasoning in writing. Valid options are: $+, -, *$ or a concatenation of up to 3 of the same symbols listed. When a rule generates multiple subgoals, every subgoal needs to be marked using the same bullet point. \todo{Am Anfang einführen?}
+\par
+We begin by applying \coqinline{T_App} twice, since we supply two arguments to the function. In both cases we need to specify \coqinline{T1}, that is, the type of the argument applied, for the same reason as in the previous example. The resulting subgoal list has three entries: the specialization of \texttt{union} (with ID 1 in Coq) needs to match both argument's types and the variables must be bound to the correct types in the context. 
 \begin{minted}{coq}
- Definition aContext2 :=
- tag_update
- (type_update
- (type_update empty (Id 3) TNat)
- (Id 4) TNat)
- (Id 0) tag_star.
- 
- Definition union (t1 t2: tm) : tm := tcaseb (tany TBool) t1 t2.
- Definition fun3 := FDecl (Id 1)
- [for_all (Id 0) tag_star]
- (TFun (TVar (Id 0)) (TFun (TVar (Id 0)) (TVar (Id 0))))
- [Id 42;Id 43]
- (union (tvar (Id 42)) (tvar (Id 43))).
- Definition prog3 := [fun3].
- 
- Definition app1 := tapp
- (tapp (tfun (Id 1) (cons (TNat) nil))
- (tvar (Id 3)))
- (tvar (Id 4)).
- Example t7 : prog3 > aContext2 |- app1 \in TNat.
- Proof.
- apply T_App with (T1 := TNat). apply T_App with (T1 := TNat).
- apply T_Fun.
- reflexivity.
- simpl. apply Forall_cons. apply D_Nat.
- apply Forall_nil.
- apply T_Var. reflexivity.
- apply T_Var. reflexivity.
- Qed.
+______________________________________(1/3)
+prog > cntxt |- tfun (Id 1) [TNat] \in TFun TNat (TFun TNat TNat)
+______________________________________(2/3)
+prog > cntxt |- tvar (Id 3) \in TNat
+______________________________________(3/3)
+prog > cntxt |- tvar (Id 4) \in TNat
 \end{minted}
-\chapter{Curry}
-\section{FlatCurry}
+The first subgoal is a \coqinline{tfun} expression, hence we use \coqinline{T_Fun} and get two additional subgoals to prove. The first goal states that \texttt{union}'s specialized type needs to match the arguments. The specialized type is computed by looking up the declaration in the program, removing the \coqinline{option} from the result and substituting $\alpha$ with \coqinline{TNat} in the function type. Since only computable functions are used in this goal, \coqinline{reflexivity} solves this directly.
+\begin{minted}{coq}
+______________________________________(1/2)
+specialize_func (fromOption default_fd (lookup_func prog (Id 1))) [TNat] =
+Some (TFun TNat (TFun TNat TNat))
+______________________________________(2/2)
+Forall (is_data_type cntxt)
+(fd_to_star_tys (fromOption default_fd (lookup_func prog (Id 1))) [TNat])
+\end{minted}
+The second subgoal requires all argument types to be data types if the corresponding quantifier has a star tag. Since this is true for $\alpha$, we need to prove that \coqinline{TNat} is a data type, which is shown by applying \coqinline{D_Nat}. We complete the first $*$-subgoal with \coqinline{Forall_nil} and have two subgoals regarding variables left. Since we assumed these variables to be bound in the context initially, applying \coqinline{T_Var} and \coqinline{reflexivity} finishes the proof.
+\section{Automated proofs}
+The examples shown in the previous section have a common structure: They all work with \coqinline{has_type} propositions and can be proven by applying rules of the inductive definition. A tactic that proves an arbitrary \coqinline{has_type} expression would need to try every rule, but would find a match eventually. Unfortunately this is not sufficient, because we already saw that some variables cannot be instantiated from the supplied expression and therefore require the manual definition of the regarding variables.
+\par
+Reconsidering the last example, one may notice the following: It is possible to infer the missing types of the arguments because the specialized function type also contains the arguments. The usage of \coqinline{apply} entails that all variables need to be instantiated immediately, even if the information may appear later. We need a way to postpone assigning values to variables until it is necessary -- the tactic \coqinline{eapply} does precisely this. 
+\begin{minted}{coq}
+______________________________________(1/3)
+prog > cntxt |- tfun (Id 1) [TNat] \in TFun ?T10 (TFun ?T1 TNat)
+______________________________________(2/3)
+prog > cntxt |- tvar (Id 3) \in ?T10
+______________________________________(3/3)
+prog > cntxt |- tvar (Id 4) \in ?T1
+\end{minted}
+Using \coqinline{eapply} replaces unknown values with variables, indicated by a question mark, without the need for manual input. When we apply \coqinline{T_Fun}, the type \coqinline{TFun ?T10 (TFun ?T1 TNat)} is matched with \coqinline{TFun TNat (TFun TNat TNat)}, that is, the specialized function type. Consequently, all necessary information was inferred automatically.
+\par
+The tactic \coqinline{constructor} tests every constructor of an inductive type, which works for inductively defined propositions. To automate the entire proof, we need to combine both ideas: A tactic that tries every rule and replaces unknown values with variables until they are known -- \coqinline{econstructor}. This is not just a combination of 'e' and constructor, but an existing, powerful tactic. It is possible to prove the example by using \coqinline{econstructor} eleven times, but luckily there is the tactic \coqinline{repeat t} that applies the supplied tactic \coqinline{t} to every subgoal and recursively to every additional generated subgoal until it fails or there is no more progress.
+\begin{minted}{coq}
+Example t7a : prog > cntxt |- app1 \in TNat.
+Proof.
+  repeat econstructor.
+Qed.
+\end{minted}
+This results in a fully automated, single-line proof and shows a small part of the powerful tactics Coq offers.
+\par
+Summarizing the last chapter, we began by transferring the formal definition of CuMin's syntax to Coq, followed by the definition of a context that contains variable bindings and tag information to enable typing of expressions. We used inductively defined propositions to describe data types and created a proposition that maps expressions to types with respect to a context. In the final sections we proved some examples and had a more detailed look at how proofs in Coq work and how they can be automated.
+\par
+In the following chapter we will follow the same procedure with FlatCurry, omitting the identical parts and focussing on the differences. Furthermore, we will look into transferring Curry programs to Coq and real world applications.
+\chapter{FlatCurry}
 \section{Typing}
 \subsection{Differences to CuMin}
 \subsection{Conversion of FlatCurry to Coq}

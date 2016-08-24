@@ -315,15 +315,15 @@ Section Examples.
                               (TFun (TVar (Id 5)) (TVar (Id 5))) 
                               [Id 1] 
                               (tvar (Id 1)).
-  Definition prog := [prog_fd].
+  Definition prog2 := [prog_fd].
 
-  Example fun1 : prog > aContext |- (tfun (Id 1) [TNat]) \in (TFun TNat TNat).
+  Example fun1 : prog2 > aContext |- (tfun (Id 1) [TNat]) \in (TFun TNat TNat).
   Proof. apply T_Fun.
     reflexivity.
     simpl. apply Forall_cons. apply D_Nat. apply Forall_nil.
   Qed.
 Check is_data_type empty.
-  Definition aContext2 :=
+  Definition cntxt :=
   tag_update
     (type_update
       (type_update empty (Id 3) TNat)
@@ -336,24 +336,25 @@ Check is_data_type empty.
                        (TFun (TVar (Id 0)) (TFun (TVar (Id 0)) (TVar (Id 0))))
                        [Id 42;Id 43]
                        (union (tvar (Id 42)) (tvar (Id 43))).
-  Definition prog3 := [fun3].
+  Definition prog := [fun3].
   
   Definition app1 := tapp
                       (tapp (tfun (Id 1) (cons (TNat) nil))
                             (tvar (Id 3)))
                       (tvar (Id 4)).
-  Example t7 : prog3 > aContext2 |- app1 \in TNat.
+  Example t7 : prog > cntxt |- app1 \in TNat.
   Proof.
-   apply T_App with (T1 := TNat). apply T_App with (T1 := TNat).
-    apply T_Fun.
-    reflexivity.
-    simpl. apply Forall_cons. apply D_Nat.
-    apply Forall_nil.
-    apply T_Var. reflexivity.
-    apply T_Var. reflexivity.
+    apply T_App with (T1 := TNat). apply T_App with (T1 := TNat).
+    * apply T_Fun.
+      - reflexivity.
+      - simpl. apply Forall_cons.
+        -- apply D_Nat.
+        -- apply Forall_nil.
+    * apply T_Var. reflexivity.
+    * apply T_Var. reflexivity.
   Qed.
 
-  Example t7a : prog3 > aContext2 |- app1 \in TNat.
+  Example t7a : prog > cntxt |- app1 \in TNat.
   Proof.
     repeat econstructor. (* Unlimited power! *)
   Qed.
