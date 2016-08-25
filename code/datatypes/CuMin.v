@@ -2,43 +2,43 @@ Require Import CQE.Maps CQE.Basics.
 Require Import EqNat Lists.List Program.Basics.
 Import ListNotations.
 
-  (* Data types *)
-  Inductive ty : Type :=
-    | TVar  : id -> ty
-    | TBool : ty
-    | TNat  : ty
-    | TList : ty -> ty
-    | TPair : ty -> ty -> ty
-    | TFun  : ty -> ty -> ty.
 
-  (* Terms *)
-  Inductive tm : Type :=
-    | tvar   : id -> tm
-    | tapp   : tm -> tm -> tm
-    | tfun   : id -> list ty -> tm
-    | tlet   : id -> tm -> tm -> tm
-    | ttrue  : tm
-    | tfalse : tm
-    | tfail  : ty -> tm
-    | tany   : ty -> tm
-    | tzero  : tm
-    | tsucc  : tm -> tm
-    | tadd   : tm -> tm -> tm
-    | teqn   : tm -> tm -> tm
-    | tpair  : tm -> tm -> tm
-    | tnil   : ty -> tm
-    | tcons  : tm -> tm -> tm
-    | tcaseb : tm -> tm -> tm -> tm
-    | tcasep : tm -> id -> id -> tm -> tm
-    | tcasel : tm -> id -> id -> tm -> tm -> tm.
+(* Data types *)
+Inductive ty : Type :=
+  | TVar  : id -> ty
+  | TBool : ty
+  | TNat  : ty
+  | TList : ty -> ty
+  | TPair : ty -> ty -> ty
+  | TFun  : ty -> ty -> ty.
 
-  (* Tags define the data types a type variable can be specialized to.
-     Star-tagged variables can only be specialized to non-functional data types
-     while the empty tag allows any specialization. *)
-  Inductive tag : Type :=
-    | tag_star  : tag
-    | tag_empty : tag.
-
+(* Terms *)
+Inductive tm : Type :=
+  | tvar   : id -> tm
+  | tapp   : tm -> tm -> tm
+  | tfun   : id -> list ty -> tm
+  | tlet   : id -> tm -> tm -> tm
+  | ttrue  : tm
+  | tfalse : tm
+  | tfail  : ty -> tm
+  | tany   : ty -> tm
+  | tzero  : tm
+  | tsucc  : tm -> tm
+  | tadd   : tm -> tm -> tm
+  | teqn   : tm -> tm -> tm
+  | tpair  : tm -> tm -> tm
+  | tnil   : ty -> tm
+  | tcons  : tm -> tm -> tm
+  | tcaseb : tm -> tm -> tm -> tm
+  | tcasep : tm -> id -> id -> tm -> tm
+  | tcasel : tm -> id -> id -> tm -> tm -> tm.
+(* Tags define the data types a type variable can be specialized to.
+   Star-tagged variables can only be specialized to non-functional data types
+   while the empty tag allows any specialization. *)
+Inductive tag : Type :=
+  | tag_star  : tag
+  | tag_empty : tag.
+  
 Section Context.
 
   (* A context maps IDs of type variables to tags and IDs of variables to 
@@ -151,6 +151,7 @@ Section Functions.
     end.
 
 End Functions.
+
 Section Typing.
   Variable Prog : program.
   (* Rules for being a data type *)
@@ -240,12 +241,12 @@ Section Typing.
 End Typing.
 
 Module TypingNotation.
-Notation "Prog > Gamma '|-' t '\in' T" := (has_type Prog Gamma t T) (at level 40) : typing_scope.
+  Notation "Prog > Gamma '|-' t '\in' T" := (has_type Prog Gamma t T) (at level 40) : typing_scope.
 End TypingNotation.
-
 
 Import TypingNotation.
 Open Scope typing_scope.
+
 Section Examples.
 
   Definition e_prog := @nil func_decl.
@@ -356,6 +357,6 @@ Check is_data_type empty.
 
   Example t7a : prog > cntxt |- app1 \in TNat.
   Proof.
-    repeat econstructor. (* Unlimited power! *)
+    repeat econstructor.
   Qed.
 End Examples.

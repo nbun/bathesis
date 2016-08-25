@@ -3,246 +3,308 @@ Require Import Datatypes EqNat Lists.List Ascii Bool String Program.Basics.
 Import ListNotations.
 Local Open Scope nat_scope.
 
-Definition beq_qname (q : QName) (q' : QName) : bool :=
+Section Context.
+
+  (* A context maps variable IDs to types and contains the full type and
+     a list of type variables for functions and constructors. *)
+  Inductive context : Type := 
+    | Con : (partial_map VarIndex TypeExpr) -> 
+            (partial_map QName (TypeExpr * (list TVarIndex))) ->
+            (partial_map QName (TypeExpr * (list TVarIndex))) -> context.
+
+  (* Empty context *)
+  Definition empty := Con emptymap emptymap emptymap.
+
+  (* Returns variable context of a context. *)
+  Definition vCon (c : context) := match c with Con vcon _ _ => vcon end.
+
+  (* Returns function context of a context. *)
+  Definition fCon (c : context) := match c with Con _ fcon _ => fcon end.
+
+  (* Returns constructor context of a context. *)
+  Definition cCon (c : context) := match c with Con _ _ ccon => ccon end.
+
+  (* Boolean equality of QNames *)
+  Definition beq_qname (q : QName) (q' : QName) : bool :=
   match q, q' with
   | (n, m), (n', m') => (andb (beq_str n n') (beq_str m m'))
   end.
 
-Inductive context : Type := 
-  | Con : (partial_map VarIndex TypeExpr) -> 
-          (partial_map QName (TypeExpr * (list TVarIndex))) ->
-          (partial_map QName (TypeExpr * (list TVarIndex))) -> context.
+  (* Updates a variable's type in a context. *)
+  Definition varUpdate (Gamma : context) (vi : VarIndex) (t : TypeExpr) : context := 
+    Con (update beq_nat (vCon Gamma) vi t) (fCon Gamma) (cCon Gamma).
 
-Definition empty := Con emptymap emptymap emptymap.
+  (* Updates the function entry of a QName. *)
+  Definition funcUpdate (Gamma : context) (qn : QName) (tvis : (TypeExpr * list TVarIndex)) : context :=
+    Con (vCon Gamma) (update beq_qname (fCon Gamma) qn tvis) (cCon Gamma).
 
-Definition vCon (c : context) := match c with Con vcon _ _ => vcon end.
+  (* Updates the constructor entry of a QName. *)
+  Definition consUpdate (Gamma : context) (qn : QName) (tvis : (TypeExpr * list TVarIndex)) :=
+    Con (vCon Gamma) (fCon Gamma) (update beq_qname (cCon Gamma) qn tvis).
 
-Definition fCon (c : context) := match c with Con _ fcon _ => fcon end.
+End Context.
 
-Definition cCon (c : context) := match c with Con _ _ ccon => ccon end.
+Section ProgToContext.
 
-Definition varUpdate (Gamma : context) (vi : VarIndex) (t : TypeExpr) : context := 
-  Con (update beq_nat (vCon Gamma) vi t) (fCon Gamma) (cCon Gamma).
+  (* Takes a list of types and returns a corresponding function type. *)
+  Fixpoint tyListFunc (tys : list TypeExpr) : TypeExpr :=
+    match tys with
+    | [t]     => t
+    | t :: ts => FuncType t (tyListFunc ts)
+    | []      => TCons ("Coq","NoType") []
+    end.
 
-Definition funcUpdate (Gamma : context) (qn : QName) (tvis : (TypeExpr * list TVarIndex)) : context :=
-  Con (vCon Gamma) (update beq_qname (fCon Gamma) qn tvis) (cCon Gamma).
+  (* Adds a constructor to a context. Because we need the full type, the
+     constructor's argument types and the type of constructor are combined
+     to a function type, the second component of the pair is a list of the
+     type variables.
+     Example: (Just a) has the entry (a -> Maybe a, [a]) in the context. *)
+  Definition addCons (con : context) (tqn : QName) (vis : list TVarIndex) (c : ConsDecl) : context :=
+    match c with
+    | Cons qn _ _ args => consUpdate con qn (tyListFunc (args ++ [TCons tqn (map TVar vis)]), vis)
+    end.
 
-Definition consUpdate (Gamma : context) (qn : QName) (tvis : (TypeExpr * list TVarIndex)) :=
-Con (vCon Gamma) (fCon Gamma) (update beq_qname (cCon Gamma) qn tvis).
+  (* Adds multiple constructors to a context. *)
+  Fixpoint addConsL (con : context) (tqn : QName) (vis : list TVarIndex) (cs : list ConsDecl) : context :=
+    match cs with
+    | [] => con
+    | c :: cs => addConsL (addCons con tqn vis c) tqn vis cs
+    end.
 
-Fixpoint tyListFunc (tys : list TypeExpr) : TypeExpr :=
-  match tys with
-  | [t]     => t
-  | t :: ts => FuncType t (tyListFunc ts)
-  | []      => TCons ("Coq","NoType") []
-  end.
+  (* Extracts constructor entries from type declarations. *)
+  Fixpoint parseTypes (con : context) (tydecls : list TypeDecl) : context :=
+    match tydecls with
+    | (Typec qn _ vis cs) :: tydecls => parseTypes (addConsL con qn vis cs) tydecls
+    | _ => con
+    end.
 
-Definition addCons (con : context) (tqn : QName) (vis : list TVarIndex) (c : ConsDecl) : context :=
-  match c with
-  | Cons qn _ _ args => consUpdate con qn (tyListFunc (args ++ [TCons tqn (map TVar vis)]), vis)
-  end.
+  (* Extracts indices of type variables from a type, with possibily
+     multiple entries for the same variable. *)
+  Fixpoint extractTVars (t : TypeExpr) : list TVarIndex :=
+    match t with
+    | TVar i      => [i]
+    | TCons _ tys => concat (map extractTVars tys)
+    | FuncType argT retT => (extractTVars argT) ++ (extractTVars retT)
+    end.
 
-Fixpoint addConsL (con : context) (tqn : QName) (vis : list TVarIndex) (cs : list ConsDecl) : context :=
-  match cs with
-  | [] => con
-  | c :: cs => addConsL (addCons con tqn vis c) tqn vis cs
-  end.
+  (* Removes duplicates from a list of type variable indices.
+     Applying rev before nodup ensures the order is preserved. *)
+  Definition funcTVars (t : TypeExpr) : list TVarIndex :=
+    rev (Basics.nodup beq_nat (rev (extractTVars t))).
 
-Fixpoint parseTypes (con : context) (tydecls : list TypeDecl) : context :=
-  match tydecls with
-  | (Typec qn _ vis cs) :: tydecls => parseTypes (addConsL con qn vis cs) tydecls
-  | _ => con
-  end.
+  (* Adds a function entry to a context. *)
+  Fixpoint addFunc (con : context) (fdecl : FuncDecl) : context :=
+    match fdecl with
+    | Func qn _ _ ty _ => funcUpdate con qn (ty, funcTVars ty)
+    end.
 
-Fixpoint extractTVars (t : TypeExpr) : list TVarIndex :=
-  match t with
-  | TVar i      => [i]
-  | TCons _ tys => concat (map extractTVars tys)
-  | FuncType argT retT => (extractTVars argT) ++ (extractTVars retT)
-  end.
+  (* Adds multiple functions to a context. *)
+  Definition parseFuncs (con : context) (fdecls : list FuncDecl) : context :=
+    fold_right (fun f c => addFunc c f) con fdecls.
 
-Definition funcTVars (t : TypeExpr) : list TVarIndex := rev (Basics.nodup beq_nat (rev (extractTVars t))).
+  (* Adds function and constructor entries to a context. *)
+  Definition parseProgram (p : TProg) : context :=
+    match p with
+    | Prog _ _ tydecls funcdecls _ => parseFuncs (parseTypes empty tydecls) funcdecls
+    end.
 
+End ProgToContext.
 
-Fixpoint addFunc (con : context) (fdecl : FuncDecl) : context :=
-  match fdecl with
-  | Func qn _ _ ty _ => funcUpdate con qn (ty, funcTVars ty)
-  end.
+Section TypingHelper.
 
-Definition parseFuncs (con : context) (fdecls : list FuncDecl) : context :=
-  fold_right (fun f c => addFunc c f) con fdecls.
+  (* Takes a function type and and an optional nat. If there is none supplied,
+     the last type of the function (e.g. c for a -> b -> c) is returned. For 
+     some number n, the first n types get removed, e.g. a -> b; Some 0 => a -> b,
+     a -> b -> c; Some 1 => b -> c, ... *)
+  Fixpoint funcPart (t : TypeExpr) (n : option nat) : TypeExpr :=
+    match t with
+    | TVar _    as t => t
+    | TCons _ _ as c => c
+    | FuncType _ (FuncType _ _ as f') as f => match n with
+                                              | None       => funcPart f' None
+                                              | Some O     => f
+                                              | Some (S n) => funcPart f' (Some n)
+                                              end
+    | FuncType _ retT     as f => match n with
+                                              | Some O => f
+                                              | _      => retT
+                                              end
+    end.
 
-Definition parseProgram (p : TProg) : context :=
-  match p with
-  | Prog _ _ tydecls funcdecls _ => parseFuncs (parseTypes empty tydecls) funcdecls
-  end.
+  (* Adds multiple variable -> type entries to a context. *)
+  Definition multiTypeUpdate (Gamma : context) (vitys : list (VarIndex * TypeExpr)) : context :=
+    fold_right (fun vity con => match vity with (vi, ty) => varUpdate con vi ty end)
+               Gamma vitys.
 
-(* Takes a function type and and an optional nat. If there is none supplied,
-   the last type of the function (e.g. c for a -> b -> c) is returned. For 
-   some number n, the first n types get removed, e.g. a -> b Some 0 => a -> b,
-   a -> b -> c Some 1 => b -> c, ... *)
-Fixpoint funcPart (t : TypeExpr) (n : option nat) : TypeExpr :=
-  match t with
-  | TVar _    as t => t
-  | TCons _ _ as c => c
-  | FuncType _ (FuncType _ _ as f') as f => match n with
-                                            | None       => funcPart f' None
-                                            | Some O     => f
-                                            | Some (S n) => funcPart f' (Some n)
-                                            end
-  | FuncType _ retT     as f => match n with
-                                            | Some O => f
-                                            | _      => retT
-                                            end
-  end.
+  (* Adds list of multiple variable -> type entries to a context. *)
+  Definition multiListTypeUpdate (Gamma : context) (vityls : list ((list VarIndex) * (list TypeExpr))) : context :=
+    fold_right (fun vityl con => match vityl with (vil, tyl) => multiTypeUpdate Gamma (zip vil tyl) end)
+               Gamma vityls.
 
-Definition multiTypeUpdate (Gamma : context) (vitys : list (VarIndex * TypeExpr)) : context :=
-  fold_right (fun vity con => match vity with (vi, ty) => varUpdate con vi ty end)
-  Gamma vitys.
+  (* Returns type of a literal. *)
+  Definition litType (l : Literal) : TypeExpr :=
+    match l with
+    | Intc _   => Int
+    | Floatc _ => Float
+    | Charc _  => Char
+    end.
 
-Definition multiListTypeUpdate (Gamma : context) (vityls : list ((list VarIndex) * (list TypeExpr))) : context :=
-  fold_right (fun vityl con => match vityl with (vil, tyl) => multiTypeUpdate Gamma (zip vil tyl) end)
-  Gamma vityls.
+  (* Returns expressions of a list of branch expressions. *)
+  Definition brexprsToExprs (brexprs : list BranchExpr) : list Expr :=
+    map (fun brexpr => match brexpr with (Branch _ e) => e end) brexprs.
 
-Definition litType (l : Literal) : TypeExpr :=
-  match l with
-  | Intc _   => Int
-  | Floatc _ => Float
-  | Charc _  => Char
-  end.
+  (* Returns patterns of a list of branch expressions. *)
+  Definition brexprsToPatterns (brexprs : list BranchExpr) : list TPattern :=
+    map (fun brexpr => match brexpr with (Branch p _) => p end) brexprs.
 
-Definition brexprsToExprs (brexprs : list BranchExpr) : list Expr :=
-  map (fun brexpr => match brexpr with (Branch _ e) => e end) brexprs.
+  (* Splits a pattern into a pair the QName and a list of type variables. *)
+  Definition pattSplit (p : TPattern) : (QName * list VarIndex) :=
+    match p with 
+    | (Pattern qn vis)      => (qn,vis)
+    | (LPattern (Intc n))   => (("Prelude","Int"), [])
+    | (LPattern (Charc c))  => (("Prelude","Char"), [])
+    | (LPattern (Floatc f)) => (("Prelude","Float"), [])
+    end.
 
-Definition brexprsToPatterns (brexprs : list BranchExpr) : list TPattern :=
-  map (fun brexpr => match brexpr with (Branch p _) => p end) brexprs.
+  (* Replaces the second element of every pair in a list. *)
+  Fixpoint replaceSnd {A B C : Type} (abs : list (A * B)) (cs : list C) : list (A * C) :=
+    match abs, cs with
+    | ((a, b) :: abs), (c :: cs) => (a, c) :: (replaceSnd abs cs)
+    | _, _                       => []
+    end.
 
-Definition pattSplit (p : TPattern) : (QName * list VarIndex) :=
-  match p with 
-  | (Pattern qn vis)      => (qn,vis)
-  | (LPattern (Intc n))   => (("Prelude","Int"), [])
-  | (LPattern (Charc c))  => (("Prelude","Char"), [])
-  | (LPattern (Floatc f)) => (("Prelude","Float"), [])
-  end.
+  (* Substitues a type variable k with a replacement type t  in a type t'. *)
+  Fixpoint typeSubst (k: TVarIndex) (t: TypeExpr) (t': TypeExpr) : TypeExpr :=
+    match t' with
+    | TVar i as v  => if (beq_nat i k) then t else v
+    | FuncType argT retT => FuncType (typeSubst k t argT) (typeSubst k t retT)
+    | TCons qn ts => TCons qn (map (typeSubst k t) ts)
+    end.
 
-Fixpoint replaceSnd {A B C : Type} (abs : list (A * B)) (cs : list C) : list (A * C) :=
-  match abs, cs with
-  | ((a, b) :: abs), (c :: cs) => (a, c) :: (replaceSnd abs cs)
-  | _, _                       => []
-  end.
+  (* Substitutes multiple type variables with multiple replacement types in a type. *)
+  Definition multiTypeSubst (ks : list TVarIndex) (ts : list TypeExpr) (t' : TypeExpr) : TypeExpr :=
+    fold_right (fun kt t' => match kt with (k, t) => typeSubst k t t' end)
+               t' (zip ks ts).
 
-Fixpoint typeSubst (k: TVarIndex) (t: TypeExpr) (t': TypeExpr) : TypeExpr :=
-  match t' with
-  | TVar i as v  => if (beq_nat i k) then t else v
-  | FuncType argT retT => FuncType (typeSubst k t argT) (typeSubst k t retT)
-  | TCons qn ts => TCons qn (map (typeSubst k t) ts)
-  end.
+  (* Returns the number of arguments a function has. *)
+  Fixpoint funcArgCnt (f : TypeExpr) : nat :=
+    match f with
+    | FuncType _ (FuncType _ _ as f') => 1 + funcArgCnt f'
+    | FuncType _ _ => 1
+    | _ => 0
+    end.
 
-Definition multiTypeSubst (ks : list TVarIndex) (ts : list TypeExpr) (t' : TypeExpr) : TypeExpr :=
-  fold_right (fun kt t' => match kt with (k, t) => typeSubst k t t' end)
-              t' (zip ks ts).
+  (* Default values for failed computations. *)
+  Definition noType := TCons ("Coq", "NoType") [].
+  Definition defaultTyVars := (noType, @nil TVarIndex).
 
-Fixpoint funcArgCnt (f : TypeExpr) : nat :=
-  match f with
-  | FuncType _ (FuncType _ _ as f') => 1 + funcArgCnt f'
-  | FuncType _ _ => 1
-  | _ => 0
-  end.
-
-Definition noType := TCons ("Coq", "NoType") [].
-Definition defaultTyVars := (noType, @nil TVarIndex).
-
-Fixpoint funcTyList (l : TypeExpr) : (list TypeExpr * TypeExpr) :=
-  match l with
-  | FuncType (FuncType _ _ as f) retT => let (x,y) := (funcTyList retT) in ([f] ++ x, y)
-  | FuncType argT (FuncType _ _ as retT) => let (x,y) := (funcTyList argT) in
+  (* Takes a function type and returns a pair of the function's argument types
+     and the return type. Example: a -> b -> Int => ([a,b],Int) *)
+  Fixpoint funcTyList (l : TypeExpr) : (list TypeExpr * TypeExpr) :=
+    match l with
+    | FuncType (FuncType _ _ as f) retT => let (x,y) := (funcTyList retT) in ([f] ++ x, y)
+    | FuncType argT (FuncType _ _ as retT) => let (x,y) := (funcTyList argT) in
                                               let (a,b) := (funcTyList retT) in (x ++ a, b)
-  | FuncType argT retT => let (x,y) := (funcTyList argT) in (x, retT)
-  | tyexpr => ([tyexpr], tyexpr)
-  end.
+    | FuncType argT retT => let (x,y) := (funcTyList argT) in (x, retT)
+    | tyexpr => ([tyexpr], tyexpr)
+    end.
 
-Definition length := Datatypes.length.
-Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
-Inductive hasType : context -> TypeExpr -> Expr -> Prop :=
-  | T_Var :       forall Gamma vi T,
-                    (vCon Gamma) vi = Some T ->
-                    Gamma |- (Var vi) \in T
+End TypingHelper.
 
-  | T_Lit :       forall Gamma l T,
-                    T = litType l ->
-                    Gamma |- (Lit l) \in T
+Section Typing.
 
-  | T_Comb_Fun :  forall Gamma qname exprs substTypes T,
-                    let funcT := fromOption defaultTyVars ((fCon Gamma) qname) in
+  (* Typing rules *)
+  Definition length := Datatypes.length.
+  Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
+  Inductive hasType : context -> Expr -> TypeExpr -> Prop :=
+    | T_Var :       forall Gamma vi T,
+                      (vCon Gamma) vi = Some T ->
+                      Gamma |- (Var vi) \in T
+
+    | T_Lit :       forall Gamma l T,
+                      T = litType l ->
+                      Gamma |- (Lit l) \in T
+
+    | T_Comb_Fun :  forall Gamma qname exprs substTypes T,
+                      let funcT := fromOption defaultTyVars ((fCon Gamma) qname) in
                       let specT := multiTypeSubst (snd funcT) substTypes (fst funcT)
-                          in funcPart specT None = T ->
-                             Forall2 (hasType Gamma) (fst (funcTyList specT)) exprs ->
-                    Gamma |- (Comb FuncCall qname exprs) \in T
+                       in funcPart specT None = T ->
+                          Forall2 (hasType Gamma) exprs (fst (funcTyList specT)) ->
+                      Gamma |- (Comb FuncCall qname exprs) \in T
 
-  | T_Comb_PFun : forall Gamma qname exprs substTypes remArg T,
-                    let funcT := fromOption defaultTyVars ((fCon Gamma) qname) in
+    | T_Comb_PFun : forall Gamma qname exprs substTypes remArg T,
+                      let funcT := fromOption defaultTyVars ((fCon Gamma) qname) in
                       let specT := multiTypeSubst (snd funcT) substTypes (fst funcT) in
-                        let n := funcArgCnt (fst funcT) - remArg
-                          in funcPart specT (Some n) = T ->
-                             Forall2 (hasType Gamma) (firstn (@length Expr exprs) (fst (funcTyList specT))) exprs ->
-                    Gamma |- (Comb (FuncPartCall remArg) qname exprs) \in T
+                      let     n := funcArgCnt (fst funcT) - remArg
+                       in funcPart specT (Some n) = T ->
+                          Forall2 (hasType Gamma) exprs (firstn (@length Expr exprs) (fst (funcTyList specT))) ->
+                      Gamma |- (Comb (FuncPartCall remArg) qname exprs) \in T
 
-  | T_Comb_Cons : forall Gamma qname exprs substTypes T,
-                    let consT := fromOption defaultTyVars ((cCon Gamma) qname) in
+    | T_Comb_Cons : forall Gamma qname exprs substTypes T,
+                      let consT := fromOption defaultTyVars ((cCon Gamma) qname) in
                       let specT := multiTypeSubst (snd consT) substTypes (fst consT)
-                        in funcPart specT None = T ->
-                           Forall2 (hasType Gamma) (fst (funcTyList specT)) exprs ->
-                    Gamma |- (Comb ConsCall qname exprs) \in T
+                       in funcPart specT None = T ->
+                          Forall2 (hasType Gamma) exprs (fst (funcTyList specT)) ->
+                      Gamma |- (Comb ConsCall qname exprs) \in T
 
-  | T_Comb_PCons :forall Gamma qname exprs substTypes remArg T,
-                    let consT := fromOption defaultTyVars ((cCon Gamma) qname) in
+    | T_Comb_PCons :forall Gamma qname exprs substTypes remArg T,
+                      let consT := fromOption defaultTyVars ((cCon Gamma) qname) in
                       let specT := multiTypeSubst (snd consT) substTypes (fst consT) in
-                        let n := funcArgCnt (fst consT) - remArg
-                          in funcPart specT (Some n) = T ->
-                             Forall2 (hasType Gamma) (firstn (@length Expr exprs) (fst (funcTyList specT))) exprs ->
-                    Gamma |- (Comb (ConsPartCall remArg) qname exprs) \in T 
+                      let n     := funcArgCnt (fst consT) - remArg
+                       in funcPart specT (Some n) = T ->
+                          Forall2 (hasType Gamma) exprs (firstn (@length Expr exprs) (fst (funcTyList specT))) ->
+                      Gamma |- (Comb (ConsPartCall remArg) qname exprs) \in T 
 
-  | T_Let :       forall Gamma vexprs tyexprs e T,
-                    @length (VarIndex * Expr) vexprs > 0 ->
-                    let exprs := map snd vexprs in
+    | T_Let :       forall Gamma ve ves tyexprs e T,
+                      let vexprs   := (ve :: ves) in
+                      let exprs    := map snd vexprs in
                       let vtyexprs := replaceSnd vexprs tyexprs in
-                        let Delta := multiTypeUpdate Gamma vtyexprs
-                          in Forall2 (hasType Delta) tyexprs exprs ->
-                             Delta |- e \in T ->
-                    Gamma |- (Let vexprs e) \in T
+                      let Delta    := multiTypeUpdate Gamma vtyexprs
+                       in Forall2 (hasType Delta) exprs tyexprs ->
+                          Delta |- e \in T ->
+                      Gamma |- (Let (ve :: ves) e) \in T
 
-  | T_Free :      forall Gamma vis expr tyexprs T,
-                  let Omega := multiTypeUpdate Gamma (zip vis tyexprs)
-                    in Omega |- expr \in T ->
-                  Gamma |- (Free vis expr) \in T
+    | T_Free :      forall Gamma vis expr tyexprs T,
+                      let Omega := multiTypeUpdate Gamma (zip vis tyexprs)
+                       in Omega |- expr \in T ->
+                      Gamma |- (Free vis expr) \in T
 
-  | T_Or :        forall Gamma e1 e2 T,
-                    Gamma |- e1 \in T ->
-                    Gamma |- e2 \in T ->
-                    Gamma |- (Or e1 e2) \in T
+    | T_Or :        forall Gamma e1 e2 T,
+                      Gamma |- e1 \in T ->
+                      Gamma |- e2 \in T ->
+                      Gamma |- (Or e1 e2) \in T
 
-  | T_Case :      forall Gamma ctype e substTypes T Tc p vis brexprs',
-                    let brexprs  := Branch p vis :: brexprs' in
-                    let pattps   := (map pattSplit (brexprsToPatterns brexprs)) in
-                    let contyvis := map (compose (fromOption defaultTyVars) (cCon Gamma))
-                                        (map fst pattps) in
-                    let tvis     := snd (fromOption defaultTyVars (cCon Gamma (fst (pattSplit p)))) in
-                    let specTs   := map (multiTypeSubst tvis substTypes)
-                                        (map fst contyvis) in
-                    let vistysl  := zip (map snd pattps)
-                                        (map (compose fst funcTyList) specTs) in
-                    let Delta    := multiListTypeUpdate Gamma vistysl
-                      in Forall (hasType Delta T) (brexprsToExprs brexprs) ->
-                         Forall (fun ty => ty = Tc) (map ((flip funcPart) None) specTs) ->
-                    Gamma |- e \in Tc ->
-                    Gamma |- (Case ctype e (Branch p vis :: brexprs')) \in T
+    | T_Case :      forall Gamma ctype e substTypes T Tc p vis brexprs',
+                      let  brexprs := Branch p vis :: brexprs' in
+                      let   pattps := (map pattSplit (brexprsToPatterns brexprs)) in
+                      let contyvis := map (compose (fromOption defaultTyVars) (cCon Gamma))
+                                          (map fst pattps) in
+                      let     tvis := snd (fromOption defaultTyVars (cCon Gamma (fst (pattSplit p)))) in
+                      let   specTs := map (multiTypeSubst tvis substTypes)
+                                          (map fst contyvis) in
+                      let  vistysl := zip (map snd pattps)
+                                          (map (compose fst funcTyList) specTs) in
+                      let    Delta := multiListTypeUpdate Gamma vistysl
+                       in Forall (flip (hasType Delta) T) (brexprsToExprs brexprs) ->
+                          Forall (fun ty => ty = Tc) (map ((flip funcPart) None) specTs) ->
+                      Gamma |- e \in Tc ->
+                      Gamma |- (Case ctype e (Branch p vis :: brexprs')) \in T
 
-  | T_Typed :     forall Gamma e T,
-                    Gamma |- e \in T ->
-                    Gamma |- (Typed e T) \in T
+    | T_Typed :     forall Gamma e T,
+                      Gamma |- e \in T ->
+                      Gamma |- (Typed e T) \in T
 
-where "Gamma '|-' t '\in' T" := (hasType Gamma T t).
+  where "Gamma '|-' t '\in' T" := (hasType Gamma t T).
 
+End Typing.
+
+Module TypingNotation.
+  Notation "Gamma '|-' t '\in' T" := (hasType Gamma t T) (at level 40) : typing_scope.
+End TypingNotation.
+
+
+Import TypingNotation.
+Open Scope typing_scope.
 Section Examples.
   Definition con := parseProgram 
    (Prog "test"
@@ -289,7 +351,6 @@ Section Examples.
   Definition letexp := Let  [(1,(Comb FuncCall ("test","plus") [(Lit (Intc 3));(Lit (Intc 2))] ))] (Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 4))]).
   Example e2 : con |- letexp \in Int.
   Proof. apply T_Let with (tyexprs := [Int]).
-    simpl. unfold gt. unfold lt. reflexivity.
     apply Forall2_cons. apply T_Comb_Fun with (substTypes := []).
     reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
@@ -307,7 +368,6 @@ Section Examples.
   Example e3 : con |- letexp2 \in Int.
   Proof.
     apply T_Let with (tyexprs := [Int; Int]).
-    simpl. unfold gt. unfold lt. apply le_S. reflexivity.
     apply Forall2_cons. apply T_Comb_Fun with (substTypes := []).
     reflexivity.
     apply Forall2_cons. apply T_Var. reflexivity.
@@ -329,7 +389,6 @@ Section Examples.
   Definition letexp3 := Let  [(1,(Comb FuncCall ("test","plus") [(Lit (Intc 1));(Lit (Intc 1))] ));(2,(Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 1))] ))] (Comb FuncCall ("test","plus") [(Var 2);(Var 1)] ).
   Example e4 : con |- letexp3 \in Int.
   Proof. apply T_Let with (tyexprs := [Int; Int]).
-    simpl. unfold gt. unfold lt. apply le_S. reflexivity.
     apply Forall2_cons. apply T_Comb_Fun with (substTypes := []).
     simpl. intros.
     reflexivity.
@@ -398,5 +457,12 @@ Qed.
     apply Forall_cons. reflexivity.
     apply Forall_nil.
     apply T_Var. simpl. reflexivity.
-  Qed. 
+  Qed.
+
+  Example e9a : (varUpdate con 1 (TCons ("test","Maybe") [Int] )) |- case1 \in Int.
+  Proof.
+    repeat econstructor;
+    try instantiate (1 := [Int]);
+    repeat econstructor.
+  Qed.
 End Examples.

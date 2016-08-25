@@ -1,9 +1,8 @@
-% LaTeX-Muster Seminararbeit
 \documentclass[fleqn]{scrreprt}
 
 \usepackage[T1]{fontenc}        % T1-Fonts
 \usepackage[utf8]{inputenc}     % Enkodierung
-\usepackage[english]{babel}     % neue deutsche Rechtschreibung
+\usepackage[english]{babel}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{proof} % http://www.logicmatters.net/resources/ndexamples/proofsty.html
@@ -761,9 +760,14 @@ Summarizing the last chapter, we began by transferring the formal definition of 
 \par
 In the following chapter we will follow the same procedure with FlatCurry, omitting the identical parts and focussing on the differences. Furthermore, we will look into transferring Curry programs to Coq and real world applications.
 \chapter{FlatCurry}
+FlatCurry is a flat representation of Curry code that enables meta-programming, that is, the transformation of Curry programs in Curry.\cite{kics2manual} Since we want to reason about Curry programs in Coq, the respective module \texttt{FlatCurry.Types} will be the foundation of the Coq implementation. The generation of FlatCurry code involves two transformations: Firstly, lambda lifting is applied, that is, local function definitions, for example introduced by \texttt{where} or \texttt{let} clauses, are replaced by top-level definitions. Secondly, pattern matching is substituted by case and or expressions, the latter in case of overlapping patterns.
+\par
+\todo{Kapitelüberblick}
+\section{Syntax}
+\section{Context}
 \section{Typing}
-\subsection{Differences to CuMin}
-\subsection{Conversion of FlatCurry to Coq}
+\section{Examples}
+\section{Conversion of FlatCurry to Coq}
 \chapter{Conclusion}
 
 % Anhang
@@ -774,6 +778,6 @@ In the following chapter we will follow the same procedure with FlatCurry, omitt
 
 % Literatur
 \bibliographystyle{abbrv}
-\bibliography{curroqe.bib} % Datei: seminar.bib
+\bibliography{curroqe} % Datei: seminar.bib
 
 \end{document}

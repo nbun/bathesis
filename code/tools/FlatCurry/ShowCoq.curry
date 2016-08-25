@@ -101,7 +101,8 @@ showFlatExpr (Typed e ty) =
   "(Typed " ++ showFlatExpr e ++ ' ' : showFlatTypeExpr ty ++ ")"
 
 showFlatLit (Intc   i) = "(Intc " ++ show i ++ ")"
-showFlatLit (Floatc f) = "(Floatc " ++ show f ++ ")"
+-- Coq: Floats are stored as strings
+showFlatLit (Floatc f) = "(Floatc \"" ++ show f ++ "\")"
 -- Coq: Characters are enclosed by double quotes instead of single quotes
 showFlatLit (Charc  c) = "(Charc \"" ++ escQuote (filter (/='\'') (show c)) ++ "\")"
 
