@@ -2,7 +2,6 @@ Require Import CQE.Maps CQE.Basics.
 Require Import EqNat Lists.List Program.Basics.
 Import ListNotations.
 
-
 (* Data types *)
 Inductive ty : Type :=
   | TVar  : id -> ty
@@ -323,7 +322,7 @@ Section Examples.
     reflexivity.
     simpl. apply Forall_cons. apply D_Nat. apply Forall_nil.
   Qed.
-Check is_data_type empty.
+
   Definition cntxt :=
   tag_update
     (type_update
