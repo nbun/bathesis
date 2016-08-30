@@ -689,7 +689,7 @@ The first example proves that \texttt{let x = 0 in 1 + x} is a natural number. B
 	\caption{Matching quantified variables with arguments}
 	\label{letmatch}
 \end{figure}
-The application of \coqinline{T_Let} needs manually specified arguments, because \coqinline{T1} is not explicitly stated in the expression. Since \coqinline{tzero} is of type \coqinline{TNat}, we can tell Coq to assume the type of \coqinline{T1} by writing \coqinline{with (T1 := TNat)} behind the tactic. In the following proof we need to show that 0, 1 and the addition $1 + x$ are \coqinline{TNat}s, which is mostly done by applying the corresponding rules. Since \coqinline{T_Let} adds a binding of $x$ (\coqinline{Id 5} in Coq) to the type of $e_{1}$ to the context, we can apply \coqinline{T_Var} successfully in the context \coqinline{type_update empty (Id 5) TNat}.\\
+The application of \coqinline{T_Let} needs manually supplied arguments, because \coqinline{T1} is not explicitly stated in the expression. Since \coqinline{tzero} is of type \coqinline{TNat}, we can tell Coq to assume the type of \coqinline{T1} by writing \coqinline{with (T1 := TNat)} behind the tactic. In the following proof we need to show that 0, 1 and the addition $1 + x$ are \coqinline{TNat}s, which is mostly done by applying the corresponding rules. Since \coqinline{T_Let} adds a binding of $x$ (\coqinline{Id 5} in Coq) to the type of $e_{1}$ to the context, we can apply \coqinline{T_Var} successfully in the context \coqinline{type_update empty (Id 5) TNat}.\\
 \par 
 The next example demonstrates the application $\text{app} = (\text{union}_{[Nat]} \: u) \: v \:$of two variables to the function \texttt{union}. We do not consider the creation of the variable bindings, they are assumed to be natural numbers, that is, $\Gamma, u :: \text{Nat}, v :: \text{Nat}, t_{\alpha} = * \vdash \text{app} :: \text{Nat}$.
 \begin{align*}
@@ -715,7 +715,7 @@ Qed.
 \end{coqcode}
 Proofs can be structured using bullet points, which makes it easier to follow the reasoning in writing. Valid options are: $+, -, *$ or a concatenation of up to 3 of the same symbols listed. When a rule generates multiple subgoals, every subgoal needs to be marked using the same bullet point. \todo{Am Anfang einführen?}
 \par
-We begin by applying \coqinline{T_App} twice, since we supply two arguments to the function. In both cases we need to specify \coqinline{T1}, that is, the type of the argument applied, for the same reason as in the previous example. The resulting subgoal list has three entries: the specialization of \texttt{union} (with ID 1 in Coq) needs to match both argument's types and the variables must be bound to the correct types in the context. 
+We begin by applying \coqinline{T_App} twice, once for each of the given arguments. In both cases we need to explicitly supply \coqinline{T1}, that is, the type of the argument applied, for the same reason as in the previous example. The resulting subgoal list has three entries: the specialization of \texttt{union} (with ID 1 in Coq) needs to match both argument's types and the variables must be bound to the correct types in the context. 
 \begin{coqcode}
 ______________________________________(1/3)
 prog > cntxt |- tfun (Id 1) [TNat] \in TFun TNat (TFun TNat TNat)
@@ -792,7 +792,7 @@ The big difference is the absence of explicit types, for example \texttt{Nat} or
 \begin{coqcode}
 (TCons ("Prelude","Either") [(TCons ("Prelude","Int") [] ), (TVar 0)])
 \end{coqcode}
-The next construct are declarations of functions, types and constructors. They are identified by qualified names and have a visibility, which determines if the declaration is visible when the module is imported in another program. A function's arity, that is, the number of arguments, is represented by a natural number; this information is useful when working with partial function applications. It is followed by the function's type, represented by a \coqinline{TypeExpr}. Lastly, rules encapsulate a list of variables and an expression, which is similar to CuMin's syntax, except for the possibility to state multiple rules instead of one.
+The next construct are declarations of functions, types and constructors. They are identified by qualified names and have a visibility, which determines if the declaration is visible when the module is imported in another program. A function's arity, that is, the number of arguments, is represented by a natural number; this information is useful when working with partial function applications. It is followed by the function's type, represented by a \coqinline{TypeExpr}. Lastly, rules encapsulate a list of variables and an expression, which is similar to CuMin's syntax.
 \begin{coqcode}
 Inductive FuncDecl : Type := 
   | Func : QName -> nat -> Visibility -> TypeExpr -> TRule -> FuncDecl.
@@ -848,7 +848,65 @@ Let [(1,(Comb FuncCall ("Prelude","+") [(Lit (Intc 3)), (Lit (Intc 2))] )),
 \end{coqcode}
 FlatCurry misses unnecessary variables and bindings are sorted hierarchically, that is, if a variable occurs in another binding, its position in the list is ahead of the binding.
 \paragraph{Case}
+There are two instances that result in a case expression in FlatCurry: An explicit case expression and pattern matching, for example in functions. The \coqinline{CaseType} is either \coqinline{rigid}, in case of an explicit case, or \coqinline{flexible} for transformed pattern matching. It modifies the evaluation strategy of free variables in the case expression; flexible cases use \textit{narrowing}, which evaluates function calls with unknown arguments non-deterministically, while rigid cases delay function calls if they cannot be evaluated deterministically, which is called \textit{residuation}.\cite{Hanus13} \todo{Stimmt das?}
+The evaluation strategy does not affect the result's type, hence we do not need to distinguish both cases.
+\par
+The two remaining arguments are an expression that determines the branch to be taken and a list of \coqinline{BranchExpr}, which consist of a pattern and an expression. Patterns may be literals or a constructor and a list of variables, as shown in the following example. The original function \texttt{fromMaybe} is transformed to a case expression in order eliminate pattern matching.\\
+\par
+\begin{minipage}[t]{.5\linewidth}
+\begin{minted}{haskell}
+fromMaybe :: a -> Maybe a -> a
+fromMaybe _ (Just x) = x
+fromMaybe d Nothing  = d
+\end{minted}
+\end{minipage}
+\begin{minipage}[t]{.5\linewidth}
+\begin{minted}{haskell}
+fromMaybeCase :: a -> Maybe a -> a
+fromMaybeCase d m = case m of
+                      Just x  -> x
+                      Nothing -> d
+\end{minted}
+\end{minipage}
+\begin{coqcode}
+Case Flex (Var 2) [(Branch (Pattern ("Prelude","Just") [3] )(Var 3)),
+                   (Branch (Pattern ("Prelude","Nothing") [] )(Var 1))]
+\end{coqcode}
+The resulting FlatCurry code looks nearly identical for both definitions, only the \coqinline{CaseType} differs because \texttt{fromMaybeCase} is an explicit case expression instead of a transformation. Unlike CuMin's \texttt{case}, this definition can be used with every type and hence typing a \texttt{case} expression is more complex in FlatCurry.\\
+\par
+The remaining expressions work as expected: \texttt{Free} introduces a list of free variables in an expression, \texttt{Or} returns one of the two expressions supplied and \texttt{Typed} assigns a type to an expression. \todo{Weglassen?}
 \section{Context}
+The context we use for typing FlatCurry contains the familiar partial map from \coqinline{VarIndex} to \coqinline{TypeExpr}, but is missing the \coqinline{tag} map, since we do not have data types anymore. In addition to the information about variables, the context contains function and constructor declarations in form of two partial maps that map a qualified name to a pair of the full type and a list of type variables, for example \texttt{Just} has the entry ($a \rightarrow$ Maybe $a$, [$a$]). The list of type variables simplifies specializing a function because every type variable needs to be substituted with a concrete type. To work with contexts there are selectors \coqinline{vCon}, \coqinline{fCon} and \coqinline{cCon} to access the respective contexts and update functions to add values, similar to the CuMin context.\\
+\par
+We want to be able to work with possibly large Curry programs, hence we need to create a parser that extracts the required information from a FlatCurry program and adds it to a context. Parsing function declarations is simple because it contains the function's type explicitly and we need to extract the type variables only.
+\begin{coqcode}
+Fixpoint extractTVars (t : TypeExpr) : list TVarIndex :=
+  match t with
+  | TVar i      => [i]
+  | TCons _ tys => concat (map extractTVars tys)
+  | FuncType argT retT => (extractTVars argT) ++ (extractTVars retT)
+  end.
+\end{coqcode}
+Because \coqinline{extractTVars} lists every occurrence of a type variable, the result needs to be deduplicated. Together with the function type the pair is added to the context. By using \coqinline{fold_right}, a list of function declarations is added to the same context.
+\par
+Parsing a constructor declaration is more complicated because the type is not as easily accessible. Additionally, the declarations are contained in a type declaration and we need do incorporate this information in the constructor's type. We begin by parsing the list with the data type supplied as an additional parameter, for example \texttt{Maybe} $a$ for the declaration of \texttt{Just}. Unfortunately the type parameters of a constructor are stored as a list, therefore we need a function that transforms a list of types to a function type, for example \texttt{[Int, Bool, Int]} to \texttt{Int -> Bool -> Int}.
+\begin{coqcode}
+Fixpoint tyListFunc (tys : list TypeExpr) : TypeExpr :=
+  match tys with
+  | [t]     => t
+  | t :: ts => FuncType t (tyListFunc ts)
+  | []      => TCons ("Coq","NoType") []
+  end.
+\end{coqcode}
+The function \coqinline{tyListFunc} recursively creates function types and adds the supplied types until the list contains only one type, which is the return type of the function. In case of an empty list we need a default type because Coq enforces exhaustive pattern matching. Now we can use \coqinline{tyListFunc} to assemble the full type:
+\begin{coqcode}
+tyListFunc (args ++ [TCons tqn (map TVar vis)])
+\end{coqcode}
+The information obtained from the type declaration is its qualified name \texttt{tqn} and type variables \texttt{vis}. By constructing a \coqinline{TypeExpr} with \coqinline{TCons} and concatenating it to the list of type variables \texttt{args} of the constructor, we get the full type by applying \coqinline{tyListFunc} to it.
+\begin{coqcode}
+tyListFunc ([TVar 0] ++ [TCons ("Prelude", "Maybe") (map TVar [0])])
+\end{coqcode} 
+In case of \texttt{Just} this results in the type $a \rightarrow$ Maybe $a$, which is added to the context together with the list of type variables of the data type. This procedure is applied to every constructor declaration and, together with the parsed function declarations, results in a context that contains the full type and a list of type variables for every function and constructor.
 \section{Typing}
 \section{Examples}
 \section{Conversion of FlatCurry to Coq}
