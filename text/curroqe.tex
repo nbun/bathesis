@@ -6,6 +6,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{proof} % http://www.logicmatters.net/resources/ndexamples/proofsty.html
+\usepackage{bussproofs}
 \usepackage{hyperref}
 \usepackage{subcaption}
 \usepackage{tikz}
@@ -828,9 +829,9 @@ Inductive Expr : Type :=
   | Case  : CaseType -> Expr -> list BranchExpr -> Expr
   | Typed : Expr -> TypeExpr -> Expr
 \end{coqcode}
-\paragraph{Lit} \todo{Kann man Paragraphüberschriften benutzen?}
-Literals can be integers, characters or floating point numbers. While there is a \texttt{nat} type in Coq, the other types cannot be represented that easily. The module \texttt{Ascii} contains data structures and notations for characters, but it is not possible to use escaped symbols like \texttt{\textbackslash n} without converting them to a decimal, three digit representation, in this case 010. Similarly, the module \texttt{Reals} can represent floats, but the dot notation that FlatCurry uses (for example $1.2$) is not available, instead numbers need to be written as fractions. Because we are mainly interested in typing expressions, we avoid this problem by using strings to represent chars and floats. That is not to say that an accurate representation is not feasible, but rather that it adds little value in the context of typing expressions. 
-\paragraph{Comb}
+\paragraph{Literals} \todo{Kann man Paragraphüberschriften benutzen?}
+Integers, characters or floating point numbers can be literals. While there is a \texttt{nat} type in Coq, the other types cannot be represented that easily. The module \texttt{Ascii} contains data structures and notations for characters, but it is not possible to use escaped symbols like \texttt{\textbackslash n} without converting them to a decimal, three digit representation, in this case 010. Similarly, the module \texttt{Reals} can represent floats, but the dot notation that FlatCurry uses (for example $1.2$) is not available, instead numbers need to be written as fractions. Because we are mainly interested in typing expressions, we avoid this problem by using strings to represent chars and floats. That is not to say that an accurate representation is not feasible, but rather that it adds little value in the context of typing expressions. 
+\paragraph{Combinations}
 The application of functions and constructors is represented by \coqinline{Comb}. Its first argument is a \coqinline{CombType}, which is either a function/constructor call with all arguments provided (\coqinline{FuncCall/ConsCall}) or a partial call (FuncPartCall/ConsPartCall). The latter has an integer value that is the number of missing arguments. The other arguments of \coqinline{Comb} are a qualified name of a function or constructor and a list of expressions, that it is applied to.
 \begin{coqcode}
 Comb FuncCall ("Prelude","map") 
@@ -876,6 +877,7 @@ The resulting FlatCurry code looks nearly identical for both definitions, only t
 \par
 The remaining expressions work as expected: \texttt{Free} introduces a list of free variables in an expression, \texttt{Or} returns one of the two expressions supplied and \texttt{Typed} assigns a type to an expression. \todo{Weglassen?}
 \section{Context}
+\label{context}
 The context we use for typing FlatCurry contains the familiar partial map from \coqinline{VarIndex} to \coqinline{TypeExpr}, but is missing the \coqinline{tag} map, since we do not have data types anymore. In addition to the information about variables, the context contains function and constructor declarations in form of two partial maps that map a qualified name to a pair of the full type and a list of type variables, for example \texttt{Just} has the entry ($a \rightarrow$ Maybe $a$, [$a$]). The list of type variables simplifies specializing a function because every type variable needs to be substituted with a concrete type. To work with contexts there are selectors \coqinline{vCon}, \coqinline{fCon} and \coqinline{cCon} to access the respective contexts and update functions to add values, similar to the CuMin context.\\
 \par
 We want to be able to work with possibly large Curry programs, hence we need to create a parser that extracts the required information from a FlatCurry program and adds it to a context. Parsing function declarations is simple because it contains the function's type explicitly and we need to extract the type variables only.
@@ -907,7 +909,185 @@ The information obtained from the type declaration is its qualified name \texttt
 tyListFunc ([TVar 0] ++ [TCons ("Prelude", "Maybe") (map TVar [0])])
 \end{coqcode} 
 In case of \texttt{Just} this results in the type $a \rightarrow$ Maybe $a$, which is added to the context together with the list of type variables of the data type. This procedure is applied to every constructor declaration and, together with the parsed function declarations, results in a context that contains the full type and a list of type variables for every function and constructor.
-\section{Typing}
+\section{Typing}\todo{:: durch $\mapsto$ bei CuMin ersetzen?}
+The FlatCurry typing rules are expand the concepts we discussed in the previous chapter. Functions can be applied to multiple arguments at once, there are user-defined data types, generic \texttt{case} expressions and \texttt{let} expressions with multiple bindings. This results in more complex typing rules, because conditions need to hold for multiple elements, instead of one, and are not restricted to a specific data type.
+\par 
+We begin by defining names for common types, for example \texttt{Int}, \texttt{Char} and \texttt{Float}, which represent \coqinline{TCons ("Prelude", "Int") []} for the respective type.
+In the following rules the same syntax $\Gamma \vdash e :: \tau$ as before is used to express that in a context $\Gamma$ the expression $e$ has the type $\tau$. We will discuss inference rules and, if not easily transferable, the implementation for FlatCurry expressions.
+\begin{figure}[H]
+\begin{subfigure}{.3 \linewidth}
+	\centering
+	\begin{prooftree}
+		\AxiomC{$\Gamma \vdash \text{Lit (Intc}~ i) :: \text{Int}$}
+	\end{prooftree}
+\end{subfigure}
+\begin{subfigure}{.34 \linewidth}
+	\centering
+	\begin{prooftree}
+		\AxiomC{$\Gamma \vdash \text{Lit (Floatc}~ f) :: \text{Float}$}
+	\end{prooftree}
+\end{subfigure}
+\begin{subfigure}{.34 \linewidth}
+	\centering
+	\begin{prooftree}
+		\AxiomC{$\Gamma \vdash \text{Lit (Charc}~ c) :: \text{Char}$}
+	\end{prooftree}
+\end{subfigure}
+\par \medskip
+\begin{subfigure}{\linewidth}
+	\centering
+	\begin{prooftree}
+		\AxiomC{$\Gamma, x \mapsto \tau \vdash x :: \tau$}
+	\end{prooftree}
+\end{subfigure}
+\caption{Typing rules for literals and variables}
+\end{figure}
+FlatCurry does have less literals than CuMin; the type of a literal depends on its argument. The other literals we defined explicitly in CuMin are replaced by \coqinline{TCons} constructs, for example \coqinline{TCons ("Prelude", "[]") []} represents the empty list. Typing variables works as before: If the context $\Gamma$ has an entry for a variable, its type is the value returned by $\Gamma$.
+\par
+\begin{figure}[H]
+	\begin{prooftree}
+		\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_k \mapsto t_k}~]$}
+		\AxiomC{$\dots$}
+		\AxiomC{$\Gamma \vdash e_n :: \tau_n[~\overline{x_k \mapsto t_k}~]$}
+		\TrinaryInfC{$\Gamma, \{ \text{$f$} \mapsto (\tau_1 \rightarrow
+			\dots \rightarrow \tau_n \rightarrow \tau, \overline{x_k})\} \vdash \text{$f$ } e_1
+			\dots e_n :: \tau[~\overline{x_k \mapsto t_k}~]$}
+	\end{prooftree}
+\caption{Typing rule for function applications}
+\label{typingfunc}
+\end{figure}
+Applying a function $f$ to $n$ arguments $e_{1} \dots e_{n}$ requires the arguments to have types $\tau_{1} \dots \tau_{n}$ that match the types in the function type returned by the context. Looking up the function $f$, denoted by curly brackets, yields the pair $(\tau_1 \rightarrow \dots \rightarrow \tau_n \rightarrow \tau, \overline{x_k})$ where the first component is the type of $f$ and the second is a list of type variables, as defined in \autoref{context}. The notation $[~\overline{x_{k} \mapsto t_{k}}~]$ represents a type substitution of the type variable $x_{i}$ with the type $t_{i}$. The types $t_{i}$ need to be supplied explicitly, because there is no type inference. For instance, the application of \texttt{map} to \texttt{IntToChar} and \texttt{[1,2,3]} yields the pair $((a \rightarrow b) \rightarrow [a] \rightarrow [b], [a,b])$ from the context, which results in the premises $\Gamma \vdash \texttt{IntToChar} :: (a \rightarrow b)[a \mapsto \texttt{Int}, b \mapsto \texttt{Char}]$ and $\Gamma \vdash [1,2,3] :: [a][a \mapsto \texttt{Int}, b \mapsto \texttt{Char}]$.\todo{Grafik statt inline Code?}\\
+\par \noindent
+The implementation is a set of rules in an inductively defined proposition, as before: 
+\begin{coqcode}
+Inductive hasType : context -> Expr -> TypeExpr -> Prop :=
+  T_Comb_Fun : forall Gamma qname exprs substTypes T,
+                 let funcT := fromOption defaultTyVars ((fCon Gamma) qname) in
+                 let specT := multiTypeSubst (snd funcT) substTypes (fst funcT)
+                  in funcPart specT None = T ->
+                     Forall2 (hasType Gamma) exprs (fst (funcTyList specT)) ->
+               Gamma |- (Comb FuncCall qname exprs) \in T
+\end{coqcode}
+Firstly, the qualified name of the function is looked up in the function context and the \coqinline{option} removed, which yields the pair \coqinline{funcT}. The variable \coqinline{substTypes}, that is, a list of types that replace the type variables, is supplied by the user when using the rule. It is used to replace the type variables in the function type, which yields the specialized type \coqinline{specT}. Now we need to determine the type $T$ of the function application, which is computed by \coqinline{funcPart}. It takes a function type plus an optional number and yields the return type of the function if no number is supplied. Otherwise \coqinline{funcPart} removes the first $n$ types of the function, for example \texttt{funcPart (Some 2) (a -> b -> c)} yields \texttt{c}. This is useful for computing the type of partial applications, in this case we need only the return type, since all arguments are supplied.
+\par
+The last premise checks that the expressions have the type of the respective part of the specialized function part by transforming the specialized type into a list of types, minus the return type that is contained in the second part of the pair \texttt{funcTyList} returns. \coqinline{Forall2} checks if the $i$-th element of the expression list has the $i$-th type of the type list, which represents the conditions of the inference rule in \autoref{typingfunc}.
+\begin{figure}[H]
+\begin{prooftree}
+	\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_k \mapsto t_k}~]$}
+	\AxiomC{$\dots$}
+	\AxiomC{$\Gamma \vdash e_n :: \tau_n[~\overline{x_k \mapsto t_k}~]$}
+	\TrinaryInfC{$\Gamma, \{ C \mapsto (\tau_1 \rightarrow
+		\dots \rightarrow \tau_n \rightarrow \tau, \overline{x_k}\} \vdash \text{$C$ } e_1
+		\dots e_n :: \tau[~\overline{x_k \mapsto t_k}~]$}
+\end{prooftree}
+\caption{Typing rule for constructor applications}
+\end{figure}
+The application of a constructor works identical to a function application, which is a consequence of the way we constructed the context and the type transformation associated with adding a constructor. The only difference is the context to look up the constructor, because we distinguish between constructors and functions.
+
+\begin{figure}[H]
+\begin{prooftree}
+	\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_i \mapsto t_i}~]$}
+	\AxiomC{$\dots$}
+	\AxiomC{$\Gamma \vdash e_k :: \tau_k[~\overline{x_i \mapsto t_i}~]$}\RightLabel{\footnotesize with
+		$k < n$}
+	\TrinaryInfC{$\Gamma, F \vdash \text{$f$ } e_1
+		\dots e_k :: (\tau_{k+1} \rightarrow \dots \rightarrow \tau_n
+		\rightarrow \tau)[~\overline{x_i \mapsto t_i}~] $}
+\end{prooftree}
+\begin{center} \small
+with
+$F = \{ \text{$f$} \mapsto (\tau_1 \rightarrow
+\dots \rightarrow \tau_k \rightarrow \tau_{k+1} \rightarrow \dots
+\rightarrow \tau_n \rightarrow \tau, \overline{x_i})\}$
+\end{center}
+\caption{Typing rule for partial function applications}
+\end{figure}
+
+\underline{(f)Case-Expression}
+\begin{prooftree}
+	\AxiomC{$\Gamma, x_1 \mapsto \tau_{1_1}, \dots, x_n \mapsto \tau_{1_n} \vdash e_1 :: \tau'$}
+	\AxiomC{$\dots$}
+	\AxiomC{$\Gamma, x_1 \mapsto \tau_{k_1}, \dots, x_m \mapsto
+		\tau_{k_m} \vdash e_k :: \tau'$}
+	\noLine
+	\TrinaryInfC{$\Gamma \vdash e :: \tau$}\RightLabel{\footnotesize with $k > 0$}
+	\UnaryInfC{ $\Gamma, Cs \vdash \text{(f)case e of } \{ \text{$C_1$ } x_1 \dots x_n \rightarrow
+		e_1; \dots ; \text{$C_k$ } x_1 \dots x_m \rightarrow e_k\}  :: \tau'$}
+\end{prooftree}
+with
+\[
+Cs = \{C_1 \mapsto (\tau_{1_1} \rightarrow
+\dots \rightarrow \tau_{1_n} \rightarrow \tau), \dots , C_k \mapsto (\tau_{k_1} \rightarrow
+\dots \rightarrow \tau_{k_m} \rightarrow \tau) \}
+\]
+
+\bigskip
+
+\underline{Or-Expression}
+\begin{prooftree}
+	\AxiomC{$\Gamma \vdash e_1 :: \tau$}
+	\AxiomC{$\Gamma \vdash e_2 :: \tau$}
+	\BinaryInfC{$\Gamma \vdash e_1 \text{ or } e_2 :: \tau$}
+\end{prooftree}
+
+\underline{Recursive Let-Expression}
+\begin{prooftree}
+	\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto \tau_n \vdash e_1 :: \tau_1$}
+	\AxiomC{\dots}
+	\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_{n} \mapsto
+		\tau_{n} \vdash e_n :: \tau_n$}
+	\noLine
+	\TrinaryInfC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto
+		\tau_n \vdash e :: \tau$}\RightLabel{\footnotesize with $n > 0$}
+	\UnaryInfC{$\Gamma \vdash \text{let } x_1 = e_1, \dots , x_n = e_n
+		\text{ in } e :: \tau $}
+\end{prooftree}
+
+\underline{Let-Expression}
+\begin{prooftree}
+	\AxiomC{$\Gamma, x_2 \mapsto \tau_2, \dots, x_n \mapsto \tau_n \vdash e_1 :: \tau_1$}
+	\AxiomC{\dots}
+	\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_{n-1} \mapsto
+		\tau_{n-1} \vdash e_n :: \tau_n$}
+	\noLine
+	\TrinaryInfC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto
+		\tau_n \vdash e :: \tau$}\RightLabel{\footnotesize with $n > 0$}
+	\UnaryInfC{$\Gamma \vdash \text{let } x_1 = e_1, \dots , x_n = e_n
+		\text{ in } e :: \tau $}
+\end{prooftree}
+
+\underline{Free-Declaration}
+\begin{prooftree}
+	\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto \tau_n \vdash
+		e :: \tau$}
+	\UnaryInfC{$\Gamma \vdash \text{let } x_1, \dots, x_n \text{ free in } e :: \tau $}
+\end{prooftree}
+
+\underline{Typed Expression}
+\begin{prooftree}
+	\AxiomC{$\Gamma \vdash e :: \tau$}
+	\UnaryInfC{$\Gamma \vdash (e ::: \tau) :: \tau$}
+\end{prooftree}
+
+\bigskip
+
+\underline{Partial Constructor Application}
+\begin{prooftree}
+	\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_i \mapsto t_i}~]$}
+	\AxiomC{$\dots$}
+	\AxiomC{$\Gamma \vdash e_k :: \tau_k[~\overline{x_i \mapsto t_i}~]$}\RightLabel{\footnotesize with
+		$k < n$}
+	\TrinaryInfC{$\Gamma, Cs \vdash \text{$C$ } e_1
+		\dots e_k :: (\tau_{k+1} \rightarrow \dots \rightarrow \tau_n
+		\rightarrow \tau)[~\overline{x_i \mapsto t_i}~] $}
+\end{prooftree}
+with
+\[
+Cs = \{ \text{$C$ } \mapsto (\tau_1 \rightarrow
+\dots \rightarrow \tau_k \rightarrow \tau_{k+1} \rightarrow \dots
+\rightarrow \tau_n \rightarrow \tau, \overline{x_i})\}
+\]
+where $\overline{x_i}$ type variables in $\tau$.
 \section{Examples}
 \section{Conversion of FlatCurry to Coq}
 \chapter{Conclusion}
