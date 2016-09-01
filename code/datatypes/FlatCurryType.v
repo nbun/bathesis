@@ -8,7 +8,7 @@ Section Context.
   (* A context maps variable IDs to types and contains the full type and
      a list of type variables for functions and constructors. *)
   Inductive context : Type := 
-    | Con : (partial_map VarIndex TypeExpr) -> 
+    | Con : (partial_map VarIndex TypeExpr) ->
             (partial_map QName (TypeExpr * (list TVarIndex))) ->
             (partial_map QName (TypeExpr * (list TVarIndex))) -> context.
 
@@ -235,9 +235,10 @@ Section Typing.
     | T_Comb_PFun : forall Gamma qname exprs substTypes remArg T,
                       let funcT := fromOption defaultTyVars ((fCon Gamma) qname) in
                       let specT := multiTypeSubst (snd funcT) substTypes (fst funcT) in
-                      let     n := funcArgCnt (fst funcT) - remArg
+                      let     n := funcArgCnt (fst funcT) - remArg in
+                      let argTs := firstn (@length Expr exprs) (fst (funcTyList specT))
                        in funcPart specT (Some n) = T ->
-                          Forall2 (hasType Gamma) exprs (firstn (@length Expr exprs) (fst (funcTyList specT))) ->
+                          Forall2 (hasType Gamma) exprs argTs ->
                       Gamma |- (Comb (FuncPartCall remArg) qname exprs) \in T
 
     | T_Comb_Cons : forall Gamma qname exprs substTypes T,
@@ -250,9 +251,10 @@ Section Typing.
     | T_Comb_PCons :forall Gamma qname exprs substTypes remArg T,
                       let consT := fromOption defaultTyVars ((cCon Gamma) qname) in
                       let specT := multiTypeSubst (snd consT) substTypes (fst consT) in
-                      let n     := funcArgCnt (fst consT) - remArg
+                      let n     := funcArgCnt (fst consT) - remArg in
+                      let argTs := (firstn (@length Expr exprs) (fst (funcTyList specT)))
                        in funcPart specT (Some n) = T ->
-                          Forall2 (hasType Gamma) exprs (firstn (@length Expr exprs) (fst (funcTyList specT))) ->
+                          Forall2 (hasType Gamma) exprs argTs ->
                       Gamma |- (Comb (ConsPartCall remArg) qname exprs) \in T 
 
     | T_Let :       forall Gamma ve ves tyexprs e T,
