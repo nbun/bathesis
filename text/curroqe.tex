@@ -196,7 +196,7 @@ Fixpoint map {X Y : Type} (f : X -> Y) (l : list X) : (list Y) :=
   | h :: t => (f h) :: (map f t)
   end.
 \end{coqcode}
-Function types are represented by combining two or more type variables with an arrow. Coq does not only allow higher-order functions, but also higher-order propositions. A predefined example is \coqinline{Forall}, which features a \coqinline{A -> Prop} construct from the last section.
+Function types are represented by combining two or more type variables with an arrow. Coq does not only allow higher-order functions but also higher-order propositions. A predefined example is \coqinline{Forall}, which features a \coqinline{A -> Prop} construct from the last section.
 \begin{coqcode}
 Forall : forall A : Type, (A -> Prop) -> list A -> Prop
 \end{coqcode}
@@ -406,7 +406,7 @@ Inductive tm : Type :=
 	\end{coqcode}
 \end{minipage}
 \end{figure}
-This \todo{label?}is the definition of \texttt{fst} in Coq syntax. All names are substituted by IDs, which do not necessarily need to be distinct from each other in general, but within their respective domain. Quantifier's IDs are used in the function's type to represent type variables, following the above definition. The argument IDs of the function need to appear in the following term, in this case \coqinline{Id 3} is passed to a case expression. The IDs \coqinline{Id 4} and \coqinline{Id 5} represent the left and right side of the pair \coqinline{Id 3}, of which at least one needs to occur in the next term, otherwise the function is constant.
+This \todo{label?}is the definition of \texttt{fst} in Coq syntax. All names are substituted by IDs, which do not necessarily need to be distinct from each other in general but within their respective domain. Quantifier's IDs are used in the function's type to represent type variables, following the above definition. The argument IDs of the function need to appear in the following term, in this case \coqinline{Id 3} is passed to a case expression. The IDs \coqinline{Id 4} and \coqinline{Id 5} represent the left and right side of the pair \coqinline{Id 3}, of which at least one needs to occur in the next term, otherwise the function is constant.
 \begin{coqcode}
 FDecl (Id 0) 
       [for_all (Id 1) tag_star; for_all (Id 2) tag_star] 
@@ -432,7 +432,7 @@ Fixpoint map (l:list A) : list B :=
   | a :: t => (f a) :: (map t)
   end.
 \end{coqcode}
-Even though \coqinline{A} and \coqinline{B} are not introduced as types in the signature, they can be used to parametrize lists. Likewise, \coqinline{f} can be applied to arguments, despite the missing function argument \coqinline{map} usually has. Although functions containing variables can be \textit{defined} this way, they are only usable outside of the own section because variables have a type, but no value. Outside of the section all variables used in a definition are appended to its type, for example \coqinline{map: list A -> list B} becomes \coqinline{forall A B : Type, (A -> B) -> list A -> list B}
+Even though \coqinline{A} and \coqinline{B} are not introduced as types in the signature, they can be used to parametrize lists. Likewise, \coqinline{f} can be applied to arguments, despite the missing function argument \coqinline{map} usually has. Although functions containing variables can be \textit{defined} this way, they are only usable outside of the own section because variables have a type but no value. Outside of the section all variables used in a definition are appended to its type, for example \coqinline{map: list A -> list B} becomes \coqinline{forall A B : Type, (A -> B) -> list A -> list B}
 \section{Data types}
 \begin{figure}[H]
 	\begin{center}
@@ -646,7 +646,7 @@ T_Fun : forall Gamma id tys T,
 \end{coqcode}
 The lookup function uses the predefined \coqinline{find}, which takes a boolean predicate plus a list and returns an optional of the first (and only, since functions are named uniquely) element that fulfills the predicate or \coqinline{None} otherwise. An anonymous function is used to compare the function's ID to every entry's ID until a match is found. Because the search is not guaranteed to succeed, an \coqinline{option func_decl} is returned. At this point there are two options to handle variables: quantification or let expressions. Via \coqinline{forall} quantified variables are easy to work with and allow limited pattern matching, for instance \coqinline{forall id fd, lookup_func Prog id = Some fd -> ...} This definitions ensures that \coqinline{lookup_func} succeeds and binds the function declaration to \coqinline{fd}, which saves us from using \coqinline{fromOption} to extract the optional value.
 \par
- The big disadvantage of this solution is the effort and redundancy arising from using quantified variables: If a variable is not found explicitly in the conclusion of a rule, that is, \coqinline{Gamma |- e \in T}, it needs to be instantiated manually when applying the rule in a proof.\footnote{This is actually not completely true, there are automated tactics that are able to infer this information, as shown in \autoref{autoproof}} This is especially cumbersome for function declarations, since this information is already contained in the program. Because of this limitation, we will use \coqinline{let} instead, which is not as comfortable, but makes proofs significantly shorter.
+ The big disadvantage of this solution is the effort and redundancy arising from using quantified variables: If a variable is not found explicitly in the conclusion of a rule, that is, \coqinline{Gamma |- e \in T}, it needs to be instantiated manually when applying the rule in a proof.\footnote{This is actually not completely true, there are automated tactics that are able to infer this information, as shown in \autoref{autoproof}} This is especially cumbersome for function declarations, since this information is already contained in the program. Because of this limitation, we will use \coqinline{let} instead, which is not as comfortable but makes proofs significantly shorter.
  \par
  The next step is to specialize the function with \coqinline{specialize_func fd tys = Some T}. It takes a function declaration plus a list of types and checks if the length of the list of quantified type variables in the function declaration matches the length of the provided type list. Subsequently the substitution begins: for every pair $(\forall^{t}\alpha_{i}, \tau_{i})$ the type variable $\alpha_{i}$ is replaced with $\tau_{i}$ in the function type $\tau$. The substitution itself is a recursive function that takes an ID, a replacement type $\tau$ and the type $\tau'$. Basic types and type variables with a different ID in $\tau'$ remain unchanged. If the ID of a type variable matches the provided ID, it is replaced by $\tau$. Because types are nested structures, the substitution of functions, lists and pairs is recursively applied to the argument types. Technically, this can produce invalid substitutions, since matching variables are replaced, regardless of their tag. Hence, this requirement is checked by the next premise.
  \par
@@ -738,7 +738,7 @@ Forall (is_data_type cntxt)
 The second subgoal requires all argument types to be data types if the corresponding quantifier has a star tag. Since this is true for $\alpha$, we need to prove that \coqinline{TNat} is a data type, which is shown by applying \coqinline{D_Nat}. We complete the first $*$-subgoal with \coqinline{Forall_nil} and have two subgoals regarding variables left. Since we assumed these variables to be bound in the context initially, applying \coqinline{T_Var} and \coqinline{reflexivity} finishes the proof.
 \section{Automated proofs}
 \label{autoproof}
-The examples shown in the previous section have a common structure: They all work with \coqinline{has_type} propositions and can be proven by applying rules of the inductive definition. A tactic that proves an arbitrary \coqinline{has_type} expression would need to try every rule, but would find a match eventually. Unfortunately this is not sufficient, because we already saw that some variables cannot be instantiated from the supplied expression and therefore require the manual definition of the regarding variables.
+The examples shown in the previous section have a common structure: They all work with \coqinline{has_type} propositions and can be proven by applying rules of the inductive definition. A tactic that proves an arbitrary \coqinline{has_type} expression would need to try every rule but would find a match eventually. Unfortunately this is not sufficient, because we already saw that some variables cannot be instantiated from the supplied expression and therefore require the manual definition of the regarding variables.
 \par
 Reconsidering the last example, one may notice the following: It is possible to infer the missing types of the arguments because the specialized function type also contains the arguments. The usage of \coqinline{apply} entails that all variables need to be instantiated immediately, even if the information may appear later. We need a way to postpone assigning values to variables until it is necessary -- the tactic \coqinline{eapply} does precisely this. 
 \begin{coqcode}
@@ -751,7 +751,7 @@ prog > cntxt |- tvar (Id 4) \in ?T1
 \end{coqcode}
 Using \coqinline{eapply} replaces unknown values with variables, indicated by a question mark, without the need for manual input. When we apply \coqinline{T_Fun}, the type \coqinline{TFun ?T10 (TFun ?T1 TNat)} is matched with \coqinline{TFun TNat (TFun TNat TNat)}, that is, the specialized function type. Consequently, all necessary information was inferred automatically.
 \par
-The tactic \coqinline{constructor} tests every constructor of an inductive type, which works for inductively defined propositions. To automate the entire proof, we need to combine both ideas: A tactic that tries every rule and replaces unknown values with variables until they are known -- \coqinline{econstructor}. This is not just a combination of 'e' and constructor, but an existing, powerful tactic. It is possible to prove the example by using \coqinline{econstructor} eleven times, but luckily there is the tactic \coqinline{repeat t} that applies the supplied tactic \coqinline{t} to every subgoal and recursively to every additional generated subgoal until it fails or there is no more progress.
+The tactic \coqinline{constructor} tests every constructor of an inductive type, which works for inductively defined propositions. To automate the entire proof, we need to combine both ideas: A tactic that tries every rule and replaces unknown values with variables until they are known -- \coqinline{econstructor}. This is not just a combination of 'e' and constructor but an existing, powerful tactic. It is possible to prove the example by using \coqinline{econstructor} eleven times, but luckily there is the tactic \coqinline{repeat t} that applies the supplied tactic \coqinline{t} to every subgoal and recursively to every additional generated subgoal until it fails or there is no more progress.
 \begin{coqcode}
 Example t7a : prog > cntxt |- app1 \in TNat.
 Proof.
@@ -783,7 +783,6 @@ Inductive TProg : Type :=
          list TypeDecl -> list FuncDecl -> list OpDecl -> TProg.
 \end{coqcode}
 Types in FlatCurry are more abstract compared to CuMin, but there are similar elements: Type variables and function types are almost the same, except the index of the variable. We do not distinguish types and data types as we did before, therefore there is no need for an \texttt{is\_data\_type} property or a context that maps types to tags.
-\todo{Typvariable durch Funktion ersetzbar?}
 \begin{coqcode}
 Inductive TypeExpr : Type :=
   | TVar     : TVarIndex -> TypeExpr
@@ -879,7 +878,7 @@ The resulting FlatCurry code looks nearly identical for both definitions, only t
 The remaining expressions work as expected: \texttt{Free} introduces a list of free variables in an expression, \texttt{Or} returns one of the two expressions supplied and \texttt{Typed} assigns a type to an expression. \todo{Weglassen?}
 \section{Context}
 \label{context}
-The context we use for typing FlatCurry contains the familiar partial map from \coqinline{VarIndex} to \coqinline{TypeExpr}, but is missing the \coqinline{tag} map, since we do not have data types anymore. In addition to the information about variables, the context contains function and constructor declarations in form of two partial maps that map a qualified name to a pair of the full type and a list of type variables, for example \texttt{Just} has the entry ($a \rightarrow$ Maybe $a$, [$a$]). The list of type variables simplifies specializing a function because every type variable needs to be substituted with a concrete type. To work with contexts there are selectors \coqinline{vCon}, \coqinline{fCon} and \coqinline{cCon} to access the respective contexts and update functions to add values, similar to the CuMin context.\\
+The context we use for typing FlatCurry contains the familiar partial map from \coqinline{VarIndex} to \coqinline{TypeExpr} but is missing the \coqinline{tag} map, since we do not have data types anymore. In addition to the information about variables, the context contains function and constructor declarations in form of two partial maps that map a qualified name to a pair of the full type and a list of type variables, for example \texttt{Just} has the entry ($a \rightarrow$ Maybe $a$, [$a$]). The list of type variables simplifies specializing a function because every type variable needs to be substituted with a concrete type. To work with contexts there are selectors \coqinline{vCon}, \coqinline{fCon} and \coqinline{cCon} to access the respective contexts and update functions to add values, similar to the CuMin context.\\
 \par
 We want to be able to work with possibly large Curry programs, hence we need to create a parser that extracts the required information from a FlatCurry program and adds it to a context. Parsing function declarations is simple because it contains the function's type explicitly and we need to extract the type variables only.
 \begin{coqcode}
@@ -1034,8 +1033,8 @@ Lastly, we check that the argument's types match the types of the specialized fu
 		\text{ in } e :: \tau $}
 \end{prooftree}
 \caption{Typing rule for let expressions}
-\end{figure}
-
+\end{figure}\noindent
+Typing \texttt{let} expressions differs, compared to CuMin, in the arbitrary number of bindings allowed. A variable $x$ can occur in other bindings \texttt{(y = x + 1)} or even its own, for example in infinite lists \texttt{(x = [2] ++ x)}. As a consequence, context entries for the variables $x_{1}\dots x_{n}$ are required in order to type the expressions $e_{1} \dots e_{n}$ and $e$. While it is a syntactically valid to write \texttt{let} expressions without bindings, for example \texttt{one = let in 1}, we require at least one binding because such an occurrence is replaced by its value in FlatCurry.
 \begin{coqcode}
 T_Let : forall Gamma ve ves tyexprs e T,
           let vexprs   := (ve :: ves) in
@@ -1046,28 +1045,27 @@ T_Let : forall Gamma ve ves tyexprs e T,
               Delta |- e \in T ->
           Gamma |- (Let (ve :: ves) e) \in T
 \end{coqcode}
-
+We use pattern matching to verify that the list of bindings \texttt{vexrps}, that is, pairs of variables and expressions, is not empty. It is possible to use \texttt{length vexrps > 0} instead, but pattern matching has two advantages: The rule fails directly when applied to an empty list and, if this is not the case, the proof is shorter because we do not need to prove the inequality. As before, \texttt{tyexprs} is explicitly supplied and represents the types of the expressions used in the bindings. The function \coqinline{replaceSnd} takes a list of pairs plus another list and replaces the second component of every pair with the corresponding item in the list; in this context we replace expressions with types, resulting in pairs of variables and types, which we can use to create an updated context $\Delta$ with \coqinline{multiTypeUpdate}. Lastly, we check $\Delta \vdash e_{i} :: \tau_{i}$ with \coqinline{Forall2} and the type of the expression $e$, that is, the type of the \texttt{let} expression.
 \begin{figure}[H]
 \begin{prooftree}
-	\AxiomC{$\Gamma, x_1 \mapsto \tau_{1_1}, \dots, x_n \mapsto \tau_{1_n} \vdash e_1 :: \tau'$}
+	\AxiomC{$\Gamma, x_1 \mapsto \tau_{1_1}[\overline{v_{i} \mapsto t_{i}}], \dots, x_n \mapsto \tau_{1_n}[\overline{v_{i} \mapsto t_{i}}] \vdash e_1 :: \tau'$}
 	\AxiomC{$\dots$}
-	\AxiomC{$\Gamma, x_1 \mapsto \tau_{k_1}, \dots, x_m \mapsto
-		\tau_{k_m} \vdash e_k :: \tau'$}
+	\AxiomC{$\Gamma, x_1 \mapsto \tau_{k_1}[\overline{v_{i} \mapsto t_{i}}], \dots, x_m \mapsto
+		\tau_{k_m}[\overline{v_{i} \mapsto t_{i}}] \vdash e_k :: \tau'$}
 	\noLine
 	\TrinaryInfC{$\Gamma \vdash e :: \tau$}\RightLabel{\footnotesize with $k > 0$}
 	\UnaryInfC{ $\Gamma, Cs \vdash \text{(f)case e of } \{ \text{$C_1$ } x_1 \dots x_n \rightarrow
 		e_1; \dots ; \text{$C_k$ } x_1 \dots x_m \rightarrow e_k\}  :: \tau'$}
 \end{prooftree}\small
 \begin{flushright}
-	with
+with
 $Cs = \{C_1 \mapsto (\tau_{1_1} \rightarrow
-\dots \rightarrow \tau_{1_n} \rightarrow \tau), \dots , C_k \mapsto (\tau_{k_1} \rightarrow
-\dots \rightarrow \tau_{k_m} \rightarrow \tau) \}$
+\dots \rightarrow \tau_{1_n} \rightarrow \tau, \overline{v_{i}}), \dots , C_k \mapsto (\tau_{k_1} \rightarrow
+\dots \rightarrow \tau_{k_m} \rightarrow \tau, \overline{v_{i}}) \}$
 \end{flushright}
-
 \caption{Typing rule for case expressions}
 \end{figure}
-
+FlatCurry has one generic \texttt{case} expression compared to CuMin's specific versions for every type, which results in the most complex rule so far.
 \begin{coqcode}
 T_Case : forall Gamma ctype e substTypes T Tc p vis brexprs',
            let  brexprs := Branch p vis :: brexprs' in
