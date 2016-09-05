@@ -198,20 +198,36 @@ Section TypingHelper.
   Definition noType := TCons ("Coq", "NoType") [].
   Definition defaultTyVars := (noType, @nil TVarIndex).
 
+
+  Fixpoint funcTyList' (l : TypeExpr) : (list TypeExpr * TypeExpr) :=
+    match l with
+    | FuncType (FuncType _ _ as f) retT => let (x,y) := (funcTyList' retT) in ([f] ++ x, y)
+    | FuncType argT (FuncType _ _ as retT) => let (x,y) := (funcTyList' argT) in
+                                              let (a,b) := (funcTyList' retT) in (x ++ a, b)
+    | FuncType argT retT => let (x,y) := (funcTyList' argT) in (x, retT)
+    | tyexpr => ([tyexpr], tyexpr)
+    end.
+
   (* Takes a function type and returns a pair of the function's argument types
      and the return type. Example: a -> b -> Int => ([a,b],Int) *)
   Fixpoint funcTyList (l : TypeExpr) : (list TypeExpr * TypeExpr) :=
     match l with
-    | FuncType (FuncType _ _ as f) retT => let (x,y) := (funcTyList retT) in ([f] ++ x, y)
-    | FuncType argT (FuncType _ _ as retT) => let (x,y) := (funcTyList argT) in
-                                              let (a,b) := (funcTyList retT) in (x ++ a, b)
-    | FuncType argT retT => let (x,y) := (funcTyList argT) in (x, retT)
-    | tyexpr => ([tyexpr], tyexpr)
+    | FuncType _ _ as f => funcTyList' f
+    | tyexpr => ([], tyexpr)
     end.
 
 End TypingHelper.
 
 Section Typing.
+
+  (* Rules for the specialization of types *)
+  Reserved Notation "t '==>' t1" (at level 40).
+  Inductive isSpecializableTo : TypeExpr -> TypeExpr -> Prop :=
+    | T_Eq   : forall T, T  ==> T
+    | T_Spec : forall T T' substTypes,
+                 multiTypeSubst (funcTVars T') substTypes T' = T ->
+                 T' ==> T
+  where "t '==>' t1" := (isSpecializableTo t t1).
 
   (* Typing rules *)
   Definition length := Datatypes.length.
@@ -292,8 +308,9 @@ Section Typing.
                       Gamma |- e \in Tc ->
                       Gamma |- (Case ctype e (Branch p vis :: brexprs')) \in T
 
-    | T_Typed :     forall Gamma e T,
-                      Gamma |- e \in T ->
+    | T_Typed :     forall Gamma e T T',
+                      Gamma |- e \in T' ->
+                      T' ==> T ->
                       Gamma |- (Typed e T) \in T
 
   where "Gamma '|-' t '\in' T" := (hasType Gamma t T).
@@ -303,7 +320,6 @@ End Typing.
 Module TypingNotation.
   Notation "Gamma '|-' t '\in' T" := (hasType Gamma t T) (at level 40) : typing_scope.
 End TypingNotation.
-
 
 Import TypingNotation.
 Open Scope typing_scope.
@@ -327,8 +343,10 @@ Section Examples.
         (Rule  [1;2] (Comb FuncCall ("Prelude","+") [(Var 1);(Var 2)] )));
   (Func ("test","test_case") 1  Public 
         (FuncType (TCons ("Prelude","Maybe") [(TCons ("Prelude","Int") [] )] ) (TCons ("Prelude","Int") [] ))
-        (Rule  [1] (Case Rigid (Var 1) [(Branch (Pattern ("Prelude","Just") [2] )(Var 2));(Branch (Pattern ("Prelude","Nothing") [] )(Lit (Intc 5)))] )))
-
+        (Rule  [1] (Case Rigid (Var 1) [(Branch (Pattern ("Prelude","Just") [2] )(Var 2));(Branch (Pattern ("Prelude","Nothing") [] )(Lit (Intc 5)))] )));
+  (Func ("test","id") 1  Public 
+        (FuncType (TVar 0) (TVar 0))
+        (Rule  [1] (Var 1)))
   ]
   [] 
   ).
@@ -466,5 +484,16 @@ Qed.
     repeat econstructor;
     try instantiate (1 := [Int]);
     repeat econstructor.
+  Qed.
+
+  Definition typed := Typed (Comb (FuncPartCall 1) ("test","id") [] ) (FuncType (TCons ("Prelude","Int") [] ) (TCons ("Prelude","Int") [] )).
+  Example e10 : con |- typed \in FuncType Int Int.
+  Proof.
+    apply T_Typed with (T' := FuncType (TVar 0) (TVar 0)).
+    apply T_Comb_PFun with (substTypes := []).
+    reflexivity.
+    apply Forall2_nil.
+    apply T_Spec with (substTypes := [Int]).
+    reflexivity.
   Qed.
 End Examples.

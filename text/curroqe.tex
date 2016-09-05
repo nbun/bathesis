@@ -1056,12 +1056,11 @@ T_Let : forall Gamma ve ves tyexprs e T,
 We use pattern matching to verify that the list of bindings \texttt{vexrps}, that is, pairs of variables and expressions, is not empty. It is possible to use \texttt{length vexrps > 0} instead, but pattern matching has two advantages: The rule fails directly when applied to an empty list and, if this is not the case, the proof is shorter because we do not need to prove the inequality. As before, \texttt{tyexprs} is explicitly supplied and represents the types of the expressions used in the bindings. The function \coqinline{replaceSnd} takes a list of pairs plus another list and replaces the second component of every pair with the corresponding item in the list; in this context we replace expressions with types, resulting in pairs of variables and types, which we can use to create an updated context $\Delta$ with \coqinline{multiTypeUpdate}. Lastly, we check $\Delta \vdash e_{i} :: \tau_{i}$ with \coqinline{Forall2} and the type of the expression $e$, that is, the type of the \texttt{let} expression.
 \begin{figure}[H]
 \begin{prooftree}
-	\AxiomC{$\Gamma, x_1 \mapsto \tau_{1_1}[\overline{v_{i} \mapsto t_{i}}], \dots, x_n \mapsto \tau_{1_n}[\overline{v_{i} \mapsto t_{i}}] \vdash e_1 :: \tau'$}
+	\AxiomC{$\Gamma, \overline{x_i \mapsto \tau_{1_i} [~\overline{v_{j} \mapsto t_{j}}~]} \vdash e_1 :: \tau'$}
 	\AxiomC{$\dots$}
-	\AxiomC{$\Gamma, x_1 \mapsto \tau_{k_1}[\overline{v_{i} \mapsto t_{i}}], \dots, x_m \mapsto
-		\tau_{k_m}[\overline{v_{i} \mapsto t_{i}}] \vdash e_k :: \tau'$}
+	\AxiomC{$\Gamma, \overline{x_i \mapsto \tau_{k_i} [~\overline{v_{j} \mapsto t_{j}}~]} \vdash e_k :: \tau'$}
 	\noLine
-	\TrinaryInfC{$\Gamma \vdash e :: \tau$}\RightLabel{\footnotesize with $k > 0$}
+	\TrinaryInfC{$\Gamma \vdash e :: \tau[~\overline{v_{j} \mapsto t_{j}}~]$}\RightLabel{\footnotesize with $k > 0$}
 	\UnaryInfC{ $\Gamma, Cs \vdash \text{(f)case e of } \{ \text{$C_1$ } x_1 \dots x_n \rightarrow
 		e_1; \dots ; \text{$C_k$ } x_1 \dots x_m \rightarrow e_k\}  :: \tau'$}
 \end{prooftree}\small
@@ -1073,7 +1072,7 @@ $Cs = \{C_1 \mapsto (\tau_{1_1} \rightarrow
 \end{flushright}
 \caption{Typing rule for case expressions}
 \end{figure}\noindent
-FlatCurry has one generic \texttt{case} expression compared to CuMin's specific versions for every type, which results in the most complex rule so far. The \texttt{case} expression $e$ can have any type, with an arbitrary number of constructors, all of which we need to look up in the context and specialize with the supplied types, followed by updating the context with new variables.
+FlatCurry has one generic \texttt{case} expression compared to CuMin's specific versions for every type, which results in the most complex rule so far. The expression $e$ can have any type with an arbitrary number of constructors, all of which need to be looked up in the context and specialized with the supplied types, followed by updating the context with new variables.
 A clarifying example:
 \begin{coqcode}
 fromMaybeCase d m = case m of
@@ -1081,9 +1080,9 @@ fromMaybeCase d m = case m of
                       Nothing -> d
 example = fromMaybeCase 0 (Just 2)
 \end{coqcode}
-Looking up \texttt{Just} and \texttt{Nothing} yields $(a \rightarrow \text{Maybe}~ a, [a])$ and (Maybe $a$, $[a]$). We called the function with integer values, thus we specialize $a$ in both types with \texttt{Int}, resulting in (Int $\rightarrow$ Maybe Int) and (Maybe Int). In order to type the expression $x$, we need to add $x \mapsto$ Int to $\Gamma$; because we type the case expression only, we can assume $d$ to have an entry in the context. Now both expressions have the type $\tau' =$ Int and satisfy the conditions of the rule, that is, ($\Gamma, x \rightarrow a[a \mapsto \text{Int}] \vdash x :: \text{Int}$), ($\Gamma \vdash d :: \text{Int}$) and ($\Gamma \vdash \text{Just}~ 2 :: \text{Maybe Int}$).\\
+Looking up \texttt{Just} and \texttt{Nothing} yields $(a \rightarrow \text{Maybe}~ a, [a])$ and (Maybe $a$, $[a]$). We called the function with integer values, thus we specialize $a$ in both types with \texttt{Int}, resulting in (Int $\rightarrow$ Maybe Int) and (Maybe Int). In order to type the expression $x$, we need to add $x \mapsto$ Int to $\Gamma$; because we type the case expression only, we can assume $d$ to have an entry in the context. Now both expressions $x$ and $d$ can be typed to $\tau' =$ Int and satisfy the conditions of the rule, that is, ($\Gamma, x \rightarrow a[a \mapsto \text{Int}] \vdash x :: \text{Int}$), ($\Gamma \vdash d :: \text{Int}$) and ($\Gamma \vdash \text{Just}~ 2 :: \text{Maybe} ~a [a \mapsto Int]$).\\
 \par\noindent
-The implementation makes heavy use of pairs and lists, thus many calls of \coqinline{map}, \coqinline{fst} and \coqinline{snd} are necessary. Again we use pattern matching to ensure that the \texttt{case} expression has a least one branch because, unlike \texttt{let}, the expression would otherwise be not typeable.
+The implementation makes heavy use of pairs and lists, thus many calls of \coqinline{map}, \coqinline{fst} and \coqinline{snd} are necessary. Again we use pattern matching to ensure that the \texttt{case} expression has a least one branch because, unlike \texttt{let}, the expression would otherwise not be typeable.
 \todo{CamelCase im Code}
 \begin{coqcode}
 T_Case : forall Gamma ctype e substTypes T Tc p vis brexprs',
@@ -1102,7 +1101,30 @@ T_Case : forall Gamma ctype e substTypes T Tc p vis brexprs',
                Gamma |- e \in Tc ->
          Gamma |- (Case ctype e (Branch p vis :: brexprs')) \in T
 \end{coqcode}
-The function \coqinline{pattSplit} takes a pattern and yields a pair of the qualified name of the constructor and its variables. Applied to the list of patterns, which is returned by \coqinline{brexprsToPatterns}, it returns the list \texttt{pattps} of (\coqinline{QName}, \coqinline{[TVarIndex]}) pairs. By composing \coqinline{fromOption} and \coqinline{cCon} we have a function that is applied to every qualified name, that is, constructor name, yielding the list \texttt{contyvis} of types and type variable pairs. The type variables are equal for every constructor, since they return the same type. To avoid using \texttt{head} and its default element, we use additional pattern matching in the last line to obtain the first pattern and apply the previous procedure again, yielding the list of type variables \texttt{tvis} that need to be specialized. This type specialization is applied to every constructor type, which is represented by the list \texttt{specTs}. To update the variables of the constructors in the context, they are merged with their types by using \texttt{zip}, resulting in the list \texttt{vistysl}. Lastly, they are added to the context by using \coqinline{multiListTypeUpdate} \todo{Beispiel...}
+The implementation might not be clear at first sight, therefore we will use the example above to illustrate the different steps. We begin with a list of branch expressions \texttt{brexprs}, that is, a pattern and an expression. \texttt{Var 3} represents the variable introduced in the \texttt{Just} pattern and \texttt{Var 1} is the default value $d$.
+\begin{coqcode}
+[(Branch (Pattern ("Prelude","Just")   [3])(Var 3));
+ (Branch (Pattern ("Prelude","Nothing") [])(Var 1))]
+\end{coqcode}
+The function \coqinline{pattSplit} takes a pattern and yields a pair of the qualified name of the constructor and its variables. Applied to the list of patterns, which is returned by \coqinline{brexprsToPatterns}, it returns the list \texttt{pattps} of (\coqinline{QName}, \coqinline{[TVarIndex]}) pairs.
+\begin{coqcode}
+[("Prelude", "Just", [3]); ("Prelude", "Nothing", [])]
+\end{coqcode}
+By composing \coqinline{fromOption} and \coqinline{cCon} we have a function that is applied to every qualified name, that is, constructor name, yielding the list \texttt{contyvis} of types and type variable pairs.
+\begin{coqcode}
+[(FuncType (TVar 0) (TCons ("test", "Maybe") [TVar 0]), [0]);
+                    (TCons ("test", "Maybe") [TVar 0],  [0])]
+\end{coqcode}
+The type variables are equal for every constructor since they return the same type. To avoid using \texttt{head} and its default element, we use additional pattern matching in the last line to obtain the first pattern and apply the previous procedure again, yielding the list of type variables \texttt{tvis = [0]} that need to be specialized. This type specialization is applied to every constructor type, which is represented by the list \texttt{specTs}.
+\begin{coqcode}
+[FuncType Int (TCons ("test", "Maybe") [Int]);
+               TCons ("test", "Maybe") [Int]]
+\end{coqcode}
+ To update the variables of the constructors in the context, they are merged with their types by using \texttt{zip}, resulting in the list \texttt{vistysl}. 
+\begin{coqcode}
+[([3], [Int]); ([], [])]
+\end{coqcode}
+Lastly, the list of pairs are added to the context by using \coqinline{multiListTypeUpdate}. The function takes a list of pairs of lists, that is, a pair that contains lists of variables and the corresponding types for every constructor, and adds them to the context. The pairs represents \texttt{Just} with its variable $x$ and \texttt{Nothing} without variables.
 \begin{figure}[H]
 	\begin{subfigure}[b]{.3 \linewidth}
 		\centering
@@ -1119,7 +1141,7 @@ The function \coqinline{pattSplit} takes a pattern and yields a pair of the qual
 		\begin{prooftree}
 			\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto \tau_n \vdash
 				e :: \tau$}
-			\UnaryInfC{$\Gamma \vdash \text{let } x_1, \dots, x_n \text{ free in } e :: \tau $\}}
+			\UnaryInfC{$\Gamma \vdash \text{let } x_1, \dots, x_n \text{ free in } e :: \tau $}
 		\end{prooftree}
 		\subcaption{}
 	\end{subfigure}
@@ -1127,15 +1149,30 @@ The function \coqinline{pattSplit} takes a pattern and yields a pair of the qual
 	\begin{subfigure}[b]{.2 \linewidth}
 		\centering
 		\begin{prooftree}
-			\AxiomC{$\Gamma \vdash e :: \tau$}
-			\UnaryInfC{$\Gamma \vdash (e ::: \tau) :: \tau$}
+			\AxiomC{$\Gamma \vdash e :: \tau'$}
+			\AxiomC{$\tau' \Rightarrow \tau$}
+			\BinaryInfC{$\Gamma \vdash (e ::: \tau) :: \tau$}
 		\end{prooftree}
 		\subcaption{}
 	\end{subfigure}
 	\caption{Typing rules for (a) or, (b) free and (c) typed expressions}
 \end{figure}
-\todo{Unterschiedliche Höhe...}
-
+\todo{Unterschiedliche Höhe...}\noindent
+The typing rules for \texttt{or} and \texttt{free} expressions are short:
+\begin{itemize}
+	\item The \coqinline{or} expression requires both expressions to have the same type $\tau$, so that the result's type is coherent.
+	\item When introducing free variables $x_1 \dots x_n$ in an expression $e$ the types $\tau_1 \dots \tau_n$ need to be added to the context on order to type $e$.
+\end{itemize}
+Typed expressions require that the stated type $\tau$ of the expression $e$ can be specialized to $\tau'$, that is, $\exists t_1 \dots t_n: \tau'[~\overline{x_i \mapsto t_i}~] = \tau$ where $x_1 \dots x_n$ are type variables in $\tau$, notated as $\tau' \Rightarrow \tau$. This requirement is necessary because polymorphic functions, such as \texttt{id :: a $\rightarrow$ a}, can be typed to a more specific type, for example \mbox{\texttt{intId = id :: Int $\rightarrow$ Int}}
+\begin{coqcode}
+Reserved Notation "T '==>' t" (at level 40).
+Inductive isSpecializableTo : TypeExpr -> TypeExpr -> Prop :=
+  | T_Eq   : forall T, T  ==> T
+  | T_Spec : forall T T' substTypes,
+               multiTypeSubst (funcTVars T') substTypes T' = T ->
+               T' ==> T
+where "T '==>' t" := (isSpecializableTo T t).
+\end{coqcode}
 \section{Examples}
 \section{Conversion of FlatCurry to Coq}
 \chapter{Conclusion}
