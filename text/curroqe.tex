@@ -11,7 +11,6 @@
 \usepackage{hyperref}
 \usepackage{subcaption}
 \usepackage{tikz}
-\usepackage[normalem]{ulem}
 
 % Kapitelüberschrift in der Kopfzeile
 \usepackage[automark]{scrpage2} % Schickerer Satzspiegel mit KOMA-Script
@@ -81,7 +80,67 @@
 \chapter{Introduction}
 \chapter{Preliminaries}
 \section{Curry}
-
+Curry\footnote{http://curry-language.org/} is a programming language that combines aspects of functional and logical programming. Created by an international initiative, it is predominantly aimed at providing a platform for research and teaching.\cite{curryintro} Curry's syntax is similar to Haskell with the addition of nondeterminism, that is, a function can return different values for the same input, and free variables, which allow the intelligent search for possible solutions. 
+\par
+The similarities to Haskell include the (interactive) compiler KICS2\footnote{https://www-ps.informatik.uni-kiel.de/kics2/} that compiles Curry programs to Haskell code and  an easily searchable\footnote{https://www-ps.informatik.uni-kiel.de/kics2/currygle/}, extensive module system with many predefined data structures and functions. In this short overview we will take a look at some language features that we will work with later, albeit not necessarily in the form of Curry code.\\
+\par\noindent
+Curry programs have the ending \texttt{.curry} and consist of function and data type declarations. The simplest form of functions, such as \texttt{double x = x + x}, has a name, a possibly empty list of variables and an expression. Although it is not mandatory to explicitly state a function's type, in this case \texttt{double :: Int $\rightarrow$ Int $\rightarrow$ Int}, every function has a type that describes the arguments and the result of evaluating the function. When a function call is evaluated, the left-hand side is replaced with the right-hand side until there are is no further evaluation possible, that is, only literal values or data structures remain. The evaluation can result in an infinite loop, for example \texttt{twos = 2 : twos}, or not compute any values. Infinite data structures are processed by computing the value of an expression only if it is actually needed, called \textit{lazy} evaluation.\\
+\par \noindent
+More advanced functions use several rules and pattern matching to describe different computational paths. By using a pattern in the left-hand side of a rule, it is limited to arguments of a specific form. Thus, functions that process data types with multiple constructors can have a different rule for every constructor. While Haskell allows overlapping patterns, that is, multiple patterns that apply to the same argument, functions remain deterministic because only the first rule that matches the argument is evaluated. Curry does not limit the evaluation -- a function with overlapping patterns can return every possible result an input evaluates to. On the other hand, patterns do not need to be exhaustive, that is, cover every possible input, because a failed computation is a valid result unlike the exception Haskell returns.\\
+\par
+\begin{minipage}{.5 \linewidth}
+\begin{minted}{haskell}
+failed = head []
+eight = failed ? 8
+\end{minted}
+\end{minipage}
+\begin{minipage}{.5 \linewidth}
+\begin{minted}{haskell}
+(?) :: a -> a -> a
+x ? _ = x
+_ ? y = y
+\end{minted}
+\end{minipage}
+\vspace{.5em}
+\par \noindent
+The function \texttt{head} returns the first element of a list, but in this case the list is empty. Therefore, the computation fails and KICS2 returns an exclamation mark. Nevertheless, it is possible to apply the \texttt{?} operator that represents a non-deterministic choice between the arguments to both the failed computation and the number 8. Since only one argument contains a value, the expression evaluates to 8.
+\par
+In some situations deterministic programs are inevitable, for example when working with IO actions. While it may not seem import if a function prints an 'a' or 'b' to the terminal, writing a file of non-deterministic size to the hard drive can cause severe problems. Fortunately, Curry enforces determinism when using IO actions. If one needs a more Haskell-esque evaluation of multiple patterns, the \texttt{case} expression applies:
+\begin{flushleft}
+	\begin{minipage}[t]{.33 \linewidth}
+	\begin{minted}{haskell}
+maybeNot True  = False
+maybeNot True  = True
+maybeNot False = True
+maybeNot False = False
+	\end{minted}
+\end{minipage}
+\begin{minipage}[t]{.3 \linewidth}
+	\begin{minted}{haskell}
+notCase b =
+  case b of
+    True  -> False
+    True  -> True
+    False -> True
+    False -> False
+	\end{minted}
+\end{minipage}
+\begin{minipage}[t]{.3 \linewidth}
+	\begin{minted}{haskell}
+maybeNotCase b =
+  case b of
+    True  -> False ? True 
+    False -> True  ? False
+	\end{minted}
+\end{minipage}
+\end{flushleft}
+Pattern matching in a function can be transformed to a corresponding case expression by replacing the pattern with a variable and creating a branch for every rule. The difference is that case expressions evaluate only the first matching branch. Thus, the second and fourth branch of \texttt{caseNot} are not reachable and the function is deterministic. If nondeterminism is needed in a \texttt{case} expression, the \texttt{?} operator is necessary.\\
+\par\noindent
+Variables that are not bound to an expression are called \textit{free variables}. They are declared by adding \texttt{where} $v_1\dots v_n$ \texttt{free} to a term containing free variables $v_1 \dots v_n$. To evaluate such a term, the variables are instantiated with a value of appropriate type, for example \texttt{False \&\& x where x free} evaluates to \texttt{\{x = \_x0\} False}, that is, for every value of \texttt{x} the result is \texttt{False}.
+\begin{minted}{haskell}
+isPrefixOf :: [a] -> [a] -> Bool
+isPrefixOf xs  ys = xs ++ zs =:= ys where zs free
+\end{minted}
 \section{Coq}
 The formalization of Curry programs requires a language that allows us to express the code itself and the propositions we intend to prove. Coq\footnote{https://coq.inria.fr/} is an interactive proof management system that meets these requirements. Hence, it will be the main tool used in the following chapters. \cite{Pierce:SF}
 \todo{Kommasetzung?}
@@ -785,7 +844,7 @@ This results in a fully automated, single-line proof and shows a small part of t
 \par
 Summarizing this chapter, we began by transferring the formal definition of CuMin's syntax to Coq, followed by the definition of a context that contains variable bindings and tag information to enable typing of expressions. We used inductively defined propositions to describe data types and created a proposition that maps expressions to types with respect to a context. In the final sections we proved some examples and had a more detailed look at how proofs in Coq work and how they can be automated.
 \par
-In the following chapter we will follow the same procedure with FlatCurry, omitting the identical parts and focussing on the differences. Furthermore, we will look into transferring Curry programs to Coq and \sout{real world} applications. \todo{Möglicherweise besser nicht erwähnen...}
+In the following chapter we will follow the same procedure with FlatCurry, omitting the identical parts and focussing on the differences. Furthermore, we will look into transferring Curry programs to Coq and some examples.
 \chapter{FlatCurry}
 FlatCurry is a flat representation of Curry code that enables meta-programming, that is, the transformation of Curry programs in Curry.\cite{kics2manual} Since we want to reason about Curry programs in Coq, the respective module \texttt{FlatCurry.Types} will be the foundation of the Coq implementation. The generation of FlatCurry code involves two transformations: Firstly, lambda lifting is applied, that is, local function definitions, for example introduced by \texttt{where} or \texttt{let} clauses, are replaced by top-level definitions. Secondly, pattern matching is substituted by case and or expressions, the latter in case of overlapping patterns.
 \par
@@ -1200,7 +1259,7 @@ Reasoning about Curry programs in Coq requires a way to transform a \texttt{.cur
 	\item The " character needs to be escaped because characters are enclosed in double quotes themselves.
 	\item List elements are separated by semicolons instead of commas.
 \end{itemize}
-To accomplish the above conversion one may come up with the idea of parsing the FlatCurry string directly, which requires counting brackets to distinguish list from pair separators and replacing certain substrings and characters in a large case expression. While this is a viable way of achieving the goal, it is neither a maintainable nor very elegant solution.
+To accomplish the above conversion one may come up with the idea of parsing the FlatCurry string directly, which requires counting brackets to distinguish list from pair separators and replacing certain substrings and characters in a large case expression. While this is a viable way of achieving the goal, it is neither an easy maintainable nor very elegant solution.
 \par
 A better approach works with the FlatCurry data structure and a modified version of \texttt{ShowFlat}. Most functions in the module work by building the FlatCurry structure from string snippets and values like names and numbers. The modified functions are denoted by an appended "Coq"; we will take a look at the relevant excerpts.
 \begin{minted}{haskell}
