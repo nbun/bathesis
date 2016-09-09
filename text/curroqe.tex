@@ -11,6 +11,7 @@
 \usepackage{hyperref}
 \usepackage{subcaption}
 \usepackage{tikz}
+\usepackage{natbib}
 
 % Kapitelüberschrift in der Kopfzeile
 \usepackage[automark]{scrpage2} % Schickerer Satzspiegel mit KOMA-Script
@@ -80,7 +81,7 @@
 \chapter{Introduction}
 \chapter{Preliminaries}
 \section{Curry}
-Curry\footnote{http://curry-language.org/} is a programming language that combines aspects of functional and logical programming. Created by an international initiative, it is predominantly aimed at providing a platform for research and teaching.\cite{curryintro} Curry's syntax is similar to Haskell with the addition of nondeterminism, that is, a function can return different values for the same input, and free variables, which allow the intelligent search for possible solutions. 
+Curry\footnote{http://curry-language.org/} is a programming language that combines aspects of functional and logical programming. Created by an international initiative, Curry is predominantly aimed at providing a platform for research and teaching.\cite{curryintro} Curry's syntax is similar to Haskell with the addition of nondeterminism, that is, a function can return different values for the same input, and free variables, which allow the intelligent search for possible solutions. 
 \par
 The similarities to Haskell include the (interactive) compiler KICS2\footnote{https://www-ps.informatik.uni-kiel.de/kics2/} that compiles Curry programs to Haskell code and  an easily searchable\footnote{https://www-ps.informatik.uni-kiel.de/kics2/currygle/}, extensive module system with many predefined data structures and functions. In this short overview we will take a look at some language features that we will work with later, albeit not necessarily in the form of Curry code.\\
 \par\noindent
@@ -136,11 +137,21 @@ maybeNotCase b =
 \end{flushleft}
 Pattern matching in a function can be transformed to a corresponding case expression by replacing the pattern with a variable and creating a branch for every rule. The difference is that case expressions evaluate only the first matching branch. Thus, the second and fourth branch of \texttt{caseNot} are not reachable and the function is deterministic. If nondeterminism is needed in a \texttt{case} expression, the \texttt{?} operator is necessary.\\
 \par\noindent
-Variables that are not bound to an expression are called \textit{free variables}. They are declared by adding \texttt{where} $v_1\dots v_n$ \texttt{free} to a term containing free variables $v_1 \dots v_n$. To evaluate such a term, the variables are instantiated with a value of appropriate type, for example \texttt{False \&\& x where x free} evaluates to \texttt{\{x = \_x0\} False}, that is, for every value of \texttt{x} the result is \texttt{False}.
+Variables that are not bound to an expression are called \textit{free variables}. They are declared by adding \texttt{where} $v_1\dots v_n$ \texttt{free} to a term containing free variables $v_1 \dots v_n$. To evaluate such a term, the variables are instantiated with a value of appropriate type, for example \texttt{False \&\& x where x free}, that is, the boolean conjunction of \texttt{False} and a free variable, evaluates to \texttt{\{x = \_x0\} False}. The value of \texttt{x} is another free variable because the expression is false for every possible value of \texttt{x}.
+\par
+Free variables can be used to compute the possible values of an expression, but there are more sophisticated applications: Curry can solve \textit{constraints}, for example the equation \texttt{1 + 1 = x where x free}. Solving the expression results in multiple values for \texttt{x} and corresponding the value of the equation:
 \begin{minted}{haskell}
-isPrefixOf :: [a] -> [a] -> Bool
-isPrefixOf xs  ys = xs ++ zs =:= ys where zs free
+{x = (-_x2)} False
+{x = 0} False
+{x = 1} False
+{x = 2} True
+{x = (2 * _x3 + 1)} False
+{x = (4 * _x4)} False
+{x = (4 * _x4 + 2)} False
 \end{minted}
+Curry solves the equation by using \textit{narrowing}, that is, guessing values that could satisfy the constraints. Since the sum of two positive numbers cannot be negative, only positive numbers are potential solutions. 2 fulfills the equation, but there could be more solutions. Therefore, odd numbers and even numbers greater than 2 are checked, both of which cannot satisfy the constraint. Since this includes all possible integer values, 2 remains the only solution. Free variables with non-basic types are evaluated similarly by trying every possible constructor.
+\par 
+An alternative approach to solving constraints is \textit{residuation}: If an expression cannot be solved because of an unknown free variable, the evaluation is suspended until its value is known from evaluating other expressions. It is possible that there is not enough information to determine the variable's value, in which case the evaluation fails.
 \section{Coq}
 The formalization of Curry programs requires a language that allows us to express the code itself and the propositions we intend to prove. Coq\footnote{https://coq.inria.fr/} is an interactive proof management system that meets these requirements. Hence, it will be the main tool used in the following chapters. \cite{Pierce:SF}
 \todo{Kommasetzung?}
@@ -1305,7 +1316,7 @@ As usual, the program needs a definition and subsequently a name. Thus, we use \
 %\todo{Fehlt noch!}
 
 % Literatur
-\bibliographystyle{abbrv}
+\bibliographystyle{plainnat}
 \bibliography{curroqe} % Datei: seminar.bib
 
 \end{document}
