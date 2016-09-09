@@ -1,8 +1,10 @@
-# Formalisierung von Aussagen und Beweise über Curry-Programme in Coq
+# Formalisierung von Inferenzsystemen in Coq am Beispiel von Typsystemen für Curry*
+### (*Formalising inference systems in Coq by means of type systems for Curry)
 
-Im Rahmen dieser Bachelorarbeit soll erarbeitet und evaluiert werden, ob mit Hilfe von Coq die
-Modellierung der Programmiersprache Curry in zufriedenstellender Weise
-erfolgen kann. Curry [0] ist eine funktional-logische Sprache, die
+Im Rahmen dieser Bachelorarbeit sollen Inferenzsysteme im Kontext der 
+Sprache Curry formalisiert werden; konkret soll dabei die Formalisierung von
+Typsystemen im Fokus stehen.
+Curry [0] ist eine funktional-logische Sprache, die
 die funktionalen Konzepte von Haskell(98, aber ohne Typklassen)
 aufweist und diese mit Konzepten aus der Logik, wie Nichtdeterminismus
 und freie Variablen, vereint.
