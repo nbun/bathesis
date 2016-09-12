@@ -19,6 +19,8 @@
 
 % Minted
 \usepackage{minted}
+\usemintedstyle[haskell]{trac}
+\newminted{haskell}{fontsize=\small}
 \newminted{coq}{fontsize=\small}
 
 % Für schönere Tabellen (optional)
@@ -88,45 +90,45 @@ The similarities to Haskell include the (interactive) compiler KICS2\footnote{ht
 Curry programs have the ending \texttt{.curry} and consist of function and data type declarations. The simplest form of functions, such as \texttt{double x = x + x}, has a name, a possibly empty list of variables and an expression. Although it is not mandatory to explicitly state a function's type, in this case \texttt{double :: Int $\rightarrow$ Int $\rightarrow$ Int}, every function has a type that describes the arguments and the result of evaluating the function. When a function call is evaluated, the left-hand side is replaced with the right-hand side until there is no further evaluation possible, that is, only literal values or data structures remain. The evaluation can result in an infinite loop, for example \texttt{twos = 2 : twos}, or not compute any values. Infinite data structures are processed by computing the value of an expression only if it is actually needed, called \textit{lazy} evaluation. In the example below the function \texttt{take} returns the first $n$ elements of a list. The value of \texttt{twos} is only evaluated by one step when the application of \texttt{take} requires the values of the list's head. Thus, the infinite list can be accessed without computing the whole structure.
 \begin{flushleft}
 	\begin{minipage}[t]{.3 \linewidth}
-\begin{minted}{haskell}
+\begin{haskellcode}
 take 2 twos
 take 2 (2 : twos)
 2 : take 1 twos
 2 : take 1 (2 : twos)
 2 : 2 : take 0 twos
 2 : 2 : []
-\end{minted}
+\end{haskellcode}
 \end{minipage}
 \hfill
 \vrule
 \hfill
 \begin{minipage}[t]{.65 \linewidth}
-\begin{minted}{haskell}
+\begin{haskellcode}
 take :: Int -> [a] -> [a]
 take n l = if n <= 0 then [] else takep n l
   where takep _ []     = []
         takep m (x:xs) = x : take (m-1) xs
-\end{minted}
+\end{haskellcode}
 \end{minipage}
 \end{flushleft}
 \noindent
 More advanced functions use several rules and pattern matching to describe different computational paths. By using a pattern in the left-hand side of a rule, it is limited to arguments of a specific form. Thus, functions that process data types with multiple constructors can have a different rule for every constructor. While Haskell allows overlapping patterns, that is, multiple patterns that apply to the same argument, functions remain deterministic because only the first rule that matches the argument is evaluated. Curry does not limit the evaluation -- a function with overlapping patterns can return every possible result an input evaluates to. On the other hand, patterns do not need to be exhaustive, that is, cover every possible input, because a failed computation is a valid result unlike the exception Haskell returns.
 \begin{flushleft}
 	\begin{minipage}[t]{.3 \linewidth}
-\begin{minted}{haskell}
+\begin{haskellcode}
 failed = head []
 eight = failed ? 8
-\end{minted}
+\end{haskellcode}
 \end{minipage}
 \hfill
 \vrule
 \hfill
 \begin{minipage}[t]{.65 \linewidth}
-\begin{minted}{haskell}
+\begin{haskellcode}
 (?) :: a -> a -> a
 x ? _ = x
 _ ? y = y
-\end{minted}
+\end{haskellcode}
 \end{minipage}
 \end{flushleft}
 \noindent
@@ -135,36 +137,36 @@ The function \texttt{head} returns the first element of a list, but in this case
 In some situations deterministic programs are inevitable, for example when working with IO actions. While it may not seem import if a function prints an 'a' or 'b' to the terminal, writing a file of non-deterministic size to the hard drive can cause severe problems. Fortunately, Curry enforces determinism when using IO actions. If one needs a more Haskell-esque evaluation of multiple patterns, the \texttt{case} expression applies:
 \begin{flushleft}
 \begin{minipage}[t]{.3 \linewidth}
-\begin{minted}{haskell}
+\begin{haskellcode}
 maybeNot True  = False
 maybeNot True  = True
 maybeNot False = True
 maybeNot False = False
-	\end{minted}
+	\end{haskellcode}
 \end{minipage}
 \hfill
 \vrule
 \hfill
 \begin{minipage}[t]{.25 \linewidth}
-	\begin{minted}{haskell}
+	\begin{haskellcode}
 notCase b =
   case b of
     True  -> False
     True  -> True
     False -> True
     False -> False
-	\end{minted}
+	\end{haskellcode}
 \end{minipage}
 \hfill
 \vrule
 \hfill
 \begin{minipage}[t]{.35 \linewidth}
-	\begin{minted}{haskell}
+	\begin{haskellcode}
 maybeNotCase b =
   case b of
     True  -> False ? True 
     False -> True  ? False
-	\end{minted}
+	\end{haskellcode}
 \end{minipage}
 \end{flushleft}
 Pattern matching in a function can be transformed to a corresponding case expression by replacing the pattern with a variable and creating a branch for every rule. The difference is that case expressions evaluate only the first matching branch. Thus, the second and fourth branch of \texttt{caseNot} are not reachable and the function is deterministic. If nondeterminism is needed in a \texttt{case} expression, the \texttt{?} operator is necessary.\\
@@ -172,7 +174,7 @@ Pattern matching in a function can be transformed to a corresponding case expres
 Variables that are not bound to an expression are called \textit{free variables}. They are declared by adding \texttt{where} $v_1\dots v_n$ \texttt{free} to a term containing free variables $v_1 \dots v_n$. To evaluate such a term, the variables are instantiated with a value of appropriate type, for example \texttt{False \&\& x where x free}, that is, the boolean conjunction of \texttt{False} and a free variable, evaluates to \texttt{\{x = \_x0\} False}. The value of \texttt{x} is another free variable because the expression is false for every possible value of \texttt{x}.
 \par
 Free variables can be used to compute the possible values of an expression, but there are more sophisticated applications: Curry can solve \textit{constraints}, for example the equation \texttt{1 + 1 = x where x free}. Solving the expression results in multiple values for \texttt{x} and corresponding the value of the equation:
-\begin{minted}{haskell}
+\begin{haskellcode}
 {x = (-_x2)} False
 {x = 0} False
 {x = 1} False
@@ -180,7 +182,7 @@ Free variables can be used to compute the possible values of an expression, but 
 {x = (2 * _x3 + 1)} False
 {x = (4 * _x4)} False
 {x = (4 * _x4 + 2)} False
-\end{minted}
+\end{haskellcode}
 Curry solves the equation by using \textit{narrowing}, that is, guessing values that could satisfy the constraints. Since the sum of two positive numbers cannot be negative, only positive numbers are potential solutions. 2 fulfills the equation, but there could be more solutions. Therefore, odd numbers and even numbers greater than 2 are checked, both of which cannot satisfy the constraint. Since this includes all possible integer values, 2 remains the only solution. Free variables with non-basic types are evaluated similarly by trying every possible constructor.
 \par 
 An alternative approach to solving constraints is \textit{residuation}: If an expression cannot be solved because of an unknown free variable, the evaluation is suspended until its value is known from evaluating other expressions. It is possible that there is not enough information to determine the variable's value, in which case the evaluation fails.
@@ -956,7 +958,7 @@ Inductive Expr : Type :=
   | Typed : Expr -> TypeExpr -> Expr
 \end{coqcode}
 \paragraph{Literals}
-Integers, characters or floating point numbers can be literals. While there is a \texttt{nat} type in Coq, the other types cannot be represented that easily. The module \texttt{Ascii} contains data structures and notations for characters, but it is not possible to use escaped symbols like \texttt{\textbackslash n} without converting them to a decimal, three digit representation, in this case 010. Similarly, the module \texttt{Reals} can represent floats, but the dot notation that FlatCurry uses (for example $1.2$) is not available, instead numbers need to be written as fractions. Because we are mainly interested in typing expressions, we avoid this problem by using strings to represent chars and floats. That is not to say that an accurate representation is not feasible, but rather that it adds little value in the context of typing expressions. 
+Integers, characters or floating point numbers can be literals. While there is a \texttt{nat} type in Coq, the other types cannot be represented that easily. The module \texttt{Ascii} contains data structures and notations for characters, but it is not possible to use escaped symbols like \texttt{\textbackslash n} without converting them to a decimal, three digit representation, in this case 010. Similarly, the module \texttt{Reals} can represent floats, but the dot notation that FlatCurry uses (for example $1.2$) is not available, instead numbers need to be written as fractions. Because we are mainly interested in typing expressions, we avoid this problem by using strings to represent chars and floats. That is not to say that an accurate representation is not feasible, but rather that it adds few value in the context of typing expressions. 
 \paragraph{Function application}
 \coqinline{Comb} represents the application of functions and constructors. Its first argument is a \coqinline{CombType}, which is either a function/constructor call with all arguments provided (\coqinline{FuncCall/ConsCall}) or a partial call (FuncPartCall/ConsPartCall). The latter has an integer value that is the number of missing arguments. The other arguments of \coqinline{Comb} are a qualified name of a function or constructor and a list of expressions, that it is applied to.
 \begin{coqcode}
@@ -981,19 +983,19 @@ The evaluation strategy does not affect the result's type. Hence, we do not need
 The two remaining arguments are an expression that determines the branch to be taken and a list of \coqinline{BranchExpr}, which consist of a pattern and an expression. Patterns may be literals or a constructor and a list of variables, as shown in the following example. The original function \texttt{fromMaybe} is transformed to a case expression in order eliminate pattern matching.\\
 \par
 \begin{minipage}[t]{.5\linewidth}
-\begin{minted}{haskell}
+\begin{haskellcode}
 fromMaybe :: a -> Maybe a -> a
 fromMaybe _ (Just x) = x
 fromMaybe d Nothing  = d
-\end{minted}
+\end{haskellcode}
 \end{minipage}
 \begin{minipage}[t]{.5\linewidth}
-\begin{minted}{haskell}
+\begin{haskellcode}
 fromMaybeCase :: a -> Maybe a -> a
 fromMaybeCase d m = case m of
                       Just x  -> x
                       Nothing -> d
-\end{minted}
+\end{haskellcode}
 \end{minipage}
 \begin{coqcode}
 Case Flex (Var 2) [(Branch (Pattern ("Prelude","Just") [3] )(Var 3)),
@@ -1296,6 +1298,7 @@ where "T '==>' t" := (isSpecializableTo T t).
 \end{coqcode}
 \coqinline{T_Eq} states that any type can be "specialized" to itself, which is useful for expressions like \texttt{(42 :: Int)}, where no specialization is necessary. If we want to prove that a type $T$ can be specialized to $\tau$, we need to substitute all type variables in $T$ with explicitly supplied types and the result must be equal to $\tau$.
 \section{Conversion of FlatCurry to Coq}
+\label{conversion}
 Reasoning about Curry programs in Coq requires a way to transform a \texttt{.curry} file into the data structure discussed in \autoref{flatcurrysyntax}. The module \texttt{FlatCurry.Files} provides functions to read and transform Curry files, which can be viewed in FlatCurry syntax by using the \texttt{showFlatProg} function of the \texttt{FlatCurry.ShowFlat} module. We modeled the syntax in Coq deliberately as similar as possible to the original syntax to minimize the conversion effort necessary. The differences we need to address are:
 \begin{itemize}
 	\item Type declarations use the constructor \coqinline{Type}, which is a keyword in Coq.
@@ -1306,28 +1309,28 @@ Reasoning about Curry programs in Coq requires a way to transform a \texttt{.cur
 To accomplish the above conversion one may come up with the idea of parsing the FlatCurry string directly, which requires counting brackets to distinguish list from pair separators and replacing certain substrings and characters in a large case expression. While this is a viable way of achieving the goal, it is neither an easy maintainable nor very elegant solution.
 \par
 A better approach works with the FlatCurry data structure and a modified version of \texttt{ShowFlat}. Most functions in the module work by building the FlatCurry structure from string snippets and values like names and numbers. The modified functions are denoted by an appended "Coq"; we will take a look at the relevant excerpts.
-\begin{minted}{haskell}
+\begin{haskellcode}
 showFlatTypeCoq :: TypeDecl -> String
 showFlatTypeCoq (Type name vis tpars consdecls) =
   "\n  (Typec " ++ show name ++ showFlatVisibility vis
                 ++ showFlatList show tpars
                 ++ showFlatList showFlatCons consdecls ++ ")"
-\end{minted}
+\end{haskellcode}
 The function \texttt{showFlatTypeCoq} returns the string representation of a type declaration by using either \texttt{show} directly or an additional formatting function to transform the values into strings, which are then concatenated and prefixed by a newline and the constructor name. To prevent Coq from mistaking the constructor for a keyword,  we use "Typec" instead of "Type".
-\begin{minted}{haskell}
+\begin{haskellcode}
 showFlatLit (Floatc f) = "(Floatc \"" ++ show f ++ "\")"
 showFlatLit (Charc  c) = "(Charc \"" ++ escQuote (filter (/='\'') (show c))
                          ++ "\")"
-\end{minted}
+\end{haskellcode}
 Literals are prefixed by the respective constructor and use \texttt{show} to create the string representing the value. In case of floats, it is sufficient to enclose the value in double quotes since we treat them as strings. Characters require slightly more effort: \texttt{show} returns a string, for example \texttt{'a'}, that contains single quotes, which we remove by filtering out the character only. Since Curry denotes strings with single quotes, they can contain unescaped double quotes. Hence, we use the function \texttt{escQuote} to escape every occurrence by adding another double quote.\cite{CoqManualV8}
-\begin{minted}{haskell}
+\begin{haskellcode}
 showFlatListElems :: (a->String) -> [a] -> String
 showFlatListElems format elems = concat (intersperse ";" (map format elems))
-\end{minted}
+\end{haskellcode}
 The first argument of \texttt{showFlatListElems} is a formatting function that prints a specific structure. Thus, \texttt{showFlatListElems} can transform arbitrary lists to strings by mapping the formatting function over it, interspersing a separator and concatenating the resulting list. In accordance with Coq's list notations, we separate the list's elements with semicolons, instead of commas.\\
 \par\noindent
 The above modifications allow us to write a Curry program that transforms \texttt{.curry} files to Coq files. The function \texttt{showFlatCoq} is called with a file path $s$ and returns an IO action that prints the transformed program. 
-\begin{minted}{haskell}
+\begin{haskellcode}
 showFlatCoq :: String -> IO ()
 showFlatCoq s = do flatProg  <- readFlatCurry s
                    let (Prog modname _ _ _ _) = flatProg
@@ -1336,11 +1339,14 @@ showFlatCoq s = do flatProg  <- readFlatCurry s
                                    ++ defString modname ++ flatProgS
                                    ++ ['.','\n']
                     in putStr coqProg
-\end{minted}
+\end{haskellcode}
 The supplied file is parsed by \texttt{readFlatCurry}, which results in a \texttt{Prog}, that is, the Curry data structure representing a FlatCurry program. We use a \texttt{let} expression to obtain the program name and apply the modified \texttt{showFlatProgCoq} function to \texttt{flatProg}. Then, the flat program string is concatenated with a header and import string. The imports required are the Coq definition of FlatCurry and \texttt{Lists.List}, that is, a module containing list notations.
 As usual, the program needs a definition and subsequently a name. Thus, we use \texttt{defString} with the \texttt{modname} we got earlier; the result is a string of the form \coqinline{Definition modname_coq :=}. Together with the actual program and a concluding dot, we have all parts of the finished Coq program that can now be imported in other programs.
 \section{Examples}
-\begin{minted}{haskell}
+In the previous sections we have discussed the FlatCurry syntax, context and typing rules. Additionally, we created a program that transforms Curry programs into a Coq representation; now we will take a look at some examples.
+\begin{flushleft}
+	\begin{minipage}[t]{.4 \linewidth}
+\begin{haskellcode}
 double :: Int -> Int
 double x = x + x
 
@@ -1348,18 +1354,26 @@ example1 :: [Int] -> [Int]
 example1 = map double
 
 example2 :: Bool -> Bool
-example2 = (id :: (Bool -> Bool))
-
+example2 = id :: (Bool -> Bool)
+\end{haskellcode}
+\end{minipage}
+\hfill
+\vrule
+\hspace{.5em}
+\begin{minipage}[t]{.5 \linewidth}
+\begin{haskellcode}
 example3 :: Int
 example3 = case x of
              Just n  -> n
              Nothing -> 0
            where x free
-\end{minted}
+\end{haskellcode}
+\end{minipage}
+\end{flushleft}
+The first example is the partial application of \texttt{map} to \texttt{double}. Since double has the type \texttt{Int $\rightarrow$ Int}, both type variables of \texttt{map} are specialized to \texttt{Int} in the resulting type. The second example shows explicit typing of the polymorphic identity function and the last example is a case expression with a free variable.
+\par\noindent
+Using the transformation introduced in \autoref{conversion} yields the following definition:
 \begin{coqcode}
-Require Import CQE.FlatCurry Lists.List.
-Import ListNotations.
-
 Definition MyProg_coq :=  (Prog "MyProg"
 ["Prelude"]
 []
@@ -1382,8 +1396,50 @@ Definition MyProg_coq :=  (Prog "MyProg"
          (Branch (Pattern ("Prelude","Nothing") [] )(Lit (Intc 0)))] ))))
 ]
 [] 
-)
-.
+).
+
+Definition cntxt := parseProgram MyProg_coq.
+\end{coqcode}
+The context is created by applying \texttt{parseProgram} to the program definition, as shown in \autoref{context}. In the following proofs \texttt{exp} variables represent the expression of the respective example's \texttt{Rule}. Unfortunately, the usage of \texttt{let} expressions in the definition of \texttt{hasType}'s rules creates large, flat terms that contribute few to the explanation. Therefore, we will discuss proofs in more abstract manner.\\ 
+\par
+The proof for \texttt{example1} contains two applications of the rule \texttt{T\_Comb\_Part}: The first is obviously the application of \texttt{map} to \texttt{double} but \texttt{double} itself is also a partial application, even though no arguments are supplied. A function application without arguments yields the original function and is necessary to supply functional arguments to higher-order functions. \texttt{T\_Comb\_Part} creates two subgoals when applied: Specializing the return type of the function with the supplied \texttt{substTypes}, that is, the types that replace the type variables, needs to match the type supplied in the proposition. The second subgoal requires the arguments to have the corresponding types of the specialized function type.
+\begin{coqcode}
+Definition example1 : cntxt |- exp1 \in (FuncType (List Int) (List Int)).
+Proof.
+  apply T_Comb_Part with (substTypes := [Int; Int]).
+  * reflexivity.
+  * apply Forall2_cons.
+    - apply T_Comb_Part with (substTypes := []).
+      -- reflexivity.
+      -- apply Forall2_nil.
+    - apply Forall2_nil.
+Qed.
+\end{coqcode}
+The first subgoal is easily proven by using \texttt{reflexivity}.
+\begin{coqcode}
+Definition example2 : cntxt |- exp2 \in FuncType Bool Bool.
+Proof.
+  eapply T_Typed.
+  * apply T_Comb_Part with (substTypes := [Bool]).
+    - reflexivity.
+     - apply Forall2_nil.
+  * apply T_Spec with (substTypes := [Bool]).
+    - reflexivity.
+Qed.
+\end{coqcode}
+
+\begin{coqcode}
+Definition example3a : cntxt |- exp3 \in Int.
+Proof.
+  eapply T_Free.
+  eapply T_Case.
+  Show Existentials.
+    * repeat econstructor. 
+      instantiate (1 := [TCons ("Prelude", "Maybe") [Int]]).
+      instantiate (1 := [Int]). repeat econstructor.
+    * repeat econstructor.
+    * repeat econstructor.
+Qed.
 \end{coqcode}
 \chapter{Conclusion}
 
