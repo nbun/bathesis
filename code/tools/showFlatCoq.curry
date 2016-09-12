@@ -5,13 +5,14 @@ import FlatCurry.Types
 import GetOpt
 import Maybe (fromMaybe)
 
-showFlatCoq :: [Prelude.Char] -> Prelude.IO ()
-showFlatCoq s = do 
-  flatProg  <- readFlatCurry s
-  let (Prog modname _ _ _ _) = flatProg
-      flatProgS = (showFlatProgCoq flatProg)
-      coqProg   = headerString ++ importString ++ defString modname ++ flatProgS ++ ['.','\n']
-    in putStr coqProg
+showFlatCoq :: String -> IO ()
+showFlatCoq s = do flatProg  <- readFlatCurry s
+                   let (Prog modname _ _ _ _) = flatProg
+                       flatProgS = (showFlatProgCoq flatProg)
+                       coqProg   = headerString ++ importString
+                                   ++ defString modname ++ flatProgS
+                                   ++ ['.','\n']
+                    in putStr coqProg
 
 headerString = "(* This is an automatically generated Coq source file. It represents a\n" ++
                "   Curry program in modified flatCurry syntax and can be compiled by\n" ++

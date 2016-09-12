@@ -1,5 +1,5 @@
-\documentclass[fleqn, abstract=on]{scrreprt}
-
+\documentclass[fleqn, abstract=on, twoside]{scrreprt}
+% escapeinside
 %\usepackage[gray]{xcolor}
 \usepackage[T1]{fontenc}        % T1-Fonts
 \usepackage[utf8]{inputenc}     % Enkodierung
@@ -40,7 +40,7 @@
 \begin{titlepage}
 	\vspace*{3cm}
 	\centering
-	{\huge\bfseries Evaluation of formalizing Curry programs in Coq\par}
+	{\huge\bfseries Formalizing inference systems in Coq by means of type systems for Curry\par}
 	\vspace{1cm}
 	\textbf{Niels Bunkenburg} \par 
 	\vspace{6cm}
@@ -81,42 +81,71 @@
 \chapter{Introduction}
 \chapter{Preliminaries}
 \section{Curry}
-Curry\footnote{http://curry-language.org/} is a programming language that combines aspects of functional and logical programming. Created by an international initiative, Curry is predominantly aimed at providing a platform for research and teaching.\cite{curryintro} Curry's syntax is similar to Haskell with the addition of nondeterminism, that is, a function can return different values for the same input, and free variables, which allow the intelligent search for possible solutions. 
+Curry\footnote{http://curry-language.org/} is a programming language that combines aspects of functional and logical programming. Created by an international initiative, Curry is predominantly aimed at providing a platform for research and teaching.\cite{curryintro} Curry's syntax is similar to Haskell with the addition of nondeterminism, that is, a function can return different values for the same input, and free variables, which allow the systematic search for unknown values.
 \par
 The similarities to Haskell include the (interactive) compiler KICS2\footnote{https://www-ps.informatik.uni-kiel.de/kics2/} that compiles Curry programs to Haskell code and  an easily searchable\footnote{https://www-ps.informatik.uni-kiel.de/kics2/currygle/}, extensive module system with many predefined data structures and functions. In this short overview we will take a look at some language features that we will work with later, albeit not necessarily in the form of Curry code.\\
 \par\noindent
-Curry programs have the ending \texttt{.curry} and consist of function and data type declarations. The simplest form of functions, such as \texttt{double x = x + x}, has a name, a possibly empty list of variables and an expression. Although it is not mandatory to explicitly state a function's type, in this case \texttt{double :: Int $\rightarrow$ Int $\rightarrow$ Int}, every function has a type that describes the arguments and the result of evaluating the function. When a function call is evaluated, the left-hand side is replaced with the right-hand side until there are is no further evaluation possible, that is, only literal values or data structures remain. The evaluation can result in an infinite loop, for example \texttt{twos = 2 : twos}, or not compute any values. Infinite data structures are processed by computing the value of an expression only if it is actually needed, called \textit{lazy} evaluation.\\
-\par \noindent
-More advanced functions use several rules and pattern matching to describe different computational paths. By using a pattern in the left-hand side of a rule, it is limited to arguments of a specific form. Thus, functions that process data types with multiple constructors can have a different rule for every constructor. While Haskell allows overlapping patterns, that is, multiple patterns that apply to the same argument, functions remain deterministic because only the first rule that matches the argument is evaluated. Curry does not limit the evaluation -- a function with overlapping patterns can return every possible result an input evaluates to. On the other hand, patterns do not need to be exhaustive, that is, cover every possible input, because a failed computation is a valid result unlike the exception Haskell returns.\\
-\par
-\begin{minipage}{.5 \linewidth}
+Curry programs have the ending \texttt{.curry} and consist of function and data type declarations. The simplest form of functions, such as \texttt{double x = x + x}, has a name, a possibly empty list of variables and an expression. Although it is not mandatory to explicitly state a function's type, in this case \texttt{double :: Int $\rightarrow$ Int $\rightarrow$ Int}, every function has a type that describes the arguments and the result of evaluating the function. When a function call is evaluated, the left-hand side is replaced with the right-hand side until there is no further evaluation possible, that is, only literal values or data structures remain. The evaluation can result in an infinite loop, for example \texttt{twos = 2 : twos}, or not compute any values. Infinite data structures are processed by computing the value of an expression only if it is actually needed, called \textit{lazy} evaluation. In the example below the function \texttt{take} returns the first $n$ elements of a list. The value of \texttt{twos} is only evaluated by one step when the application of \texttt{take} requires the values of the list's head. Thus, the infinite list can be accessed without computing the whole structure.
+\begin{flushleft}
+	\begin{minipage}[t]{.3 \linewidth}
+\begin{minted}{haskell}
+take 2 twos
+take 2 (2 : twos)
+2 : take 1 twos
+2 : take 1 (2 : twos)
+2 : 2 : take 0 twos
+2 : 2 : []
+\end{minted}
+\end{minipage}
+\hfill
+\vrule
+\hfill
+\begin{minipage}[t]{.65 \linewidth}
+\begin{minted}{haskell}
+take :: Int -> [a] -> [a]
+take n l = if n <= 0 then [] else takep n l
+  where takep _ []     = []
+        takep m (x:xs) = x : take (m-1) xs
+\end{minted}
+\end{minipage}
+\end{flushleft}
+\noindent
+More advanced functions use several rules and pattern matching to describe different computational paths. By using a pattern in the left-hand side of a rule, it is limited to arguments of a specific form. Thus, functions that process data types with multiple constructors can have a different rule for every constructor. While Haskell allows overlapping patterns, that is, multiple patterns that apply to the same argument, functions remain deterministic because only the first rule that matches the argument is evaluated. Curry does not limit the evaluation -- a function with overlapping patterns can return every possible result an input evaluates to. On the other hand, patterns do not need to be exhaustive, that is, cover every possible input, because a failed computation is a valid result unlike the exception Haskell returns.
+\begin{flushleft}
+	\begin{minipage}[t]{.3 \linewidth}
 \begin{minted}{haskell}
 failed = head []
 eight = failed ? 8
 \end{minted}
 \end{minipage}
-\begin{minipage}{.5 \linewidth}
+\hfill
+\vrule
+\hfill
+\begin{minipage}[t]{.65 \linewidth}
 \begin{minted}{haskell}
 (?) :: a -> a -> a
 x ? _ = x
 _ ? y = y
 \end{minted}
 \end{minipage}
-\vspace{.5em}
-\par \noindent
+\end{flushleft}
+\noindent
 The function \texttt{head} returns the first element of a list, but in this case the list is empty. Therefore, the computation fails and KICS2 returns an exclamation mark. Nevertheless, it is possible to apply the \texttt{?} operator that represents a non-deterministic choice between the arguments to both the failed computation and the number 8. Since only one argument contains a value, the expression evaluates to 8.
 \par
 In some situations deterministic programs are inevitable, for example when working with IO actions. While it may not seem import if a function prints an 'a' or 'b' to the terminal, writing a file of non-deterministic size to the hard drive can cause severe problems. Fortunately, Curry enforces determinism when using IO actions. If one needs a more Haskell-esque evaluation of multiple patterns, the \texttt{case} expression applies:
 \begin{flushleft}
-	\begin{minipage}[t]{.33 \linewidth}
-	\begin{minted}{haskell}
+\begin{minipage}[t]{.3 \linewidth}
+\begin{minted}{haskell}
 maybeNot True  = False
 maybeNot True  = True
 maybeNot False = True
 maybeNot False = False
 	\end{minted}
 \end{minipage}
-\begin{minipage}[t]{.3 \linewidth}
+\hfill
+\vrule
+\hfill
+\begin{minipage}[t]{.25 \linewidth}
 	\begin{minted}{haskell}
 notCase b =
   case b of
@@ -126,7 +155,10 @@ notCase b =
     False -> False
 	\end{minted}
 \end{minipage}
-\begin{minipage}[t]{.3 \linewidth}
+\hfill
+\vrule
+\hfill
+\begin{minipage}[t]{.35 \linewidth}
 	\begin{minted}{haskell}
 maybeNotCase b =
   case b of
@@ -1054,6 +1086,7 @@ FlatCurry does have fewer literals than CuMin; the type of a literal depends on 
 \todo{Überschriften?}
 Applying a function $f$ to $n$ arguments $e_{1} \dots e_{n}$ requires the arguments to have types $\tau_{1} \dots \tau_{n}$ that match the types in the function type returned by the context. Looking up the function $f$, denoted by curly brackets, yields the pair $(\tau_1 \rightarrow \dots \rightarrow \tau_n \rightarrow \tau, \overline{x_k})$ where the first component is the type of $f$ and the second is a list of type variables, as defined in \autoref{context}. The notation $[~\overline{x_{k} \mapsto t_{k}}~]$ represents a type substitution of the type variable $x_{i}$ with the type $t_{i}$. The types $t_{i}$ need to be supplied explicitly, because there is no type inference. For instance, the application of \texttt{map} to \texttt{IntToChar} and \texttt{[1,2,3]} yields the pair $((a \rightarrow b) \rightarrow [a] \rightarrow [b], [a,b])$ from the context, which results in the premises $\Gamma \vdash \texttt{IntToChar} :: (a \rightarrow b)[a \mapsto \texttt{Int}, b \mapsto \texttt{Char}]$ and $\Gamma \vdash [1,2,3] :: [a][a \mapsto \texttt{Int}, b \mapsto \texttt{Char}]$.\todo{Grafik statt inline Code?}\\
 \par \noindent
+\todo{Neue Versionen von Comb einpflegen}
 The implementation is a set of rules in an inductively defined proposition, as before: 
 \begin{coqcode}
 Inductive hasType : context -> Expr -> TypeExpr -> Prop :=
@@ -1307,6 +1340,51 @@ showFlatCoq s = do flatProg  <- readFlatCurry s
 The supplied file is parsed by \texttt{readFlatCurry}, which results in a \texttt{Prog}, that is, the Curry data structure representing a FlatCurry program. We use a \texttt{let} expression to obtain the program name and apply the modified \texttt{showFlatProgCoq} function to \texttt{flatProg}. Then, the flat program string is concatenated with a header and import string. The imports required are the Coq definition of FlatCurry and \texttt{Lists.List}, that is, a module containing list notations.
 As usual, the program needs a definition and subsequently a name. Thus, we use \texttt{defString} with the \texttt{modname} we got earlier; the result is a string of the form \coqinline{Definition modname_coq :=}. Together with the actual program and a concluding dot, we have all parts of the finished Coq program that can now be imported in other programs.
 \section{Examples}
+\begin{minted}{haskell}
+double :: Int -> Int
+double x = x + x
+
+example1 :: [Int] -> [Int]
+example1 = map double
+
+example2 :: Bool -> Bool
+example2 = (id :: (Bool -> Bool))
+
+example3 :: Int
+example3 = case x of
+             Just n  -> n
+             Nothing -> 0
+           where x free
+\end{minted}
+\begin{coqcode}
+Require Import CQE.FlatCurry Lists.List.
+Import ListNotations.
+
+Definition MyProg_coq :=  (Prog "MyProg"
+["Prelude"]
+[]
+[
+(Func ("MyProg","double") 1  Public 
+      (FuncType Int Int)
+      (Rule  [1] (Comb FuncCall ("Prelude","+") [(Var 1);(Var 1)] )));
+(Func ("MyProg","example1") 0  Public 
+      (FuncType (List Int) (List Int))
+      (Rule  [] (Comb (FuncPartCall 1) ("Prelude","map") [(Comb (FuncPartCall 1)
+      ("MyProg","double") [] )] )));
+(Func ("MyProg","example2") 0  Public 
+      (FuncType Bool Bool)
+      (Rule  [] (Typed (Comb (FuncPartCall 1) ("Prelude","id") [] )
+      (FuncType Bool Bool))));
+(Func ("MyProg","example3") 0  Public 
+      Int
+      (Rule  [] (Free  [1] (Case Rigid (Var 1) 
+        [(Branch (Pattern ("Prelude","Just") [2] )(Var 2));
+         (Branch (Pattern ("Prelude","Nothing") [] )(Lit (Intc 0)))] ))))
+]
+[] 
+)
+.
+\end{coqcode}
 \chapter{Conclusion}
 
 % Anhang

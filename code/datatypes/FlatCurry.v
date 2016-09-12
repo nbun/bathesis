@@ -27,9 +27,9 @@ Definition Float  := TCons ("Prelude", "Float") [].
 Definition Char   := TCons ("Prelude", "Char")  [].
 Definition Bool   := TCons ("Prelude", "Bool")  [].
 Definition Unit   := TCons ("Prelude", "()")    [].
-Definition IO   t := TCons ("Prelude", "IO")    t.
-Definition Pair t := TCons ("Prelude", "(,)")   t.
-Definition List t := TCons ("Prelude", "[]")    t.
+Definition IO   t   := TCons ("Prelude", "IO")    [t].
+Definition Pair s t := TCons ("Prelude", "(,)") [s;t].
+Definition List t   := TCons ("Prelude", "[]")    [t].
 
 Inductive ConsDecl : Type :=
   | Cons :  QName -> nat -> Visibility -> list TypeExpr -> ConsDecl.
