@@ -1375,11 +1375,14 @@ The first example is the partial application of \texttt{map} to \texttt{double}.
 Using the transformation introduced in \autoref{conversion} yields the following definition:
 \begin{coqcode}
 Definition MyProg_coq :=  (Prog "MyProg"
-["Prelude"]
-[]
-[
-(Func ("MyProg","double") 1  Public 
+["Prelude"] (* imported modules *)
+[] (* data type declarations *)
+[ (* function declarations *)
+      (* qualified name,  arity and visibility *)
+(Func ("MyProg","double") 1         Public 
+      (* full type *)
       (FuncType Int Int)
+      (* variable list and expression *)
       (Rule  [1] (Comb FuncCall ("Prelude","+") [(Var 1);(Var 1)] )));
 (Func ("MyProg","example1") 0  Public 
       (FuncType (List Int) (List Int))
@@ -1395,14 +1398,14 @@ Definition MyProg_coq :=  (Prog "MyProg"
         [(Branch (Pattern ("Prelude","Just") [2] )(Var 2));
          (Branch (Pattern ("Prelude","Nothing") [] )(Lit (Intc 0)))] ))))
 ]
-[] 
+[] (* operator declarations *)
 ).
 
 Definition cntxt := parseProgram MyProg_coq.
 \end{coqcode}
-The context is created by applying \texttt{parseProgram} to the program definition, as shown in \autoref{context}. In the following proofs \texttt{exp} variables represent the expression of the respective example's \texttt{Rule}. Unfortunately, the usage of \texttt{let} expressions in the definition of \texttt{hasType}'s rules creates large, flat terms that contribute few to the explanation. Therefore, we will discuss proofs in more abstract manner.\\ 
+The context is created by applying \texttt{parseProgram} to the program definition, as shown in \autoref{context}. In the following proofs \texttt{exp} variables represent the expression of the respective example's \texttt{Rule}. Unfortunately, the usage of \texttt{let} expressions in the definition of \texttt{hasType}'s rules creates large, flat terms that contribute few to the explanation. Therefore, we will discuss proofs in a more abstract manner.\\ 
 \par
-The proof for \texttt{example1} contains two applications of the rule \texttt{T\_Comb\_Part}: The first is obviously the application of \texttt{map} to \texttt{double} but \texttt{double} itself is also a partial application, even though no arguments are supplied. A function application without arguments yields the original function and is necessary to supply functional arguments to higher-order functions. \texttt{T\_Comb\_Part} creates two subgoals when applied: Specializing the return type of the function with the supplied \texttt{substTypes}, that is, the types that replace the type variables, needs to match the type supplied in the proposition. The second subgoal requires the arguments to have the corresponding types of the specialized function type.
+The proof for \texttt{example1} contains two applications of the rule \texttt{T\_Comb\_Part}: The first is the application of \texttt{map} to \texttt{double}, but \texttt{double} itself is also a partial application, even though no arguments are supplied. A function application without arguments yields the original function and is necessary to supply functional arguments to higher-order functions. \texttt{T\_Comb\_Part} creates two subgoals when applied: Specializing the return type of the function with the supplied \texttt{substTypes}, that is, the types that replace the type variables, needs to match the type supplied in the proposition. The second subgoal requires the arguments to have the corresponding types of the specialized function type.
 \begin{coqcode}
 Definition example1 : cntxt |- exp1 \in (FuncType (List Int) (List Int)).
 Proof.
@@ -1415,32 +1418,67 @@ Proof.
     - apply Forall2_nil.
 Qed.
 \end{coqcode}
-The first subgoal is easily proven by using \texttt{reflexivity}.
+The first subgoal is easily proven by applying \texttt{reflexivity}. There is, however, more to it than meets the eye: \texttt{map} is looked up in the context, which yields the polymorphic type \texttt{map :: (a $\rightarrow$ b) $\rightarrow$ [a] $\rightarrow$ [b]}. The specialization \texttt{[a $\mapsto$ Int, b $\mapsto$ Int]} is applied and the first argument type removed, yielding \texttt{[a] $\rightarrow$ [b]}, that is, the expected type.
+\par
+The second subgoal checks if the supplied argument matches the previously removed argument type, that is, if \texttt{double} has the type \texttt{(Int $\rightarrow$ Int)}. In order to do so, we apply \texttt{T\_Comb\_Part} once again, this time without any \texttt{substTypes} since \texttt{double} is not a polymorphic function. The generated subgoals are similar to the first application, with the exception that we can use \texttt{Forall2\_nil} directly since we do not apply any arguments to \texttt{double}. This proves that the first and only argument of \texttt{map} matches its corresponding type. Thus, the proof is finished by applying \texttt{Forall2\_nil}.
+\par
+Proving the full application of functions or constructors works identical because all differences are contained in the computational part that \texttt{reflexivity} solves.\\
+\par\noindent
+In the second example \texttt{id :: (Bool -> Bool)} we take a look at explicitly typed expressions and the proposition \texttt{isSpecializableTo}. 
 \begin{coqcode}
 Definition example2 : cntxt |- exp2 \in FuncType Bool Bool.
 Proof.
   eapply T_Typed.
-  * apply T_Comb_Part with (substTypes := [Bool]).
-    - reflexivity.
-     - apply Forall2_nil.
-  * apply T_Spec with (substTypes := [Bool]).
-    - reflexivity.
+    * apply T_Comb_Part with (substTypes := []);
+      econstructor.
+    * apply T_Spec with (substTypes := [Bool]).
+      reflexivity.
 Qed.
 \end{coqcode}
-
+We begin with e-applying \texttt{T\_Typed}. Without existential variables, the actual type \texttt{T} of the expression would need to be specified, but in this case it can be inferred from the line \texttt{FuncType (TVar 0) (TVar 0) = ?T} that occurs while typing \texttt{id}. Since we already used \texttt{T\_Comb\_Part} before, we solve the generated subgoals automatically with \texttt{econstructor}. To apply a tactic \texttt{T'} to every subgoal generated by the tactic \texttt{T}, we write \texttt{T; T'}, which avoids repeating tactics for similar subgoals. 
+\par
+The second subgoal states that \texttt{(a $\rightarrow$ a) $\Rightarrow$ (Bool $\rightarrow$ Bool)}, that is, the actual type of \texttt{id} can be specialized to the explicitly stated type. We can prove this by applying \texttt{T\_Spec} with a list of specialized types for every type variable. Now, one may ask if it is possible to use this rule without supplying the substitution explicitly since it seems fairly obvious that the type variable \texttt{a} needs to be specialized to \texttt{Bool}. The answer arises from the following situation:
 \begin{coqcode}
-Definition example3a : cntxt |- exp3 \in Int.
-Proof.
-  eapply T_Free.
-  eapply T_Case.
-  Show Existentials.
-    * repeat econstructor. 
-      instantiate (1 := [TCons ("Prelude", "Maybe") [Int]]).
-      instantiate (1 := [Int]). repeat econstructor.
-    * repeat econstructor.
-    * repeat econstructor.
+multiTypeSubst (funcTVars (FuncType (TVar 0) (TVar 0))) ?substTypes
+(FuncType (TVar 0) (TVar 0)) = FuncType Bool Bool
+\end{coqcode}
+The rule \texttt{T\_Spec} uses the function \texttt{multiTypeSubst} to specialize the polymorphic type. We do not know the types that replace the type variables, but we know the result. A Curry analogy could look like this:
+\begin{haskellcode}
+replChar :: Char -> Char -> String -> String
+replChar a b s = map (\c -> if (c == a) then b else c) s
+
+replChar 'a' b "a -> a" == "B -> B" where b free
+\end{haskellcode}
+The function \texttt{replChar} replaces a character in a string, similar to replacing a type in a larger construct of types. Curry allows us to use a free variable in place of the replacement character and can solve the equation, that is, \texttt{{b = 'B'}}. Coq is able to instantiate variables in such a scenario too, as we saw in \autoref{autoproof}: The equation is simplified until both sides contain similar data structures and then individual components are matched to variables, for example \texttt{?a $\rightarrow$ Int = Char $\rightarrow$ Int} would result in the instantiation of \texttt{?a} with \texttt{Char}.
+\par
+The actual cause of the problem is the definition of \texttt{multiTypeSubst} or rather that it replaces multiple variables. The above Curry function replaces only one character, a definition equal to \texttt{multiTypeSubst} that replaces multiple characters in a string could look like this:
+\begin{haskellcode}
+replChars :: [Char] -> [Char] -> String -> String
+replChars cs ds s =  foldr (\cd t -> case cd of (c,d) -> replChar c d t)
+                           s (zip cs ds)
+                    
+replChars ['a', 'b'] cs "a -> b" == "I -> C" where cs free
+\end{haskellcode}
+Curry is still able to solve the equation, but the result \texttt{{cs = ('I':'C':\_xk)}} contains a free variable because the substitution discards the remaining tail of the longer list. Therefore, the result is ambiguous! Coq needs to instantiate the variable with a specific value, but since choosing one solution could lead to multiple outcomes depending on the choice, the proof fails. Therefore, we need to supply the \texttt{substTypes} and can finish the proof with \texttt{reflexivity}.\\
+\par
+The last example, that is, the case expression with a free variable, expands on the usage of automation in proofs. As we already discussed, there are some limitations that require explicitly supplying some values, but the proof is still shortened significantly by using the \texttt{;} and \texttt{econstructor}.
+\begin{coqcode}
+Definition example3 : cntxt |- exp3 \in Int.
+  Proof.
+  apply T_Free with (tyexprs := [TCons ("Prelude", "Maybe") [Int]]);
+  eapply T_Case;
+  try instantiate (1 := [Int]);
+  repeat econstructor.
 Qed.
 \end{coqcode}
+Typing an expression $e$ containing free variables requires explicitly supplying the type of the variables when applying \texttt{T\_Free}. In this case the return type is \texttt{Int} and the \texttt{case} patterns are \texttt{Maybe a} constructors. Hence, the free variable must be of type \texttt{Maybe Int}. In order to type $e$, that is, a \texttt{case} expression, we use \texttt{eapply} with \texttt{T\_Case} which introduces two existential variables \texttt{?substTypes} and \texttt{?Tc}. Although we know that \texttt{?substTypes} needs to be explicitly supplied, it is better to use \texttt{eapply} nevertheless because \texttt{?Tc}, that is, the type of the free variable we already typed above, can be inferred.
+\par
+Now we need to supply a value for \texttt{?substTypes} after the application of \texttt{T\_Case}. The tactic \texttt{instantiate} instantiates existential variables but works with numbers instead of variable names to simplify automation. The variables are enumerated by their first occurrence from right to left in the expression, which may be hard to perceive in large expressions. Fortunately, the tactic \texttt{Show Existentials} prints a list of all existential variables and the corresponding types.
+\begin{coqcode}
+Existential 1 = ?substTypes : [ |- list TypeExpr] 
+Existential 2 = ?Tc : [ |- TypeExpr] 
+\end{coqcode}
+Thus, we know that \texttt{?substTypes} has the number 1 and can instantiate it with the type \texttt{Int} to specialize \texttt{Maybe a}. We already used \texttt{;} before, but in this case we use it between all tactics. This applies every tactic to all subgoals generated by the previous tactic, which concludes the proof with a single application of \texttt{repeat econstructor}. There are downsides to this approach, however: \texttt{T\_Case} generates three subgoals, all of which \texttt{instantiate} would be applied to. Existential variables are instantiated globally, that is, in all subgoals, and would therefore fail. In cases where a tactic is only useful for some subgoals, \texttt{try} allows the proof to proceed even if the application of the tactic fails.
 \chapter{Conclusion}
 
 % Anhang

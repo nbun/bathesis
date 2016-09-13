@@ -544,7 +544,7 @@ Qed.
   Definition example1 : con2 |- exp1 \in (FuncType (List Int) (List Int)).
   Proof.
     apply T_Comb_Part with (substTypes := [Int; Int]).
-      * reflexivity.
+      * simpl. reflexivity.
       * apply Forall2_cons.
         - apply T_Comb_Part with (substTypes := []).
           -- reflexivity.
@@ -555,11 +555,10 @@ Qed.
   Definition example2 : con2 |- exp2 \in FuncType Bool Bool.
   Proof.
     eapply T_Typed.
-      * apply T_Comb_Part with (substTypes := [Bool]).
-        - reflexivity.
-        - apply Forall2_nil.
+      * apply T_Comb_Part with (substTypes := []);
+        econstructor.
       * apply T_Spec with (substTypes := [Bool]).
-        - reflexivity.
+        reflexivity.
   Qed.
 
   Definition example3 : con2 |- exp3 \in Int.
@@ -567,7 +566,7 @@ Qed.
     apply T_Free with (tyexprs := [TCons ("Prelude", "Maybe") [Int]]).
     apply T_Case with (substTypes := [Int]) (Tc := TCons ("Prelude", "Maybe") [Int]).
       * apply Forall_cons.
-        - apply T_Var. simpl. reflexivity.
+        - apply T_Var. reflexivity.
         - apply Forall_cons.
           -- apply T_Lit. reflexivity.
           -- apply Forall_nil.
@@ -581,15 +580,22 @@ Qed.
 
   Definition example3a : con2 |- exp3 \in Int.
   Proof.
-    eapply T_Free.
+    apply T_Free with (tyexprs := [TCons ("Prelude", "Maybe") [Int]]).
     eapply T_Case.
     Show Existentials.
       * repeat econstructor. 
-        instantiate (1 := [TCons ("Prelude", "Maybe") [Int]]).
         instantiate (1 := [Int]). 
         repeat econstructor.
       * repeat econstructor.
       * repeat econstructor.
+  Qed.
+  
+  Definition example3b : con2 |- exp3 \in Int.
+  Proof.
+    apply T_Free with (tyexprs := [TCons ("Prelude", "Maybe") [Int]]);
+    eapply T_Case;
+    try instantiate (1 := [Int]);
+    repeat econstructor.
   Qed.
 
 End Examples.
