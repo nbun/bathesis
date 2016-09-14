@@ -81,7 +81,10 @@
 % oder direkt:
 
 \chapter{Introduction}
+\todo{Introductions are hard...}
+This thesis is structured the following way: We begin with the preliminaries in \autoref{preliminiaries}.  Besides a basic introduction to Curry and Coq, this chapter gives a theoretical overview of the following chapters \ref{cumin} and \ref{flatcurry}. These chapters discuss two representations of Curry code, formal typing rules and a Coq implementation of the type system. Chapter \ref{cumin} ends with a few examples and a section about automated proofs, while \autoref{flatcurry} is finished with a program that transforms Curry programs into a Coq-compatible form. The last chapter presents results and possible expansions thereof. 
 \chapter{Preliminaries}
+\label{preliminiaries}
 \section{Curry}
 Curry\footnote{http://curry-language.org/} is a programming language that combines aspects of functional and logical programming. Created by an international initiative, Curry is predominantly aimed at providing a platform for research and teaching.\cite{curryintro} Curry's syntax is similar to Haskell with the addition of nondeterminism, that is, a function can return different values for the same input, and free variables, which allow the systematic search for unknown values.
 \par
@@ -335,6 +338,7 @@ Qed.
 \end{coqcode}
 \coqinline{Forall} is an inductively defined proposition, which requires rules to be applied in order to prove a certain goal. This will be further explained in the next section, for now it sufficient to know that \coqinline{Forall} can be proven by applying the rules \coqinline{Forall_cons} and \coqinline{Forall_nil}, depending on the remaining list. Because we begin with a non-empty list, we have to apply \coqinline{Forall_cons}. The goal changes to \coqinline{2 <> 8}, the head of the list applied to the property. We have already proven this type of inequality before, \coqinline{inversion} is actually able to do most of the work we did manually by itself. Next the same procedure needs to be done for the list's tail \coqinline{[4]}, which works exactly the same as before. To conclude the proof, we need to show that the property is satisfied by the empty list. \coqinline{Forall_nil} covers this case, which is trivially fulfilled.
 \subsection{Inductively defined propositions}
+\label{induprop}
 Properties of a data type can be written in multiple ways, two of which we already discussed: Boolean equations of the form \coqinline{b x = true} and functions that return propositions. For example the function \coqinline{InB} returns \coqinline{true} if a \coqinline{nat} is contained in a list, the boolean function could look like this:
 \begin{coqcode}
 Fixpoint InB (x : nat) (l : list nat) : bool :=
@@ -365,27 +369,14 @@ Qed.
 \end{coqcode}
 Proving the same example as before, we need new tactics to work with logical connectives. By simplifying the original statement we get a disjunction of equations for every element in the list. If we want to show that a disjunction is true, we need to choose a side we believe to be true and prove it. \coqinline{left} and \coqinline{right} keep only the respective side as the current goal, discarding the other one. A similar tactic exists for the logical conjunction \coqinline{/\ }, with the difference that \coqinline{split} keeps both sides as subgoals, since a conjunction is only true if both sides are true.
 \par
-The last option to describe this property is by using inductively defined propositions. As already mentioned before, inductively defined propositions consist of rules that describe how an argument can satisfy the proposition. A useful notation for representing these rules are \textit{inference rules} \label{infrules}. They consist of an optional list of premises that needs to be fulfilled in order for the conclusion below the line to hold.
-\par
-We can describe \coqinline{In} with two rules:
-\begin{figure}[H]
-	\begin{center}
-		\begin{minipage}{.45 \linewidth}
-			\infer[1]{\coqinline{In n (n :: l)}}{\phantom{premise}}
-		\end{minipage}
-		\hspace{.1 \linewidth}
-		\begin{minipage}{.45 \linewidth}
-			\infer[2]{\coqinline{In n (e :: l)}}{\coqinline{In n l}}
-		\end{minipage}
-	\end{center}
-	\vspace*{-1em}
-\end{figure}
-Rule one states that the list's head is an element of the list. Additionally, if an element is contained in a list, it is also an element of the the same list, prefixed by another element, as described in the second rule. This definition can be transferred to Coq:
+The last option to describe this property is by using inductively defined propositions. As already mentioned before, inductively defined propositions consist of rules that describe how an argument can satisfy the proposition.
+\label{In}
 \begin{coqcode}
 Inductive InInd : nat -> list nat -> Prop :=
 | Head : forall n l, InInd n (n :: l)
 | Tail : forall n l, InInd n (tl l) -> InInd n l.
-\end{coqcode}
+\end{coqcode} 
+Rule one states that the list's head is an element of the list. Additionally, if an element is contained in a list, it is also an element of the the same list, prefixed by another element, as described in the second rule. This definition can be transferred to Coq:
 \begin{coqcode}
 Example e7 : InInd 42 [2;42].
 Proof. 
@@ -410,36 +401,72 @@ Forall2 : forall A B : Type, (A -> B -> Prop) -> list A -> list B -> Prop
 \label{theory}
 In functional languages a data type is a classification of applicable operators and properties of its members. There are base types that store a single date and more complex types that may have multiple constructors and type variables. Typing describes the process of assigning an expression to a corresponding type in order to avoid programming errors, for example calling an arithmetic function with a character.
 \par
-Typing an expression requires a context that contains data type definitions, function/constructor/operator declarations and a map that assigns types to variables.  Without a context, expressions do not have any useful meaning -- \coqinline{42} could be typed as a number, the character 'B', a string or the answer to everything. The majority of information in a context can be extracted from the source code of a program and is continually updated while typing expressions.
+Typing an expression requires a context that contains data type definitions, function declarations and a map that assigns types to variables.  Without a context, expressions do not have any useful meaning -- \coqinline{42} could be typed as a number, the character 'B', a string or the answer to everything. The majority of information in a context can be extracted from the source code of a program and is continually updated while typing expressions.
 \par
-In the following chapters we are going to formalize two representations of Curry programs. This process consists of:
+In the following chapters we are going to formalize the typing systems of two representations of Curry programs. This process consists of:
 \begin{enumerate}
 	\item Creating \begin{itemize}
 		              \item a Coq data structure that represents the program.
 		              \item a context that contains all necessary information for typing expressions.
 		           \end{itemize}
 	\item Formalizing typing rules with inductively defined propositions.
-	\item Parsing Curry code to Coq programs automatically.
+	\item Transferring programs into Coq syntax and using typing rules to prove propositions about the program.
 \end{enumerate}
-To represent a program in Coq, we need to list all elements it can possibly contain and link them together in a meaningful way. In case of CuMin this is relatively easy; a program consists of several function declarations, which have a signature and a body. Signatures combine quantifiers and type variables, while the body contains variables and expressions. The resulting typing rules are straightforward, because types and expressions are very specific and some procedures are simplified, for example it is not allowed to supply more than one argument to a function at a time. 
+\paragraph{Representation}
+To represent a program in Coq, we need to list all elements it can possibly contain and link them together in a meaningful way. In case of CuMin this is relatively easy; a program consists of function declarations, which have a signature and a body. Signatures combine quantifiers and type variables, while the body contains variables and expressions. The resulting typing rules are basic, because types and expressions are very specific and some procedures are simplified, for example it is not allowed to supply more than one argument to a function at a time. 
 \par
-While FlatCurry is designed to accurately represent Curry code and therefore has a more abstract program structure, the basic layout is similar. 
+While FlatCurry is designed to accurately represent Curry code and therefore has a more abstract program structure, the basic layout is similar. A program consists of a name, imported modules and declarations of functions, data types and operators. The latter two are not present in CuMin, but function declarations have a similar structure with additional information, such as the function's arity and visibility.
+\par
+Types and expressions in FlatCurry are not as specific as in CuMin, for example CuMin has an explicitly defined data type \texttt{Bool} with a \texttt{case} expression that works with \texttt{Bool} values only, while FlatCurry uses the data type constructor to represent the \texttt{Bool} type. FlatCurry's \texttt{case} expression works with arbitrary values and therefore the typing rules are more complex.\\
+\paragraph{Context}
+Both CuMin and FlatCurry need a context that maps keys to values, that is, variables to types or names to declarations. There are many options to implement a map, such as a list of pairs, but we will use functions instead because it resembles the formal notation we will use later more closely.
 \begin{coqcode}
-Definition total_map (K V : Type) := K -> V.
-
+Definition total_map   (K V : Type) := K -> V.
 Definition partial_map (K V : Type) := total_map K (option V).
-
-Definition tmap_empty {K V : Type} (v : V) : total_map K V := (fun _ => v).
-
-Definition emptymap {K V :Type} : partial_map K V := tmap_empty None.
-
-Definition t_update {K V : Type} (beq : K -> K -> bool) (m : total_map K V) (k : K) (v : V) :=
-fun k' => if beq k k' then v else m k'.
-
-Definition update {K V : Type} (beq : K -> K -> bool) (m : partial_map K V) (k : K) (v : V) :=
-t_update beq m k (Some v).
 \end{coqcode}
+A total map is a function that takes a key value of type \texttt{K} and returns a value of type \texttt{V}. Because we define maps for arbitrary keys and values, the same definition can be used for CuMin and FlatCurry. A context contains only information about certain variables or functions, not for every possible key value. Thus, we define a partial map by adding an \texttt{option} to the value, that is, known keys yield a \texttt{Some v} and other keys a \texttt{None}.
+\par
+An empty total map is a function that returns the same value \texttt{v}  for every key. In case of the partial map, the default value is \texttt{None}.
+\begin{coqcode}
+Definition emptytmap {K V : Type} (v : V) : total_map K V := (fun _ => v).
+Definition emptymap {K V :Type} : partial_map K V := emptytmap None.
+\end{coqcode}
+Updating a total map works by calling \texttt{t\_update} with a boolean equality function \texttt{beq} between keys, a total map \texttt{m}, key \texttt{k} and value \texttt{v}. To update a partial map with the value \texttt{v}, we use \texttt{t\_update} with \texttt{Some v}.
+\begin{coqcode}
+Definition t_update {K V : Type} (beq : K -> K -> bool) (m : total_map K V)
+(k : K) (v : V) := fun k' => if beq k k' then v else m k'.
+Definition update {K V : Type} (beq : K -> K -> bool) (m : partial_map K V)
+(k : K) (v : V) := t_update beq m k (Some v).
+\end{coqcode}
+The result of \texttt{t\_update} is a function that takes a key \texttt{k'} and applies \texttt{beq} to \texttt{k'} and \texttt{k}. If the keys are equal, the value is returned, otherwise the key is applied to the map \texttt{m}. 
+\begin{coqcode}
+pmap = update beq_nat 1 Int emptymap
+-- fun k' => if (beq_nat 1 k') then (Some Int) else (emptymap k')
+pmap2 = update beq_nat 2 Char pmap
+-- fun k' => if (beq_nat 2 k') then (Some Char) else (pmap k')   
+\end{coqcode}
+This implementation of a map is constructed by linking multiple functions together. Each function compares the supplied key with its key and if they differ, passes it to the next function. When looking up a key in a map, the key is compared to the last added entry first. An unknown key is checked by every function until finally \texttt{emptymap} returns \texttt{None}.
+\paragraph{Inference rules}
+In the following chapters we will work with typing rules, that is, a rule that states conditions which need to be satisfied in order for an expression to have a certain type. In Coq we use such rules as part of an inductively defined proposition, but this usually includes implementation-specific details. Therefore, we use a more formal notation: \textit{inference rules}.\label{infrules} An inference rule consists of an optional list of premises that needs to be fulfilled in order for the conclusion below the line to hold, similar to an implication.
+We can describe the inductively defined proposition \coqinline{In} we used in \autoref{In} to describe the occurrence of an element in a list with two inference rules as shown in \autoref{InInfR}.
+\begin{figure}[H]
+	\begin{center}
+		\begin{minipage}{.45 \linewidth}
+			\infer[\text{\texttt{In\_H}}]{\coqinline{In n (n :: l)}}{\phantom{premise}}
+		\end{minipage}
+		\hspace{.1 \linewidth}
+		\begin{minipage}{.45 \linewidth}
+			\infer[\text{\texttt{In\_T}}]{\coqinline{In n (e :: l)}}{\coqinline{In n l}}
+		\end{minipage}
+	\end{center}
+	\caption{Inference rules for occurrence of an element in a list}
+	\label{InInfR}
+\end{figure} \noindent
+\texttt{In\_H} does not have a premise because a list's head is always an element of the list. Thus, the line can be omitted. The rule \texttt{In\_T} states that if the premise \texttt{In n l} is true, then the conclusion \texttt{In n (e :: l)} holds. Inference rules can have multiple premises $p_1 \dots p_n$ that are treated as multiple implications $p_1 \rightarrow \dots \rightarrow p_n \rightarrow c$ with the conclusion $c$.
+\par
+Even though the line may imply that premises and the conclusion are independent from each other, this is not necessarily the case. Additionally, there is no chronological order, which means that the premises can contain variables that are bound to a value only after evaluating the conclusion.
 \chapter{CuMin}
+\label{cumin}
 CuMin is a simplified sublanguage of Curry with a restricted syntax that allows more concrete typing rules and data types. Although it requires some transformations to substitute missing constructs, CuMin can express the majority of Curry programs. In the following sections we will take a look at CuMin's syntax\cite{p19mehner}, create a suitable context and discuss data types, followed by the formal definition and implementation of typing rules and some examples. In the concluding section of this chapter we will see some more advanced tactics that are able to fully automate simple proofs.
 \section{Syntax}
 The Backus–Naur Form (BNF) is a tool to formally describe context-free grammars and languages like CuMin. A BNF definition is a set of derivation rules $S ::= A_{1} | \dots | A_{n} $ where $S$ is a \textit{nonterminal}, that is, a symbol that can be replaced by any of the $n$ sequences $A_{i}$ on the right side of the $::=$. A sequence is a combination of symbols and other characters that form an expression. If a symbol occurs only on the right side of a rule, it is called a \textit{terminal} because it cannot be replaced.
@@ -891,6 +918,7 @@ Summarizing this chapter, we began by transferring the formal definition of CuMi
 \par
 In the following chapter we will follow the same procedure with FlatCurry, omitting the identical parts and focussing on the differences. Furthermore, we will look into transferring Curry programs to Coq and some examples.
 \chapter{FlatCurry}
+\label{flatcurry}
 FlatCurry is a flat representation of Curry code that enables meta-programming, that is, the transformation of Curry programs in Curry.\cite{kics2manual} Since we want to reason about Curry programs in Coq, the respective module \texttt{FlatCurry.Types} will be the foundation of the Coq implementation. The generation of FlatCurry code involves two transformations: Firstly, lambda lifting is applied, that is, local function definitions, for example introduced by \texttt{where} or \texttt{let} clauses, are replaced by top-level definitions. Secondly, pattern matching is substituted by case and or expressions, the latter in case of overlapping patterns.
 \par
 \todo{Kapitelüberblick}
