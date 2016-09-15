@@ -1,4 +1,4 @@
-\documentclass[fleqn, abstract=on, twoside]{scrreprt}
+\documentclass[paper = a4, fleqn, abstract=on, twoside]{scrreprt}
 % escapeinside
 %\usepackage[gray]{xcolor}
 \usepackage[T1]{fontenc}        % T1-Fonts
@@ -12,10 +12,11 @@
 \usepackage{subcaption}
 \usepackage{tikz}
 \usepackage{natbib}
+\usepackage[automark, headsepline]{scrlayer-scrpage}
 
 % Kapitelüberschrift in der Kopfzeile
-\usepackage[automark]{scrpage2} % Schickerer Satzspiegel mit KOMA-Script
-\pagestyle{scrheadings}
+%\usepackage[automark]{scrpage2} % Schickerer Satzspiegel mit KOMA-Script
+%\pagestyle{scrheadings}
 
 % Minted
 \usepackage{minted}
@@ -81,8 +82,23 @@
 % oder direkt:
 
 \chapter{Introduction}
-\todo{Introductions are hard...}
-This thesis is structured the following way: We begin with the preliminaries in \autoref{preliminiaries}.  Besides a basic introduction to Curry and Coq, this chapter gives a theoretical overview of the following chapters \ref{cumin} and \ref{flatcurry}. These chapters discuss two representations of Curry code, formal typing rules and a Coq implementation of the type system. Chapter \ref{cumin} ends with a few examples and a section about automated proofs, while \autoref{flatcurry} is finished with a program that transforms Curry programs into a Coq-compatible form. The last chapter presents results and possible expansions thereof. 
+Does a program behave as intended? This question is a fundamental part of the formal verification of software. One aspect of formal verification is deductive verification, that is, formally representing and proving properties about programs.\citep{filliatre2011deductive} Interactive theorem provers, such as Coq, offer a specification language to represent programs and verification logic to argue about properties of the program. Figure \ref{coqscreen} shows CoqIde, a graphical interface for Coq. The specification is written on the left-hand side; the right-hand side contains an overview of the remaining goals in a proof.
+\begin{figure}[H]
+\includegraphics[width=\linewidth]{images/coq.png}
+\caption{CoqIde, a graphical interface for Coq}
+\label{coqscreen}
+\end{figure}\noindent 
+In the following chapters, we will use Coq to formalize inference systems, particularly type systems for the functional logic programming language Curry. Type systems are an important concept of strongly typed languages like Curry. Every function and expression has a specific type that, if not explicitly stated, is inferred and checked by the compiler.
+The process of typing expressions follows a set of inference rules that define conditions, which need to be met in order for an expression to be of a certain type.\\
+\par \noindent
+The goal of this thesis is to find an appropriate representation of Curry code in Coq and to implement the inference rules of the type system in order to verify properties of Curry code and to provide a basis for the formalization of further aspects of Curry.\\
+\par \noindent
+This thesis is structured the following way: We begin with the preliminaries in \autoref{preliminiaries}, which includes a basic introduction to Curry and Coq. The last section of this chapter gives a theoretical overview of the approach used in the following chapters.\\
+\par \noindent
+Both chapters \ref{cumin} and \ref{flatcurry} are structured similarly: \autoref{cumin} features the language CuMin, a minimal representation of Curry mostly used in theoretical contexts, while \autoref{flatcurry} focuses on FlatCurry, a more practical representation that is used as an intermediary language for some Curry compilers.
+The common approach in these chapters includes discussing and implementing the syntax of both languages and the type system. Chapter \ref{cumin} ends with a few examples and a section about automated proofs, while \autoref{flatcurry} is concluded with a program that transforms Curry programs into a Coq-compatible form.\\
+\par \noindent
+The last chapter presents the results and possible expansions thereof, as well as related work. 
 \chapter{Preliminaries}
 \label{preliminiaries}
 \section{Curry}
@@ -919,6 +935,7 @@ Summarizing this chapter, we began by transferring the formal definition of CuMi
 In the following chapter we will follow the same procedure with FlatCurry, omitting the identical parts and focussing on the differences. Furthermore, we will look into transferring Curry programs to Coq and some examples.
 \chapter{FlatCurry}
 \label{flatcurry}
+\todo{> Bei Ergebnissen}
 FlatCurry is a flat representation of Curry code that enables meta-programming, that is, the transformation of Curry programs in Curry.\cite{kics2manual} Since we want to reason about Curry programs in Coq, the respective module \texttt{FlatCurry.Types} will be the foundation of the Coq implementation. The generation of FlatCurry code involves two transformations: Firstly, lambda lifting is applied, that is, local function definitions, for example introduced by \texttt{where} or \texttt{let} clauses, are replaced by top-level definitions. Secondly, pattern matching is substituted by case and or expressions, the latter in case of overlapping patterns.
 \par
 \todo{Kapitelüberblick}
