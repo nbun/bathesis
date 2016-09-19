@@ -49,20 +49,20 @@ Section Context.
   Definition empty := con emptymap emptymap.
 
   (* Returns type context of a context. *)
-  Definition typecon (Gamma : context) : (partial_map id ty) :=
+  Definition type_con (Gamma : context) : (partial_map id ty) :=
     match Gamma with (con _ tyc) => tyc end.
 
   (* Returns tag context of a context. *)
-  Definition tagcon (Gamma : context) : (partial_map id tag) :=
+  Definition tag_con (Gamma : context) : (partial_map id tag) :=
     match Gamma with (con tagc _) => tagc end.
 
   (* Updates the ID's type in a context. *)
   Definition type_update (Gamma : context) (x : id) (v : ty) := 
-    (con (tagcon Gamma) (update beq_id (typecon Gamma) x v)).
+    (con (tag_con Gamma) (update beq_id (type_con Gamma) x v)).
 
   (* Updates the ID's tag in a context. *)
   Definition tag_update (Gamma : context) (x : id) (v : tag) := 
-    (con (update beq_id (tagcon Gamma) x v) (typecon Gamma)).
+    (con (update beq_id (tag_con Gamma) x v) (type_con Gamma)).
 
 End Context.
 
@@ -157,7 +157,7 @@ Section Typing.
   Reserved Notation "Gamma '|-' T '\is_data_type'" (at level 40).
   Inductive is_data_type : context -> ty -> Prop :=
     | D_Var  : forall Gamma n,
-                (tagcon Gamma) n  = Some tag_star ->
+                (tag_con Gamma) n  = Some tag_star ->
                 Gamma |- (TVar n) \is_data_type
     | D_Bool : forall Gamma, Gamma |- TBool \is_data_type
     | D_Nat  : forall Gamma, Gamma |- TNat \is_data_type
@@ -171,76 +171,76 @@ Section Typing.
   where "Gamma '|-' T '\is_data_type'" := (is_data_type Gamma T) : typing_scope.
 
   (* Typing rules *)
-  Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
+  Reserved Notation "Gamma '|-' t ':::' T" (at level 40).
   Inductive has_type : context -> tm -> ty -> Prop :=
     | T_Var :    forall Gamma x T,
-                   (typecon Gamma) x = Some T ->
-                   Gamma |- tvar x \in T
+                   (type_con Gamma) x = Some T ->
+                   Gamma |- tvar x ::: T
     | T_True :   forall Gamma, 
-                   Gamma |- ttrue \in TBool
+                   Gamma |- ttrue ::: TBool
     | T_False :  forall Gamma,
-                   Gamma |- tfalse \in TBool
+                   Gamma |- tfalse ::: TBool
     | T_Zero :   forall Gamma,
-                   Gamma |- tzero \in TNat
+                   Gamma |- tzero ::: TNat
     | T_Succ :   forall Gamma e,
-                   Gamma |- e \in TNat -> 
-                   Gamma |- (tsucc e) \in TNat
+                   Gamma |- e ::: TNat -> 
+                   Gamma |- (tsucc e) ::: TNat
     | T_Nil :    forall Gamma T, 
-                   Gamma |- (tnil T) \in (TList T)
+                   Gamma |- (tnil T) ::: (TList T)
     | T_App :    forall Gamma e1 e2 T1 T2,
-                   Gamma |- e1 \in (TFun T1 T2) ->
-                   Gamma |- e2 \in T1 ->
-                   Gamma |- (tapp e1 e2) \in T2
+                   Gamma |- e1 ::: (TFun T1 T2) ->
+                   Gamma |- e2 ::: T1 ->
+                   Gamma |- (tapp e1 e2) ::: T2
     | T_Let :    forall Gamma e1 e2 x T1 T2,
-                   Gamma |- e1 \in T1 ->
-                   (type_update Gamma x T1) |- e2 \in T2 ->
-                   Gamma |- (tlet x e1 e2) \in T2
+                   Gamma |- e1 ::: T1 ->
+                   (type_update Gamma x T1) |- e2 ::: T2 ->
+                   Gamma |- (tlet x e1 e2) ::: T2
     | T_Fun :    forall Gamma id tys T,
                    let fd := fromOption default_fd (lookup_func Prog id) in 
                    specialize_func fd tys = Some T ->
                    Forall (is_data_type Gamma) (fd_to_star_tys fd tys) ->
-                   Gamma |- (tfun id tys) \in T
+                   Gamma |- (tfun id tys) ::: T
     | T_Add :    forall Gamma e1 e2,
-                   Gamma |- e1 \in TNat ->
-                   Gamma |- e2 \in TNat ->
-                   Gamma |- (tadd e1 e2) \in TNat
+                   Gamma |- e1 ::: TNat ->
+                   Gamma |- e2 ::: TNat ->
+                   Gamma |- (tadd e1 e2) ::: TNat
     | T_EqN :    forall Gamma e1 e2,
-                   Gamma |- e1 \in TNat ->
-                   Gamma |- e2 \in TNat ->
-                   Gamma |- (teqn e1 e2) \in TBool
+                   Gamma |- e1 ::: TNat ->
+                   Gamma |- e2 ::: TNat ->
+                   Gamma |- (teqn e1 e2) ::: TBool
     | T_Pair:    forall Gamma e1 e2 T1 T2,
-                   Gamma |- e1 \in T1 ->
-                   Gamma |- e2 \in T2 ->
-                   Gamma |- (tpair e1 e2) \in (TPair T1 T2)
+                   Gamma |- e1 ::: T1 ->
+                   Gamma |- e2 ::: T2 ->
+                   Gamma |- (tpair e1 e2) ::: (TPair T1 T2)
     | T_Cons :   forall Gamma e1 e2 T,
-                   Gamma |- e1 \in T ->
-                   Gamma |- e2 \in (TList T) -> 
-                   Gamma |- (tcons e1 e2) \in (TList T)
+                   Gamma |- e1 ::: T ->
+                   Gamma |- e2 ::: (TList T) -> 
+                   Gamma |- (tcons e1 e2) ::: (TList T)
     | T_CaseL :  forall Gamma e e1 e2 h t T T',
-                   Gamma |- e \in (TList T') ->
-                   Gamma |- e1 \in T ->
+                   Gamma |- e ::: (TList T') ->
+                   Gamma |- e1 ::: T ->
                    (type_update 
-                     (type_update Gamma h T') t (TList T')) |- e2 \in T ->
-                   Gamma |- (tcasel e h t e1 e2) \in T
+                     (type_update Gamma h T') t (TList T')) |- e2 ::: T ->
+                   Gamma |- (tcasel e h t e1 e2) ::: T
     | T_CaseP :  forall Gamma e e1 l r T T1 T2,
-                   Gamma |- e \in (TPair T1 T2) ->
-                   (type_update (type_update Gamma l T1) r T2) |- e1 \in T ->
-                   Gamma |- (tcasep e l r e1) \in T
+                   Gamma |- e ::: (TPair T1 T2) ->
+                   (type_update (type_update Gamma l T1) r T2) |- e1 ::: T ->
+                   Gamma |- (tcasep e l r e1) ::: T
     | T_CaseB :  forall Gamma e e1 e2 T,
-                   Gamma |- e \in TBool ->
-                   Gamma |- e1 \in T ->
-                   Gamma |- e2 \in T ->
-                   Gamma |- (tcaseb e e1 e2) \in T
+                   Gamma |- e ::: TBool ->
+                   Gamma |- e1 ::: T ->
+                   Gamma |- e2 ::: T ->
+                   Gamma |- (tcaseb e e1 e2) ::: T
     | T_Fail :   forall Gamma T,
-                   Gamma |- (tfail T) \in T
+                   Gamma |- (tfail T) ::: T
     | T_Any :    forall Gamma T,
                    Gamma |- T \is_data_type ->
-                   Gamma |- (tany T) \in T
-  where "Gamma '|-' t '\in' T" := (has_type Gamma t T) : typing_scope.
+                   Gamma |- (tany T) ::: T
+  where "Gamma '|-' t ':::' T" := (has_type Gamma t T) : typing_scope.
 End Typing.
 
 Module TypingNotation.
-  Notation "Prog > Gamma '|-' t '\in' T" := (has_type Prog Gamma t T) (at level 40) : typing_scope.
+  Notation "Prog > Gamma '|-' t ':::' T" := (has_type Prog Gamma t T) (at level 40) : typing_scope.
 End TypingNotation.
 
 Import TypingNotation.
@@ -249,26 +249,26 @@ Open Scope typing_scope.
 Section Examples.
 
   Definition e_prog := @nil func_decl.
-  Example t1 : e_prog > empty |- ttrue \in TBool.
+  Example t1 : e_prog > empty |- ttrue ::: TBool.
   Proof. apply T_True. Qed.
 
   Definition c := (type_update empty (Id 5) TNat).
 
-  Example t2 : e_prog > c |- (tvar (Id 5)) \in TNat.
+  Example t2 : e_prog > c |- (tvar (Id 5)) ::: TNat.
   Proof. apply T_Var. reflexivity. Qed.
 
   Example t3 : e_prog > empty |- (tlet (Id 5) tzero 
-                                (tadd (tsucc tzero) (tvar (Id 5)))) \in TNat.
+                                (tadd (tsucc tzero) (tvar (Id 5)))) ::: TNat.
   Proof. 
     apply T_Let with (T1 := TNat).
-    apply T_Zero.
-    apply T_Add.
-    apply T_Succ. apply T_Zero.
-    apply T_Var. reflexivity.
+    * apply T_Zero.
+    * apply T_Add.
+      - apply T_Succ. apply T_Zero.
+      - apply T_Var. reflexivity.
   Qed.
 
   Example t4 : e_prog > empty |- (tcasel (tnil TNat) (Id 0) (Id 1) (tnil TNat)
-                                        (tcons (tsucc tzero) (tnil TNat))) \in (TList TNat).
+                                        (tcons (tsucc tzero) (tnil TNat))) ::: (TList TNat).
   Proof.
     apply T_CaseL with (T' := TNat).
     apply T_Nil.
@@ -279,7 +279,7 @@ Section Examples.
   Qed.
 
   Example t5 : e_prog > empty |- 
-               (tcasel (tcons ttrue (tnil TBool)) (Id 0) (Id 1) tfalse (tvar (Id 0))) \in TBool.
+               (tcasel (tcons ttrue (tnil TBool)) (Id 0) (Id 1) tfalse (tvar (Id 0))) ::: TBool.
   Proof.
     apply T_CaseL with (T' := TBool).
     apply T_Cons.
@@ -296,7 +296,7 @@ Section Examples.
         (Id 51) TBool)
       (Id 2) (TVar (Id 1)).
 
-  Example t6 : e_prog > aContext |- tvar (Id 2) \in TVar (Id 1).
+  Example t6 : e_prog > aContext |- tvar (Id 2) ::: TVar (Id 1).
   Proof. apply T_Var. reflexivity. Qed.
 
   Example multi_t1 : multi_ty_subst 
@@ -317,7 +317,7 @@ Section Examples.
                               (tvar (Id 1)).
   Definition prog2 := [prog_fd].
 
-  Example fun1 : prog2 > aContext |- (tfun (Id 1) [TNat]) \in (TFun TNat TNat).
+  Example fun1 : prog2 > aContext |- (tfun (Id 1) [TNat]) ::: (TFun TNat TNat).
   Proof. apply T_Fun.
     reflexivity.
     simpl. apply Forall_cons. apply D_Nat. apply Forall_nil.
@@ -339,10 +339,10 @@ Section Examples.
   Definition prog := [fun3].
   
   Definition app1 := tapp
-                      (tapp (tfun (Id 1) (cons (TNat) nil))
+                      (tapp (tfun (Id 1) [TNat])
                             (tvar (Id 3)))
                       (tvar (Id 4)).
-  Example t7 : prog > cntxt |- app1 \in TNat.
+  Example t7 : prog > cntxt |- app1 ::: TNat.
   Proof.
     apply T_App with (T1 := TNat). apply T_App with (T1 := TNat).
     * apply T_Fun.
@@ -354,7 +354,7 @@ Section Examples.
     * apply T_Var. reflexivity.
   Qed.
 
-  Example t7a : prog > cntxt |- app1 \in TNat.
+  Example t7a : prog > cntxt |- app1 ::: TNat.
   Proof.
     repeat econstructor.
   Qed.

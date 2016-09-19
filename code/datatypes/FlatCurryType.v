@@ -247,22 +247,22 @@ Section Typing.
 
   (* Typing rules *)
   Definition length := Datatypes.length.
-  Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
+  Reserved Notation "Gamma '|-' t ':::' T" (at level 40).
   Inductive hasType : context -> Expr -> TypeExpr -> Prop :=
     | T_Var :       forall Gamma vi T,
                       (vCon Gamma) vi = Some T ->
-                      Gamma |- (Var vi) \in T
+                      Gamma |- (Var vi) ::: T
 
     | T_Lit :       forall Gamma l T,
                       T = litType l ->
-                      Gamma |- (Lit l) \in T
+                      Gamma |- (Lit l) ::: T
 
     | T_Comb :      forall Gamma qname exprs cType substTypes T,
                       let funcT := fromOption defaultTyVars ((combCon cType Gamma) qname) in
                       let specT := multiTypeSubst (snd funcT) substTypes (fst funcT)
                        in funcPart specT None = T ->
                           Forall2 (hasType Gamma) exprs (fst (funcTyList specT)) ->
-                      Gamma |- (Comb cType qname exprs) \in T
+                      Gamma |- (Comb cType qname exprs) ::: T
 
     | T_Comb_Part : forall Gamma qname exprs substTypes cType T,
                       let funcT := fromOption defaultTyVars ((combCon cType Gamma) qname) in
@@ -271,7 +271,7 @@ Section Typing.
                       let argTs := firstn (@length Expr exprs) (fst (funcTyList specT))
                        in funcPart specT (Some n) = T ->
                           Forall2 (hasType Gamma) exprs argTs ->
-                      Gamma |- (Comb cType qname exprs) \in T
+                      Gamma |- (Comb cType qname exprs) ::: T
 
     | T_Let :       forall Gamma ve ves tyexprs e T,
                       let vexprs   := (ve :: ves) in
@@ -279,18 +279,18 @@ Section Typing.
                       let vtyexprs := replaceSnd vexprs tyexprs in
                       let Delta    := multiTypeUpdate Gamma vtyexprs
                        in Forall2 (hasType Delta) exprs tyexprs ->
-                          Delta |- e \in T ->
-                      Gamma |- (Let (ve :: ves) e) \in T
+                          Delta |- e ::: T ->
+                      Gamma |- (Let (ve :: ves) e) ::: T
 
     | T_Free :      forall Gamma vis expr tyexprs T,
                       let Omega := multiTypeUpdate Gamma (zip vis tyexprs)
-                       in Omega |- expr \in T ->
-                      Gamma |- (Free vis expr) \in T
+                       in Omega |- expr ::: T ->
+                      Gamma |- (Free vis expr) ::: T
 
     | T_Or :        forall Gamma e1 e2 T,
-                      Gamma |- e1 \in T ->
-                      Gamma |- e2 \in T ->
-                      Gamma |- (Or e1 e2) \in T
+                      Gamma |- e1 ::: T ->
+                      Gamma |- e2 ::: T ->
+                      Gamma |- (Or e1 e2) ::: T
 
     | T_Case :      forall Gamma ctype e substTypes T Tc p vis brexprs',
                       let  brexprs := Branch p vis :: brexprs' in
@@ -305,20 +305,20 @@ Section Typing.
                       let    Delta := multiListTypeUpdate Gamma vistysl
                        in Forall (flip (hasType Delta) T) (brexprsToExprs brexprs) ->
                           Forall (fun ty => ty = Tc) (map ((flip funcPart) None) specTs) ->
-                      Gamma |- e \in Tc ->
-                      Gamma |- (Case ctype e (Branch p vis :: brexprs')) \in T
+                      Gamma |- e ::: Tc ->
+                      Gamma |- (Case ctype e (Branch p vis :: brexprs')) ::: T
 
     | T_Typed :     forall Gamma e t T,
-                      Gamma |- e \in T ->
+                      Gamma |- e ::: T ->
                       T ==> t ->
-                      Gamma |- (Typed e t) \in t
+                      Gamma |- (Typed e t) ::: t
 
-  where "Gamma '|-' t '\in' T" := (hasType Gamma t T).
+  where "Gamma '|-' t ':::' T" := (hasType Gamma t T).
 
 End Typing.
 
 Module TypingNotation.
-  Notation "Gamma '|-' t '\in' T" := (hasType Gamma t T) (at level 40) : typing_scope.
+  Notation "Gamma '|-' t ':::' T" := (hasType Gamma t T) (at level 40) : typing_scope.
 End TypingNotation.
 
 Import TypingNotation.
@@ -351,7 +351,7 @@ Section Examples.
   [] 
   ).
 
-  Example e0 : con |- (Comb (FuncPartCall 2) ("test","first") [(Lit (Charc "a"))] ) \in FuncType Int (FuncType (TVar 1) Char).
+  Example e0 : con |- (Comb (FuncPartCall 2) ("test","first") [(Lit (Charc "a"))] ) ::: FuncType Int (FuncType (TVar 1) Char).
   Proof.
     apply T_Comb_Part with (substTypes := [Char]).
     simpl.
@@ -360,7 +360,7 @@ Section Examples.
     apply Forall2_nil.
   Qed.
 
-  Example e1 : con |- Comb FuncCall ("test","left") [(Lit (Intc 1));(Lit (Charc "a"))] \in Int.
+  Example e1 : con |- Comb FuncCall ("test","left") [(Lit (Intc 1));(Lit (Charc "a"))] ::: Int.
   Proof. apply T_Comb with (substTypes := [Int; Char]).
     reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
@@ -369,7 +369,7 @@ Section Examples.
   Qed.
 
   Definition letexp := Let  [(1,(Comb FuncCall ("test","plus") [(Lit (Intc 3));(Lit (Intc 2))] ))] (Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 4))]).
-  Example e2 : con |- letexp \in Int.
+  Example e2 : con |- letexp ::: Int.
   Proof. apply T_Let with (tyexprs := [Int]).
     apply Forall2_cons. apply T_Comb with (substTypes := []).
     reflexivity.
@@ -385,7 +385,7 @@ Section Examples.
   Qed.
 
   Definition letexp2 := Let  [(1,(Comb FuncCall ("test","plus") [(Var 2);(Lit (Intc 1))] ));(2,(Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 2))] ))] (Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 3))] ).
-  Example e3 : con |- letexp2 \in Int.
+  Example e3 : con |- letexp2 ::: Int.
   Proof.
     apply T_Let with (tyexprs := [Int; Int]).
     apply Forall2_cons. apply T_Comb with (substTypes := []).
@@ -407,7 +407,7 @@ Section Examples.
   Qed.
 
   Definition letexp3 := Let  [(1,(Comb FuncCall ("test","plus") [(Lit (Intc 1));(Lit (Intc 1))] ));(2,(Comb FuncCall ("test","plus") [(Var 1);(Lit (Intc 1))] ))] (Comb FuncCall ("test","plus") [(Var 2);(Var 1)] ).
-  Example e4 : con |- letexp3 \in Int.
+  Example e4 : con |- letexp3 ::: Int.
   Proof. apply T_Let with (tyexprs := [Int; Int]).
     apply Forall2_cons. apply T_Comb with (substTypes := []).
     simpl. intros.
@@ -429,7 +429,7 @@ Section Examples.
 Qed.
 
   Definition comb1 := (Comb ConsCall ("test","Just") [(Lit (Intc 5))] ).
-  Example e5 : con |- comb1 \in (TCons ("test","Maybe") [Int] ).
+  Example e5 : con |- comb1 ::: (TCons ("test","Maybe") [Int] ).
   Proof. apply T_Comb with (substTypes := [Int]).
     reflexivity.
     apply Forall2_cons. apply T_Lit. reflexivity.
@@ -437,7 +437,7 @@ Qed.
   Qed.
 
   Definition comb2 := Comb ConsCall ("test","T") [Lit (Intc 5); Lit (Intc 2); Lit (Charc "a"); Lit (Charc "b")].
-  Example e6 : con |- comb2 \in (TCons ("test", "Test") [Int; Char]).
+  Example e6 : con |- comb2 ::: (TCons ("test", "Test") [Int; Char]).
   Proof.
     apply T_Comb with (substTypes := [Int; Char]).
     reflexivity.
@@ -449,7 +449,7 @@ Qed.
   Qed.
 
   Definition comb3 := (Comb (ConsPartCall 1) ("test","T") [(Lit (Intc 5));(Lit (Intc 2));(Lit (Charc "a"))] ).
-  Definition e7 : con |- comb3 \in (FuncType (TVar 1) (TCons ("test","Test") [(TCons ("Prelude","Int") [] );(TVar 1)] )).
+  Definition e7 : con |- comb3 ::: (FuncType (TVar 1) (TCons ("test","Test") [(TCons ("Prelude","Int") [] );(TVar 1)] )).
   Proof.
     apply T_Comb_Part with (substTypes := [Int]).
     reflexivity.
@@ -460,13 +460,13 @@ Qed.
   Qed.
 
   Definition free1 := (Free  [1] (Var 1)).
-  Example e8 : con |- free1 \in Int.
+  Example e8 : con |- free1 ::: Int.
   Proof. apply T_Free with (tyexprs := [Int]).
     apply T_Var. reflexivity.
   Qed.
 
   Definition case1 := (Case Rigid (Var 1) [(Branch (Pattern ("test","Just") [2] )(Var 2));(Branch (Pattern ("test","Nothing") [] )(Lit (Intc 5)))] ).
-  Example e9 : (varUpdate con 1 (TCons ("test","Maybe") [Int] )) |- case1 \in Int.
+  Example e9 : (varUpdate con 1 (TCons ("test","Maybe") [Int] )) |- case1 ::: Int.
   Proof.
     apply T_Case with (substTypes := [Int]) (Tc := (TCons ("test","Maybe") [Int] )).
     simpl.
@@ -479,7 +479,7 @@ Qed.
     apply T_Var. simpl. reflexivity.
   Qed.
 
-  Example e9a : (varUpdate con 1 (TCons ("test","Maybe") [Int] )) |- case1 \in Int.
+  Example e9a : (varUpdate con 1 (TCons ("test","Maybe") [Int] )) |- case1 ::: Int.
   Proof.
     repeat econstructor;
     try instantiate (1 := [Int]);
@@ -487,7 +487,7 @@ Qed.
   Qed.
 
   Definition typed := Typed (Comb (FuncPartCall 1) ("test","id") [] ) (FuncType (TCons ("Prelude","Int") [] ) (TCons ("Prelude","Int") [] )).
-  Example e10 : con |- typed \in FuncType Int Int.
+  Example e10 : con |- typed ::: FuncType Int Int.
   Proof.
     eapply T_Typed. (* with (T' := FuncType (TVar 0) (TVar 0)). *)
     apply T_Comb_Part with (substTypes := []).
@@ -541,7 +541,7 @@ Qed.
         [(Branch (Pattern ("Prelude","Just") [2] )(Var 2));
          (Branch (Pattern ("Prelude","Nothing") [] )(Lit (Intc 0)))] )).
 
-  Definition example1 : con2 |- exp1 \in (FuncType (List Int) (List Int)).
+  Definition example1 : con2 |- exp1 ::: (FuncType (List Int) (List Int)).
   Proof.
     apply T_Comb_Part with (substTypes := [Int; Int]).
       * simpl. reflexivity.
@@ -552,7 +552,7 @@ Qed.
         - apply Forall2_nil.
   Qed.
 
-  Definition example2 : con2 |- exp2 \in FuncType Bool Bool.
+  Definition example2 : con2 |- exp2 ::: FuncType Bool Bool.
   Proof.
     eapply T_Typed.
       * apply T_Comb_Part with (substTypes := []);
@@ -561,7 +561,7 @@ Qed.
         reflexivity.
   Qed.
 
-  Definition example3 : con2 |- exp3 \in Int.
+  Definition example3 : con2 |- exp3 ::: Int.
   Proof.
     apply T_Free with (tyexprs := [TCons ("Prelude", "Maybe") [Int]]).
     apply T_Case with (substTypes := [Int]) (Tc := TCons ("Prelude", "Maybe") [Int]).
@@ -578,24 +578,37 @@ Qed.
       * apply T_Var. reflexivity.
   Qed.
 
-  Definition example3a : con2 |- exp3 \in Int.
+  Definition example3a : con2 |- exp3 ::: Int.
   Proof.
     apply T_Free with (tyexprs := [TCons ("Prelude", "Maybe") [Int]]).
     eapply T_Case.
-    Show Existentials.
       * repeat econstructor. 
         instantiate (1 := [Int]). 
         repeat econstructor.
       * repeat econstructor.
       * repeat econstructor.
   Qed.
-  
-  Definition example3b : con2 |- exp3 \in Int.
+
+  Definition example3b : con2 |- exp3 ::: Int.
   Proof.
     apply T_Free with (tyexprs := [TCons ("Prelude", "Maybe") [Int]]);
     eapply T_Case;
     try instantiate (1 := [Int]);
+    (* Show Existentials. *)
     repeat econstructor.
   Qed.
+
+  Definition beq_type (t1 t2 : TypeExpr) := true.
+  Fixpoint inferType (c : context) (e : Expr) : TypeExpr :=
+    match e with
+    | Var i => fromOption noType ((vCon c) i)
+    | Lit l => litType l
+    | Or e1 e2 => let type1 := (inferType c e1) in
+                  let type2 := (inferType c e2)
+                   in if (beq_type type1 type2) then type1 else noType
+    | _ => noType
+    end.
+  Theorem typeInference : forall Gamma e, Gamma |- e ::: inferType Gamma e.
+  Admitted.
 
 End Examples.
