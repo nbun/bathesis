@@ -102,113 +102,16 @@ The common approach in these chapters includes discussing and implementing the s
 The last chapter presents the results and possible expansions thereof, as well as related work. 
 \chapter{Preliminaries}
 \label{preliminiaries}
-\section{Curry}
-Curry\footnote{http://curry-language.org/} is a programming language that combines aspects of functional and logical programming. Created by an international initiative, Curry is predominantly aimed at providing a platform for research and teaching.\cite{curryintro} Curry's syntax is similar to Haskell with the addition of nondeterminism, that is, a function can return different values for the same input, and free variables, which allow the systematic search for unknown values.
-\par
-The similarities to Haskell include the (interactive) compiler KICS2\footnote{https://www-ps.informatik.uni-kiel.de/kics2/} that compiles Curry programs to Haskell code and  an easily searchable\footnote{https://www-ps.informatik.uni-kiel.de/kics2/currygle/}, extensive module system with many predefined data structures and functions. In this short overview we will take a look at some language features that we will work with later, albeit not necessarily in the form of Curry code.\\
-\par\noindent
-Curry programs have the ending \texttt{.curry} and consist of function and data type declarations. The simplest form of functions, such as \texttt{double x = x + x}, has a name, a possibly empty list of variables and an expression. Although it is not mandatory to explicitly state a function's type, in this case \texttt{double :: Int $\rightarrow$ Int $\rightarrow$ Int}, every function has a type that describes the arguments and the result of evaluating the function. When a function call is evaluated, the left-hand side is replaced with the right-hand side until there is no further evaluation possible, that is, only literal values or data structures remain. The evaluation can result in an infinite loop, for example \texttt{twos = 2 : twos}, or not compute any values. Infinite data structures are processed by computing the value of an expression only if it is actually needed, called \textit{lazy} evaluation. In the example below the function \texttt{take} returns the first $n$ elements of a list. The value of \texttt{twos} is only evaluated by one step when the application of \texttt{take} requires the values of the list's head. Thus, the infinite list can be accessed without computing the whole structure.
-\begin{flushleft}
-	\begin{minipage}[t]{.3 \linewidth}
-\begin{haskellcode}
-take 2 twos
-take 2 (2 : twos)
-2 : take 1 twos
-2 : take 1 (2 : twos)
-2 : 2 : take 0 twos
-2 : 2 : []
-\end{haskellcode}
-\end{minipage}
-\hfill
-\vrule
-\hfill
-\begin{minipage}[t]{.65 \linewidth}
-\begin{haskellcode}
-take :: Int -> [a] -> [a]
-take n l = if n <= 0 then [] else takep n l
-  where takep _ []     = []
-        takep m (x:xs) = x : take (m-1) xs
-\end{haskellcode}
-\end{minipage}
-\end{flushleft}
-\noindent
-More advanced functions use several rules and pattern matching to describe different computational paths. By using a pattern in the left-hand side of a rule, it is limited to arguments of a specific form. Thus, functions that process data types with multiple constructors can have a different rule for every constructor. While Haskell allows overlapping patterns, that is, multiple patterns that apply to the same argument, functions remain deterministic because only the first rule that matches the argument is evaluated. Curry does not limit the evaluation -- a function with overlapping patterns can return every possible result an input evaluates to. On the other hand, patterns do not need to be exhaustive, that is, cover every possible input, because a failed computation is a valid result unlike the exception Haskell returns.
-\begin{flushleft}
-	\begin{minipage}[t]{.3 \linewidth}
-\begin{haskellcode}
-failed = head []
-eight = failed ? 8
-\end{haskellcode}
-\end{minipage}
-\hfill
-\vrule
-\hfill
-\begin{minipage}[t]{.65 \linewidth}
-\begin{haskellcode}
-(?) :: a -> a -> a
-x ? _ = x
-_ ? y = y
-\end{haskellcode}
-\end{minipage}
-\end{flushleft}
-\noindent
-The function \texttt{head} returns the first element of a list, but in this case the list is empty. Therefore, the computation fails and KICS2 returns an exclamation mark. Nevertheless, it is possible to apply the \texttt{?} operator that represents a non-deterministic choice between the arguments to both the failed computation and the number 8. Since only one argument contains a value, the expression evaluates to 8.
-\par
-In some situations deterministic programs are inevitable, for example when working with IO actions. While it may not seem import if a function prints an 'a' or 'b' to the terminal, writing a file of non-deterministic size to the hard drive can cause severe problems. Fortunately, Curry enforces determinism when using IO actions. If one needs a more Haskell-esque evaluation of multiple patterns, the \texttt{case} expression applies:
-\begin{flushleft}
-\begin{minipage}[t]{.3 \linewidth}
-\begin{haskellcode}
-maybeNot True  = False
-maybeNot True  = True
-maybeNot False = True
-maybeNot False = False
-	\end{haskellcode}
-\end{minipage}
-\hfill
-\vrule
-\hfill
-\begin{minipage}[t]{.25 \linewidth}
-	\begin{haskellcode}
-notCase b =
-  case b of
-    True  -> False
-    True  -> True
-    False -> True
-    False -> False
-	\end{haskellcode}
-\end{minipage}
-\hfill
-\vrule
-\hfill
-\begin{minipage}[t]{.35 \linewidth}
-	\begin{haskellcode}
-maybeNotCase b =
-  case b of
-    True  -> False ? True 
-    False -> True  ? False
-	\end{haskellcode}
-\end{minipage}
-\end{flushleft}
-Pattern matching in a function can be transformed to a corresponding case expression by replacing the pattern with a variable and creating a branch for every rule. The difference is that case expressions evaluate only the first matching branch. Thus, the second and fourth branch of \texttt{caseNot} are not reachable and the function is deterministic. If nondeterminism is needed in a \texttt{case} expression, the \texttt{?} operator is necessary.\\
-\par\noindent
-Variables that are not bound to an expression are called \textit{free variables}. They are declared by adding \texttt{where} $v_1\dots v_n$ \texttt{free} to a term containing free variables $v_1 \dots v_n$. To evaluate such a term, the variables are instantiated with a value of appropriate type, for example \texttt{False \&\& x where x free}, that is, the boolean conjunction of \texttt{False} and a free variable, evaluates to \texttt{\{x = \_x0\} False}. The value of \texttt{x} is another free variable because the expression is false for every possible value of \texttt{x}.
-\par
-Free variables can be used to compute the possible values of an expression, but there are more sophisticated applications: Curry can solve \textit{constraints}, for example the equation \texttt{1 + 1 = x where x free}. Solving the expression results in multiple values for \texttt{x} and corresponding the value of the equation:
-\begin{haskellcode}
-{x = (-_x2)} False
-{x = 0} False
-{x = 1} False
-{x = 2} True
-{x = (2 * _x3 + 1)} False
-{x = (4 * _x4)} False
-{x = (4 * _x4 + 2)} False
-\end{haskellcode}
-Curry solves the equation by using \textit{narrowing}, that is, guessing values that could satisfy the constraints. Since the sum of two positive numbers cannot be negative, only positive numbers are potential solutions. 2 fulfills the equation, but there could be more solutions. Therefore, odd numbers and even numbers greater than 2 are checked, both of which cannot satisfy the constraint. Since this includes all possible integer values, 2 remains the only solution. Free variables with non-basic types are evaluated similarly by trying every possible constructor.
-\par 
-An alternative approach to solving constraints is \textit{residuation}: If an expression cannot be solved because of an unknown free variable, the evaluation is suspended until its value is known from evaluating other expressions. It is possible that there is not enough information to determine the variable's value, in which case the evaluation fails.
+This chapter introduces the two main programming languages used in this thesis: Coq and Curry. The introduction of Coq is based on \textit{Software Foundations} by \citet{Pierce:SF} and gives an overview of modeling and proving in Coq. In case of Curry, we focus on the extended features compared to Haskell.
+In the last section the approach and languages used in the following chapters are presented.
 \section{Coq}
-The formalization of Curry programs requires a language that allows us to express the code itself and the propositions we intend to prove. Coq\footnote{https://coq.inria.fr/} is an interactive proof management system that meets these requirements. Hence, it will be the main tool used in the following chapters. \cite{Pierce:SF}
-\todo{Kommasetzung?}
+The formalization of Curry programs requires a language that allows us to express the code itself and propositions we intend to prove. Coq is an interactive proof management system created by \cite{CoqManualV8} that meets these requirements with its functional modeling language and integrated verification logic.
+\par
+We already saw CoqIde in \autoref{coqscreen}, but this is not the only Coq front-end. There is also the Emacs package \textit{Proof General}\footnote{https://proofgeneral.github.io/} that integrates multiple interactive theorem provers like Coq into the text editor.
+\par 
+Regardless of the interface chosen, the structure is similar to the following: the left-hand side contains the code, while the right-hand side shows information about proofs and error messages. Definitions in Coq are always completed by a dot that marks a segment. Depending on the front-end, there may be buttons or shortcuts to load one segment at a time, multiple segments or the whole file. A loaded segment is usually highlighted green, which means that the definition contains no errors.
+\par
+Because of this approach, definitions that reference other definitions need to be in the correct order, that is, a function or data structure needs to be defined before expressions can use it. 
 \subsection{Data types and functions}
 Coq's predefined definitions, contrary to e.g. Haskell's Prelude, are very limited. Nevertheless, being a functional language, there is a powerful mechanism for defining new data types. A definition of polymorphic lists could look like this:
 \begin{coqcode}
@@ -414,6 +317,110 @@ We already used \coqinline{Forall} in the previous section without knowing the e
 \begin{coqcode}
 Forall2 : forall A B : Type, (A -> B -> Prop) -> list A -> list B -> Prop
 \end{coqcode}
+\section{Curry}
+Curry\citet{report} is a programming language that combines aspects of functional and logical programming. Created by an international initiative, Curry is predominantly aimed at providing a platform for research and teaching.\cite{curryintro} Curry's syntax is similar to Haskell with the addition of nondeterminism, that is, a function can return different values for the same input, and free variables, which allow the systematic search for unknown values.
+\par
+The similarities to Haskell include the (interactive) compiler KICS2\footnote{https://www-ps.informatik.uni-kiel.de/kics2/} that compiles Curry programs to Haskell code and  an easily searchable\footnote{https://www-ps.informatik.uni-kiel.de/kics2/currygle/}, extensive module system with many predefined data structures and functions. In this short overview we will take a look at some language features that we will work with later, albeit not necessarily in the form of Curry code.\\
+\par\noindent
+Curry programs have the ending \texttt{.curry} and consist of function and data type declarations. The simplest form of functions, such as \texttt{double x = x + x}, has a name, a possibly empty list of variables and an expression. Although it is not mandatory to explicitly state a function's type, in this case \texttt{double :: Int $\rightarrow$ Int $\rightarrow$ Int}, every function has a type that describes the arguments and the result of evaluating the function. When a function call is evaluated, the left-hand side is replaced with the right-hand side until there is no further evaluation possible, that is, only literal values or data structures remain. The evaluation can result in an infinite loop, for example \texttt{twos = 2 : twos}, or not compute any values. Infinite data structures are processed by computing the value of an expression only if it is actually needed, called \textit{lazy} evaluation. In the example below the function \texttt{take} returns the first $n$ elements of a list. The value of \texttt{twos} is only evaluated by one step when the application of \texttt{take} requires the values of the list's head. Thus, the infinite list can be accessed without computing the whole structure.
+\begin{flushleft}
+	\begin{minipage}[t]{.3 \linewidth}
+		\begin{haskellcode}
+take 2 twos
+take 2 (2 : twos)
+2 : take 1 twos
+2 : take 1 (2 : twos)
+2 : 2 : take 0 twos
+2 : 2 : []
+		\end{haskellcode}
+	\end{minipage}
+	\hfill
+	\vrule
+	\hspace{.5em}
+	\begin{minipage}[t]{.65 \linewidth}
+		\begin{haskellcode}
+take :: Int -> [a] -> [a]
+take n l = if n <= 0 then [] else takep n l
+  where takep _ []     = []
+        takep m (x:xs) = x : take (m-1) xs
+		\end{haskellcode}
+	\end{minipage}
+\end{flushleft}
+\noindent
+More advanced functions use several rules and pattern matching to describe different computational paths. By using a pattern in the left-hand side of a rule, it is limited to arguments of a specific form. Thus, functions that process data types with multiple constructors can have a different rule for every constructor. While Haskell allows overlapping patterns, that is, multiple patterns that apply to the same argument, functions remain deterministic because only the first rule that matches the argument is evaluated. Curry does not limit the evaluation -- a function with overlapping patterns can return every possible result an input evaluates to. On the other hand, patterns do not need to be exhaustive, that is, cover every possible input, because a failed computation is a valid result unlike the exception Haskell returns.
+\begin{flushleft}
+	\begin{minipage}[t]{.3 \linewidth}
+		\begin{haskellcode}
+failed = head []
+eight = failed ? 8
+		\end{haskellcode}
+	\end{minipage}
+	\hfill
+	\vrule
+	\hspace{.5 em}
+	\begin{minipage}[t]{.65 \linewidth}
+		\begin{haskellcode}
+(?) :: a -> a -> a
+x ? _ = x
+_ ? y = y
+		\end{haskellcode}
+	\end{minipage}
+\end{flushleft}
+\noindent
+The function \texttt{head} returns the first element of a list, but in this case the list is empty. Therefore, the computation fails and KICS2 returns an exclamation mark. Nevertheless, it is possible to apply the \texttt{?} operator that represents a non-deterministic choice between the arguments to both the failed computation and the number 8. Since only one argument contains a value, the expression evaluates to 8.
+\par
+In some situations deterministic programs are inevitable, for example when working with IO actions. While it may not seem import if a function prints an 'a' or 'b' to the terminal, writing a file of non-deterministic size to the hard drive can cause severe problems. Fortunately, Curry enforces determinism when using IO actions. If one needs a more Haskell-esque evaluation of multiple patterns, the \texttt{case} expression applies:
+\begin{flushleft}
+	\begin{minipage}[t]{.3 \linewidth}
+		\begin{haskellcode}
+maybeNot True  = False
+maybeNot True  = True
+maybeNot False = True
+maybeNot False = False
+		\end{haskellcode}
+	\end{minipage}
+	\hfill
+	\vrule
+	\hspace{.5 em}
+	\begin{minipage}[t]{.25 \linewidth}
+		\begin{haskellcode}
+notCase b =
+  case b of
+    True  -> False
+    True  -> True
+    False -> True
+    False -> False
+		\end{haskellcode}
+	\end{minipage}
+	\hfill
+	\vrule
+	\hspace{.5 em}
+	\begin{minipage}[t]{.35 \linewidth}
+		\begin{haskellcode}
+maybeNotCase b =
+  case b of
+    True  -> False ? True 
+    False -> True  ? False
+		\end{haskellcode}
+	\end{minipage}
+\end{flushleft}
+Pattern matching in a function can be transformed to a corresponding case expression by replacing the pattern with a variable and creating a branch for every rule. The difference is that case expressions evaluate only the first matching branch. Thus, the second and fourth branch of \texttt{caseNot} are not reachable and the function is deterministic. If nondeterminism is needed in a \texttt{case} expression, the \texttt{?} operator is necessary.\\
+\par\noindent
+Variables that are not bound to an expression are called \textit{free variables}. They are declared by adding \texttt{where} $v_1\dots v_n$ \texttt{free} to a term containing free variables $v_1 \dots v_n$. To evaluate such a term, the variables are instantiated with a value of appropriate type, for example \texttt{False \&\& x where x free}, that is, the boolean conjunction of \texttt{False} and a free variable, evaluates to \texttt{\{x = \_x0\} False}. The value of \texttt{x} is another free variable because the expression is false for every possible value of \texttt{x}.
+\par
+Free variables can be used to compute the possible values of an expression, but there are more sophisticated applications: Curry can solve \textit{constraints}, for example the equation \texttt{1 + 1 = x where x free}. Solving the expression results in multiple values for \texttt{x} and corresponding the value of the equation:
+\begin{haskellcode}
+{x = (-_x2)} False
+{x = 0} False
+{x = 1} False
+{x = 2} True
+{x = (2 * _x3 + 1)} False
+{x = (4 * _x4)} False
+{x = (4 * _x4 + 2)} False
+\end{haskellcode}
+Curry solves the equation by using \textit{narrowing}, that is, guessing values that could satisfy the constraints. Since the sum of two positive numbers cannot be negative, only positive numbers are potential solutions. 2 fulfills the equation, but there could be more solutions. Therefore, odd numbers and even numbers greater than 2 are checked, both of which cannot satisfy the constraint. Since this includes all possible integer values, 2 remains the only solution. Free variables with non-basic types are evaluated similarly by trying every possible constructor.
+\par 
+An alternative approach to solving constraints is \textit{residuation}: If an expression cannot be solved because of an unknown free variable, the evaluation is suspended until its value is known from evaluating other expressions. It is possible that there is not enough information to determine the variable's value, in which case the evaluation fails.
 \section{Theory}
 \label{theory}
 In functional languages a data type is a classification of applicable operators and properties of its members. There are base types that store a single date and more complex types that may have multiple constructors and type variables. Typing describes the process of assigning an expression to a corresponding type in order to avoid programming errors, for example calling an arithmetic function with a character.
