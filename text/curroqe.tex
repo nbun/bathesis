@@ -23,6 +23,7 @@
 \usemintedstyle[haskell]{trac}
 \newminted{haskell}{fontsize=\small}
 \newminted{coq}{fontsize=\small}
+\setmintedinline{style = bw}
 
 % Für schönere Tabellen (optional)
 % \usepackage{booktabs}           % Netteres Tabellenlayout
@@ -111,33 +112,41 @@ We already saw CoqIde in \autoref{coqscreen}, but this is not the only Coq front
 \par 
 Regardless of the interface chosen, the structure is similar to the following: the left-hand side contains the code, while the right-hand side shows information about proofs and error messages. Definitions in Coq are always completed by a dot that marks a segment. Depending on the front-end, there may be buttons or shortcuts to load one segment at a time, multiple segments or the whole file. A loaded segment is usually highlighted green, which means that the definition contains no errors.
 \par
-Because of this approach, definitions that reference other definitions need to be in the correct order, that is, a function or data structure needs to be defined before expressions can use it. 
+Because of this approach, definitions that reference other definitions need to be in the correct order, that is, a function or data structure needs to be defined before it can be used in an expressions.
 \subsection{Data types and functions}
-Coq's predefined definitions, contrary to e.g. Haskell's Prelude, are very limited. Nevertheless, being a functional language, there is a powerful mechanism for defining new data types. A definition of polymorphic lists could look like this:
+Coq's predefined definitions, contrary to e.g. Haskell's Prelude, are rather limited. Nevertheless, being a functional language, there is a powerful mechanism for defining new data types. The following example shows the definition of a polymorphic list.
 \begin{coqcode}
-Inductive list (X:Type) : Type :=
+Inductive list (X : Type) : Type :=
   | nil  : list X
   | cons : X -> list X -> list X.
 \end{coqcode}
-We defined a type named \coqinline{list} with two constructors: the constant \coqinline{nil}, which represents an empty list, and a binary constructor \coqinline{cons} that takes an element and a list of the same type as arguments. In fact, \coqinline{nil} and \coqinline{cons} have one additional argument, a type \coqinline{X}. This is required, because we want polymorphic lists -- but we do not want to explicitly state the type. Fortunately, Coq allows us to declare type arguments as implicit by enclosing them in curly brackets:
+The definition begins with the keyword \coqinline{Inductive}, followed by the name of the data type and its arguments, that is, a \coqinline{Type} in this case. The return type, marked by a colon, is also a \coqinline{Type}. The inductive definition \coqinline{list} has two constructors: the constant \coqinline{nil}, which represents an empty list, and a binary constructor \coqinline{cons} that takes an element and a list of the same type as arguments. In fact, \coqinline{nil} and \coqinline{cons} have one additional argument, a type \coqinline{X}. 
 \begin{coqcode}
-Check (cons nat 8 (nil nat)). (*cons nat 8 (nil nat) : list nat*)
+> Check cons nat 8 (nil nat).
+cons nat 8 (nil nat) : list nat
+\end{coqcode}
+This is required because the list is supposed to be polymorphic, but we do not want to explicitly state the type. Fortunately, Coq allows us to declare type arguments as implicit by enclosing them in curly brackets in the original definition or using \coqinline{Arguments} followed by the name of the function and the arguments to do this afterwards.
+\begin{coqcode}
 Arguments nil {X}.
 Arguments cons {X} _ _.
+
+> Check cons 8 nil.
+cons 8 nil: list nat
 \end{coqcode}
 Coq's type inference system infers the type of a list automatically now if possible. In some cases this does not work, because there is not enough information about the implicit types present. 
 \begin{coqcode}
 Fail Definition double_cons x y z := (cons x (cons y z)).
 Definition double_cons {A} x y z := (@cons A x (@cons A y z)).
 \end{coqcode}
-The first definition does not work, as indicated by \coqinline{Fail}\footnote{\coqinline{Fail} checks if an expression does indeed cause an error and allows further processing of the file.}, because Coq cannot infer the implicit type variable of \coqinline{double_cons}, since \coqinline{cons} does not have an explicit type either. By prefixing at least one \coqinline{cons} with \coqinline{@}, we can tell Coq to accept explicit expressions for all implicit arguments. This allows us to pass the type of \coqinline{cons} on to \coqinline{double_cons}, again as an implicit argument.
+The first definition does not work, as indicated by \coqinline{Fail}\footnote{\coqinline{Fail} checks if an expression does indeed cause an error and allows further processing of the file.}, because Coq cannot infer the implicit type variable of \coqinline{double_cons}, since \coqinline{cons} does not have a type either. By prefixing at least one \coqinline{cons} with \coqinline{@}, we can tell Coq to accept explicit expressions for all implicit arguments. This allows us to pass the type of \coqinline{cons} on to \coqinline{double_cons}, again as an implicit argument.
 \begin{coqcode}
-Check double_cons 2 4 []. (* : list nat *)
-Fail Check (cons 2 (cons nil nil)). 
+> Check double_cons 2 4 nil.
+double_cons 2 4 nil : list nat
+> Check cons 2 (cons nil nil). 
 (* Error: The term "cons nil nil" has type "list (list ?X0)"
 while it is expected to have type "list nat". *)
 \end{coqcode}
-Based on this we can write a function that determines if a list is empty:
+Based on this definition of lists we can write a polymorphic function that determines if a list is empty, as shown in the next example.
 \begin{coqcode}
 Definition isEmpty {X : Type} (l : list X) : bool := 
   match l with
@@ -145,10 +154,11 @@ Definition isEmpty {X : Type} (l : list X) : bool :=
   | cons _ _ => false
   end.
 \end{coqcode}
-Function definitions begin with the keyword \coqinline{Definition}. \coqinline{isEmpty} takes an (implicit) type and a list and returns a boolean value.
-To distinguish empty from non-empty lists, pattern matching can be used on $n$ arguments by writing \coqinline{match} $x_{0},...,x_{n-1}$ \coqinline{with} | $p_{0} \rightarrow e_{0}$ | ... | $p_{m-1} \rightarrow e_{m-1}$ for $m$ pattern $p$, consisting of a sub-pattern for every $x_{i}$ and expressions $e_{i}$.
-
-The definition of recursive functions requires that the function is called with a smaller structure than before in each iteration, which ensures that the function eventually terminates. A recursive function is indicated by using \coqinline{Fixpoint} instead of \coqinline{Definition}.
+Function definitions begin with the keyword \coqinline{Definition}. \coqinline{isEmpty} takes an (implicit) type and a list and returns a boolean value. To distinguish empty from non-empty lists, pattern matching can be used on $n$ arguments by writing \coqinline{match} $x_{0},...,x_{m}$ \coqinline{with} $b$ \coqinline{end.} where $m < n$ and $b$ is a list of branches. Because the arguments need to be explicitly stated in order to be pattern matched, it is possible to use pattern matching only on a subset of the arguments. Multiple patterns are separated by commas and thus patterns do not need to be enclosed in brackets.
+\par
+A branch contains a pattern and an expression. Multiple branches are separated by vertical lines and need to be exhaustive, that is, cover every constructor of the argument. If there are overlapping patterns, Coq prints an error message stating that the respective clause is redundant.
+\par
+A recursive function must be explicitly marked by using \coqinline{Fixpoint} instead of \coqinline{Definition}. The definition of recursive functions requires that the function is called with a smaller structure than before in each iteration, which ensures that the function eventually terminates. In the following example \coqinline{app} appends two lists. As mentioned before, only the first list is pattern matched because we do not need to access the second list's structure.
 \begin{coqcode}
 Fixpoint app {X : Type} (l1 l2 : list X) : (list X) :=
   match l1 with
@@ -158,38 +168,51 @@ Fixpoint app {X : Type} (l1 l2 : list X) : (list X) :=
 \end{coqcode}
 In this case $l_{1}$ gets shorter with every iteration and thus the function terminates after a finite number of recursions. 
 
-Coq allows us to define notations for functions and constructors by using the keyword \coqinline{Notation}, followed by the desired syntax and the expression. 
+Coq allows us to define notations for functions and constructors by using the keyword \coqinline{Notation}, followed by the desired syntax and the expression. Sometimes it is necessary to state the level, that is, the priority when used with other notations, and associativity of the notation.
 \begin{coqcode}
 Notation "x :: y" := (cons x y) (at level 60, right associativity).
 Notation "[ ]" := nil.
 Notation "[ x ; .. ; y ]" := (cons x .. (cons y []) ..).
 Notation "x ++ y" := (app x y) (at level 60, right associativity).
 \end{coqcode}
-
 \subsection{Propositions and proofs}
-Every claim that we state or prove has the type \coqinline{Prop}. Propositions can be any statement, regardless of its truth. A few examples:
+Every claim that we state or want to prove has the type \coqinline{Prop}. Propositions can be any statement, regardless of its truth.
 \begin{coqcode}
 Check 1 + 1 = 2. (* : Prop *)
 Check forall (X : Type) (l : list X), l ++ [] = l. (* : Prop *)
 Check forall (n : nat), n > 0 -> n * n > 0. (* : Prop *)
 Check (fun n => n <> 2). (* : nat -> Prop*)
 \end{coqcode}
-The first proposition is a simple equation, while the second one contains an universal quantifier. This allows us to state propositions about every type of list, or, as shown in the third example, about every natural number greater than zero. Combined with implications we can premise specific properties that limit the set of elements the proposition applies to. The last example contains an anonymous function, which is used by stating the functions' arguments and an expression.
+The first proposition is a simple equation, while the second one contains the universal quantifier \coqinline{forall}. This allows us to state propositions about, for example, every type of list, or, as shown in the third example, about every natural number greater than zero. Combined with implications that are represented by the symbol \coqinline{->} we can premise specific properties that limit the set of elements the proposition applies to. The last example contains an anonymous function, which is indicated by the keyword \coqinline{fun} followed by variable binders. The expression after the \coqinline{=>} can be a simple expression or pattern matching, for example \coqinline{(fun p => match p with (x,y) => x end)}.
 \par
 Now how do we prove these propositions? Proving an equation requires to show that both sides are equal, usually by simplifying one side until it looks exactly like the other. Coq allows us to do this by using tactics, which can perform a multitude of different operations.
 \begin{coqcode}
 Example e1 : 1+1=2.
 Proof. simpl. reflexivity. Qed. 
 \end{coqcode} 
-\todo{Highlighting für Proof und Qed}
-After naming the proposition as an example, theorem or lemma it appears in the interactive subgoal list that Coq provides. The \coqinline{simpl} tactic performs basic simplification like adding two numbers in this case. The updated subgoal is now \coqinline{2=2}, which is obviously true. By using the \coqinline{reflexivity} tactic we tell Coq to check both sides for equality, which succeeds and clears the subgoal list, followed by \coqinline{Qed} to complete the proof.
+After naming the proposition as an example, theorem or lemma it appears in the interactive subgoal list that Coq provides.
+\begin{coqcode}
+1 subgoal
+______________________________________(1/1)
+1 + 1 = 2
+\end{coqcode}
+The \coqinline{simpl} tactic performs basic simplification like adding two numbers in this case. The updated subgoal is now \coqinline{2 = 2}, which is obviously true. By using the \coqinline{reflexivity} tactic we tell Coq to check both sides for equality, which succeeds and clears the subgoal list, followed by \coqinline{Qed} to complete the proof.
 \begin{coqcode}
 Example e2 : forall (X : Type) (l : list X), [] ++ l = l.
 Proof. intros X l. reflexivity. Qed.
 \end{coqcode}
-Universal quantifiers allow us to introduce variables, the corresponding tactic is called \coqinline{intros}. The new context contains a type \coqinline{X} and a list \coqinline{l}, with the remaining subgoal \coqinline{[ ] ++ l = l}. Because we defined \coqinline{app} to return the second argument if the first one is an empty list, \coqinline{reflexivity} directly proves our goal. \coqinline{reflexivity} is not useful for obvious equations only, it also simplifies and unfolds definitions until the flat terms match each other if possible.
+Universal quantifiers allow us to introduce variables, the corresponding tactic is called \coqinline{intros} and is used with the names of the variables that should be introduced. The new context contains a type \coqinline{X} and a list \coqinline{l}and the remaining goal.
+\begin{coqcode}
+1 subgoal
+X : Type
+l : list X
+______________________________________(1/1)
+[ ] ++ l = l
+\end{coqcode}
+Because we defined \coqinline{app} to return the second argument if the first one is an empty list, \coqinline{reflexivity} directly proves our goal. \coqinline{reflexivity} is not only useful for obvious equations, it also simplifies and unfolds definitions until the flat terms match each other if possible, otherwise it fails with an error message.
 \par
-To prove that the proposition \coqinline{l ++ [] = l} holds, we need more advanced tactics, because we cannot just apply the definition. \coqinline{app} works by iterating through the first list, but we need to prove the proposition for every list, regardless of its length. One possibility to solve this problem is by using structural induction.
+To prove that the proposition \coqinline{l ++ [] = l} holds, we need more advanced tactics, because we cannot just apply the definition. \coqinline{app} works by iterating through the first list, but we need to prove the proposition for every list, regardless of its length. One possibility to solve this problem is by using structural induction, that is, showing that every constructor of a data type satisfies the proposition.
+\newpage
 \begin{coqcode}
 Example e3 : forall (X : Type) (l : list X), l ++ [] = l.
 Proof. intros X. induction l as [|l ls IH].
@@ -197,18 +220,33 @@ Proof. intros X. induction l as [|l ls IH].
   simpl. rewrite IH. reflexivity.
 Qed.
 \end{coqcode}
-The proof begins by introducing type \coqinline{X}, followed by the \coqinline{induction} tactic applied to \coqinline{l}. Coq names newly introduced variables by itself, which can be done manually by adding \coqinline{as [c1|...|cn]} to the tactic. Each $c_{i}$ represents a sequence of variable names, which will be used when introducing variables in the corresponding case. Cases are ordered as listed in the \coqinline{Definition}.
-\par
-Now we need to prove two cases: the empty list and a cons construct. The first case does not require any new variable names, therefore the first section in the squared brackets is empty. It is easily solved by applying \coqinline{reflexivity}, because of the definition of \coqinline{app}.
-The second case requires variables for the list's head and tail, which we call \coqinline{l} and \coqinline{ls} respectively. The variable name \coqinline{IH} identifies the induction hypothesis \coqinline{ls ++ [ ] = ls}, which Coq generates automatically. The goal changes as following:
+The proof begins by introducing the type \coqinline{X}, followed by the \coqinline{induction} tactic applied to \coqinline{l}. Coq names newly introduced variables by itself, which can be done manually by adding \coqinline{as [c1|...|cn]} to the tactic. Each $c_{i}$ represents a sequence of variable names, which will be used when introducing variables in the corresponding subgoal. For every constructor a subgoal is generated, ordered as listed in the definition of the data type.
 \begin{coqcode}
+X : Type
+______________________________________(1/2)
+[ ] ++ [ ] = [ ]
+______________________________________(2/2)
 (l :: ls) ++ [ ] = l :: ls
+\end{coqcode}
+Now we need to prove two subgoals: the empty list and a cons construct. The first subgoal does not require any new variable names since \coqinline{l} is replaced by the empty list. Therefore, the first section in the squared brackets is empty. The subgoal easily solved by applying \coqinline{reflexivity} because of the definition of \coqinline{app}.
+\par
+The second case requires variables for the list's head and tail, which we call \coqinline{l} and \coqinline{ls} respectively. The variable name \coqinline{IH} identifies the induction hypothesis \coqinline{ls ++ [ ] = ls}, which Coq generates automatically.
+\begin{coqcode}
+X : Type
+l : X
+ls : list X
+IH : ls ++ [ ] = ls
+______________________________________(1/1)
+(l :: ls) ++ [ ] = l :: ls
+\end{coqcode}
+The remaining proof is finished by using \coqinline{simpl} and \coqinline{rewrite IH}. The tactic \coqinline{rewrite} changes the current goal by replacing every occurrence of the left side of the provided equation with the right side.
+\begin{coqcode}
  l :: ls  ++ [ ] = l :: ls (* simpl *)
  l :: ls         = l :: ls (* rewrite with IH *)
 \end{coqcode}
-The tactic \coqinline{rewrite} changes the current goal by replacing every occurrence of the left side of the provided equation with the right side. Both sides are equal now and therefore \coqinline{reflexivity} proves the last case.
-\par 
-Example \coqinline{e4} is different from the other examples, in the sense that one cannot prove a function by itself and that only supplying an argument returns a verifiable inequality. 
+Both sides are equal now and therefore \coqinline{reflexivity} proves the last subgoal.\\
+\par \noindent
+Example \coqinline{e4} is different from the other examples, in the sense that one cannot prove a function by itself and that only supplying an argument to the function returns a verifiable inequality. Therefore, we apply the function to 1 and prove that $1 \neq 2$. This proof is not as simple as the other ones, mainly because of the inequality, which is a notation\footnote{It is often useful to be able to look up notations, \coqinline{Locate "<>"} returns the term associated with \coqinline{<>}.} for \coqinline{not (x = y)}. 
 \begin{coqcode}
 Example e4 : (fun n => n <> 2) 1.
 Proof.
@@ -218,22 +256,18 @@ Proof.
   inversion H. (* No more subgoals. *)
 Qed.
 \end{coqcode}
-This proof is not as straight forward as the other ones, mainly because of the inequality, which is a notation\footnote{It is often useful to be able to look up notations, \coqinline{Locate "<>"} returns the term associated with \coqinline{<>}.} for \coqinline{not (x = y)}. Because \coqinline{not} is the outermost term, we need to eliminate it first by applying \coqinline{unfold}. This replaces \coqinline{not} with its definition \coqinline{fun A : Prop => A -> False}, where \coqinline{False} is the unprovable proposition. Why does this work?
-Assuming that a proposition \coqinline{P} is true, \coqinline{not P} means that \coqinline{P} implies \coqinline{False}, which is false, because something true cannot imply something false. On the other hand, if \coqinline{P} is false, then \coqinline{False -> False} is true because anything follows from falsehood, as stated by the principle of explosion. \todo{verweis?}
+Because \coqinline{not} is the outermost term, we need to eliminate it first by applying \coqinline{unfold}, which replaces \coqinline{not} with its definition \coqinline{fun A : Prop => A -> False}, where \coqinline{False} is the unprovable proposition. Why does this work?
+Assuming that a proposition \coqinline{P} is true, \coqinline{not P} means \coqinline{P -> False}, which is false, because something true cannot imply something false. On the other hand, if \coqinline{P} is false, then \coqinline{False -> False} is true because anything follows from falsehood, as stated by the principle of explosion.
 \par
-The current goal \coqinline{4 = 8 -> False} is further simplified by introducing \coqinline{4 = 8} as an hypothesis \coqinline{H}, leaving \coqinline{False} as the remaining goal. Intuitively we know that \coqinline{H} is false, but Coq needs a justification for this claim.
-Conveniently the tactic \coqinline{inversion} solves this problem easily by applying two core principles of inductively defined data types:
+After using \coqinline{simpl} and \coqinline{unfold not}, the current goal is \coqinline{1 = 2 -> False}. Introducing \coqinline{1 = 2} as an hypothesis \coqinline{H} with \coqinline{intros} leaves \coqinline{False} as the remaining goal. Intuitively we know that \coqinline{H} is false, but Coq needs a justification for this claim.
+Conveniently, the tactic \coqinline{inversion} solves this problem by applying two core principles of inductively defined data types:
 \begin{itemize}
 	\item Injectivity: \coqinline{C n = C m} implies that n and m are equal for a constructor \coqinline{C}.
 	\item Disjoint constructors: Values created by different constructors cannot be equal.
 \end{itemize}
-By applying \coqinline{inversion} to the hypothesis \coqinline{2 = 1} we tell Coq to add all inferable equations as additional hypotheses. In this case we start with \coqinline{2 = 1} or the Peano number representation \coqinline{S(S(O)) = S(0)}. Injectivity implies that if the previous equation was true, \coqinline{S(O) = O} must also be true. This is obviously false, since it would allow two different representations of nil. Hence, the application of \coqinline{inversion} to \coqinline{2 = 1} infers the current goal \coqinline{False}, which concludes the proof.
-
-Besides directly supplying arguments to functions that return propositions, there are other interesting applications for them, that we will discuss in the next section.
-
+By applying \coqinline{inversion} to the hypothesis \coqinline{2 = 1} we tell Coq to add all inferable equations as additional hypotheses. In this case we start with \coqinline{2 = 1} or the Peano number representation \coqinline{S(S(O)) = S(0)}. Injectivity implies that if the previous equation was true, \coqinline{S(O) = O} must also be true. This is obviously false since it would allow two different representations of nil. Hence, using \coqinline{inversion} with the hypothesis \coqinline{2 = 1} infers the current goal \coqinline{False}, which concludes the proof.
 \subsection{Higher-order constructs}
-Functions can be passed as arguments to other functions or returned as a result, they are first-class citizens in Coq. This allows us create higher-order functions, such as \coqinline{map} or \coqinline{fold}.
-\todo{minted bug?}
+Functions can be passed as arguments to other functions or returned as a result, they are first-class citizens in Coq. This allows us create higher-order functions like \coqinline{map}, which applies a function to every element of a list.
 \begin{coqcode}
 Fixpoint map {X Y : Type} (f : X -> Y) (l : list X) : (list Y) :=
   match l with
@@ -245,7 +279,7 @@ Function types are represented by combining two or more type variables with an a
 \begin{coqcode}
 Forall : forall A : Type, (A -> Prop) -> list A -> Prop
 \end{coqcode}
-\coqinline{Forall} takes a \textit{property} of \coqinline{A}, which returns a \coqinline{Prop} for any given \coqinline{A}, plus a list of \coqinline{A} and returns a proposition. It works by applying the property to every element of the given list and can be proven by showing that all elements satisfy the property.
+\coqinline{Forall} takes a \textit{property} of \coqinline{A}, that is, a function that returns a \coqinline{Prop} for any given \coqinline{A}, plus a list of \coqinline{A} and returns a proposition. It works by applying the property to every element of the given list and can be proven by showing that all elements satisfy the property.
 \begin{coqcode}
 Example e5 : Forall (fun n => n <> 8) [2;4].
 Proof.
@@ -256,28 +290,28 @@ apply Forall_cons. intros H. inversion H.
 apply Forall_nil.
 Qed.
 \end{coqcode}
-\coqinline{Forall} is an inductively defined proposition, which requires rules to be applied in order to prove a certain goal. This will be further explained in the next section, for now it sufficient to know that \coqinline{Forall} can be proven by applying the rules \coqinline{Forall_cons} and \coqinline{Forall_nil}, depending on the remaining list. Because we begin with a non-empty list, we have to apply \coqinline{Forall_cons}. The goal changes to \coqinline{2 <> 8}, the head of the list applied to the property. We have already proven this type of inequality before, \coqinline{inversion} is actually able to do most of the work we did manually by itself. Next the same procedure needs to be done for the list's tail \coqinline{[4]}, which works exactly the same as before. To conclude the proof, we need to show that the property is satisfied by the empty list. \coqinline{Forall_nil} covers this case, which is trivially fulfilled.
+\coqinline{Forall} is an inductively defined proposition, which requires \textit{rules} to be applied in order to prove a certain goal. This will be further explained in the next section, for now it sufficient to know that \coqinline{Forall} can be proven by applying the rules \coqinline{Forall_cons} and \coqinline{Forall_nil}, depending on the remaining list. Because we begin with a non-empty list, we have to apply \coqinline{Forall_cons}. The goal changes to \coqinline{2 <> 8}, the head of the list applied to the property. We have already proven this type of inequality before, \coqinline{inversion} is actually able to do most of the work we did manually by itself. Next the same procedure needs to be done for the list's tail \coqinline{[4]}, which works exactly the same as before. To conclude the proof, we need to show that the property is satisfied by the empty list. \coqinline{Forall_nil} covers this case, which is trivially fulfilled.
 \subsection{Inductively defined propositions}
 \label{induprop}
-Properties of a data type can be written in multiple ways, two of which we already discussed: Boolean equations of the form \coqinline{b x = true} and functions that return propositions. For example the function \coqinline{InB} returns \coqinline{true} if a \coqinline{nat} is contained in a list, the boolean function could look like this:
+Properties of a data type can be written in multiple ways, two of which we already discussed: Boolean equations of the form \coqinline{f x = true} and functions that return propositions. For example, the function \coqinline{inB} returns \coqinline{true} if a \coqinline{nat} is contained in a list.
 \begin{coqcode}
-Fixpoint InB (x : nat) (l : list nat) : bool :=
-match l with
-| [] => false
-| x' :: l' => if (beq_nat x x') then true else InB x l'
-end.
+Fixpoint inB (x : nat) (l : list nat) : bool :=
+  match l with
+  | [] => false
+  | x' :: l' => if (beq_nat x x') then true else inB x l'
+  end.
 Example e5 : InB 42 [1;2;42] = true.
 Proof. reflexivity. Qed.
 \end{coqcode}
-Because \coqinline{InB} returns a boolean value, we have to check for equality with \coqinline{true} in order to get a provable proposition. The proof is fairly simple, \coqinline{reflexivity} evaluates the expression and checks the equation, nothing more needs to be done.
-\par 
-Properties are another approach that works equally well. This definition connects multiple equations by disjunction, noted as \coqinline{\/}. The resulting proposition needs to contain a least one true equation to become true itself.
+Because \coqinline{inB} returns a boolean value, we have to check for equality with \coqinline{true} in order to get a provable proposition. The proof is fairly simple, \coqinline{reflexivity} evaluates the expression and checks the equation, nothing more needs to be done.\\
+\par \noindent
+Properties are another approach that works equally well. The following definition connects multiple equations by disjunction, noted as \coqinline{\/}. This operator is not the boolean disjunction, but a disjunction of propositions. It can be proven by showing that either one of the arguments is true. In the example at least one equation needs to be true in order for the whole disjunction to be true. 
 \begin{coqcode}
 Fixpoint In (x : nat) (l : list nat) : Prop :=
-match l with
-| [] => False
-| x' :: l' => x' = x \/ In x l'
-end.
+  match l with
+  | [] => False
+  | x' :: l' => x' = x \/ In x l'
+  end.
 Example e6 : In 42 [1;2;42].
 Proof. 
   simpl. (* 1 = 42 \/ 2 = 42 \/ 42 = 42 \/ False *)
@@ -287,67 +321,56 @@ Proof.
   reflexivity.
 Qed.
 \end{coqcode}
-Proving the same example as before, we need new tactics to work with logical connectives. By simplifying the original statement we get a disjunction of equations for every element in the list. If we want to show that a disjunction is true, we need to choose a side we believe to be true and prove it. \coqinline{left} and \coqinline{right} keep only the respective side as the current goal, discarding the other one. A similar tactic exists for the logical conjunction \coqinline{/\ }, with the difference that \coqinline{split} keeps both sides as subgoals, since a conjunction is only true if both sides are true.
-\par
+Proving the same example as before, we need new tactics to work with logical connectives. By simplifying the original statement we get a disjunction of equations for every element in the list. If we want to show that a disjunction is true, we need to choose a side we believe to be true and prove it. \coqinline{left} and \coqinline{right} keep only the respective side as the current goal, discarding the other one. A similar tactic exists for the logical conjunction \coqinline{/\ }, with the difference that \coqinline{split} keeps both sides as subgoals, since a conjunction is only true if both sides are true.\\
+\par \noindent
 The last option to describe this property is by using inductively defined propositions. As already mentioned before, inductively defined propositions consist of rules that describe how an argument can satisfy the proposition.
 \label{In}
 \begin{coqcode}
 Inductive InInd : nat -> list nat -> Prop :=
-| Head : forall n l, InInd n (n :: l)
-| Tail : forall n l, InInd n (tl l) -> InInd n l.
+  | head : forall n l, InInd n (n :: l)
+  | tail : forall n l e, InInd n l -> InInd n (e :: l).
 \end{coqcode} 
-Rule one states that the list's head is an element of the list. Additionally, if an element is contained in a list, it is also an element of the the same list, prefixed by another element, as described in the second rule. This definition can be transferred to Coq:
+The rule \coqinline{head} states that the list's head is an element of the list. The second rule \coqinline{tail} covers the case that if an element is contained in a list, it is also an element of the same list prefixed by another element.
 \begin{coqcode}
 Example e7 : InInd 42 [2;42].
 Proof. 
-  apply Tail.  (* InInd 42 (tl [2; 42]) *)
-  simpl.       (* InInd 42 [42] *)
+  apply Tail.  (* InInd 42 [42] *)
   apply Head.
 Qed.           
 \end{coqcode}
-The interesting part about this proof is the deductive approach. Previously we started with a proposition and constructed evidence of its truth. In this case we use \coqinline{InInd}'s rules "backwards": Because we want to show that \coqinline{42} is an element of \coqinline{[2;42]]}, we need to argue that it is contained within the list's tail. Since it is the head of \coqinline{[42]}, we can then apply \coqinline{Head} and conclude that the previous statement must also be true, because we required \coqinline{42} to be contained in the list's tail, which is true.
+The interesting part about this proof is the deductive approach. Previously we started with a proposition and constructed evidence of its truth. In this case we use \coqinline{InInd}'s rules "backwards": because we want to show that \coqinline{42} is an element of \coqinline{[2;42]]}, we need to argue that it is contained within the list's tail. Since it is the head of \coqinline{[42]}, we can then apply \coqinline{head} and conclude that the previous statement must also be true, because we required \coqinline{42} to be contained in the list's tail, which is true.
 \par
 Inductively defined propositions will play an important role in the following chapters, hence some more examples:
 \begin{coqcode}
 Inductive Forall (A : Type) (P : A -> Prop) : list A -> Prop :=
-| Forall_nil : Forall P [ ]
-| Forall_cons : forall (x : A) (l : list A), P x -> Forall P l -> Forall P (x :: l)
+  | Forall_nil : Forall P [ ]
+  | Forall_cons : forall (x : A) (l : list A), P x -> Forall P l ->
+                    Forall P (x :: l)
 \end{coqcode}
-We already used \coqinline{Forall} in the previous section without knowing the exact definition, the rules are fairly intuitive. According to \coqinline{Forall_nil}, a proposition is always true for the empty list. If the list is non-empty, the first element and the list's tail have to satisfy the proposition, as stated in \coqinline{Forall_cons}, in order for the whole list to satisfy the property. This pattern can be expanded to more complex inductive propositions, \coqinline{Forall2} takes a binary property plus two lists and checks if $P ~ a_{i} ~ b_{i}$ holds for every \coqinline{i < length l}.
+We already used \coqinline{Forall} in the previous section without knowing the exact definition, the rules are fairly intuitive. According to \coqinline{Forall_nil}, a proposition is always true for the empty list. If the list is non-empty, the first element and every element in the list's tail have to satisfy the property, as stated in \coqinline{Forall_cons}, in order for the whole list to satisfy the property.
+\par
+This pattern can be expanded to more complex inductive propositions like \coqinline{Forall2}, which takes a binary property plus two lists $a$, $b$ and checks if $P ~ a_{i} ~ b_{i}$ holds for every \coqinline{i < length l}.
 \begin{coqcode}
+> Check Forall2.
 Forall2 : forall A B : Type, (A -> B -> Prop) -> list A -> list B -> Prop
 \end{coqcode}
+To summarize this section, we began with inductive data types that we expanded to have implicit type arguments. We defined functions and discussed the restrictions Coq enforces in order to prevent infinite loops, followed by notations that allow us to use list constructors conveniently. Then, we discussed propositions and proved some examples, in which we used some more advanced tactics like \coqinline{induction} and \coqinline{inversion}. Lastly, we learned about higher-order constructs and inductively defined propositions like \coqinline{Forall}.
 \section{Curry}
-Curry\citet{report} is a programming language that combines aspects of functional and logical programming. Created by an international initiative, Curry is predominantly aimed at providing a platform for research and teaching.\cite{curryintro} Curry's syntax is similar to Haskell with the addition of nondeterminism, that is, a function can return different values for the same input, and free variables, which allow the systematic search for unknown values.
+Curry\citet{report} is a programming language that combines aspects of functional and logical programming. Created by an international initiative, Curry is predominantly aimed at providing a platform for research and teaching. Curry's syntax is similar to the functional programming language Haskell with the addition of nondeterminism, that is, a function can return different values for the same input, and free variables, which allow the systematic search for unknown values.
 \par
-The similarities to Haskell include the (interactive) compiler KICS2\footnote{https://www-ps.informatik.uni-kiel.de/kics2/} that compiles Curry programs to Haskell code and  an easily searchable\footnote{https://www-ps.informatik.uni-kiel.de/kics2/currygle/}, extensive module system with many predefined data structures and functions. In this short overview we will take a look at some language features that we will work with later, albeit not necessarily in the form of Curry code.\\
+The similarities to Haskell include an (interactive) compiler named KICS2\footnote{https://www-ps.informatik.uni-kiel.de/kics2/} that compiles Curry programs to Haskell code and  an easily searchable\footnote{https://www-ps.informatik.uni-kiel.de/kics2/currygle/}, extensive module system with many predefined data structures and functions. In this short overview we will take a look at some language features that we will work with later, albeit not necessarily in the form of Curry code.\\
 \par\noindent
-Curry programs have the ending \texttt{.curry} and consist of function and data type declarations. The simplest form of functions, such as \texttt{double x = x + x}, has a name, a possibly empty list of variables and an expression. Although it is not mandatory to explicitly state a function's type, in this case \texttt{double :: Int $\rightarrow$ Int $\rightarrow$ Int}, every function has a type that describes the arguments and the result of evaluating the function. When a function call is evaluated, the left-hand side is replaced with the right-hand side until there is no further evaluation possible, that is, only literal values or data structures remain. The evaluation can result in an infinite loop, for example \texttt{twos = 2 : twos}, or not compute any values. Infinite data structures are processed by computing the value of an expression only if it is actually needed, called \textit{lazy} evaluation. In the example below the function \texttt{take} returns the first $n$ elements of a list. The value of \texttt{twos} is only evaluated by one step when the application of \texttt{take} requires the values of the list's head. Thus, the infinite list can be accessed without computing the whole structure.
-\begin{flushleft}
-	\begin{minipage}[t]{.3 \linewidth}
-		\begin{haskellcode}
-take 2 twos
-take 2 (2 : twos)
-2 : take 1 twos
-2 : take 1 (2 : twos)
-2 : 2 : take 0 twos
-2 : 2 : []
-		\end{haskellcode}
-	\end{minipage}
-	\hfill
-	\vrule
-	\hspace{.5em}
-	\begin{minipage}[t]{.65 \linewidth}
-		\begin{haskellcode}
-take :: Int -> [a] -> [a]
-take n l = if n <= 0 then [] else takep n l
-  where takep _ []     = []
-        takep m (x:xs) = x : take (m-1) xs
-		\end{haskellcode}
-	\end{minipage}
-\end{flushleft}
-\noindent
-More advanced functions use several rules and pattern matching to describe different computational paths. By using a pattern in the left-hand side of a rule, it is limited to arguments of a specific form. Thus, functions that process data types with multiple constructors can have a different rule for every constructor. While Haskell allows overlapping patterns, that is, multiple patterns that apply to the same argument, functions remain deterministic because only the first rule that matches the argument is evaluated. Curry does not limit the evaluation -- a function with overlapping patterns can return every possible result an input evaluates to. On the other hand, patterns do not need to be exhaustive, that is, cover every possible input, because a failed computation is a valid result unlike the exception Haskell returns.
+Curry programs have the ending \texttt{.curry} and consist of function and data type declarations. The simplest form of functions, such as \texttt{double x = x + x}, has a name, a possibly empty list of variables and an expression. Although it is not mandatory to explicitly state a function's type, for example \texttt{double $::$ Int $\rightarrow$ Int $\rightarrow$ Int}, every function has a type that describes the arguments and the result of evaluating the function. 
+\par
+When a function call is evaluated, the left-hand side is replaced with the right-hand side until there is no further evaluation possible, that is, only literal values or data structures remain. The evaluation can result in an infinite loop, for example the infinite list of twos \texttt{twos = 2 $:$ twos}, or not compute any values. Infinite data structures are processed by computing the value of an expression only if it is actually needed, called \mbox{\textit{lazy} evaluation.}\\
+\par \noindent
+Besides functions, there is another important element of functional programming: data types. A data type is generally of the form \texttt{data Name $v_1 \dots v_n$ = $C_1 T_1 | \dots | C_m T_m$} where $v_i$ are type variables, $C_i$ are constructor names and $T_i$ are lists of types, which can include the type variables $v_i$. Simple data types like \coqinline{Bool} do not have type variables, but polymorphic types like \coqinline{Maybe} can contain any data type to represent optional values.
+\begin{haskellcode}
+data Bool = True | False
+data Maybe a = Nothing | Just a
+\end{haskellcode}
+\paragraph{Nondeterminism}
+More advanced functions use multiple rules and pattern matching to describe different computational paths. By using a pattern in the left-hand side of a rule, it is limited to arguments of a specific form. Thus, functions that process data types with multiple constructors can have a different rule for every constructor. While Haskell allows overlapping patterns, that is, multiple patterns that apply to the same argument, functions remain deterministic because only the first rule that matches the argument is evaluated. Curry does not limit the evaluation -- a function with overlapping patterns can return every possible result an input evaluates to. On the other hand, patterns do not need to be exhaustive, that is, cover every possible input, because a failed computation is a valid result unlike the exception Haskell returns.
 \begin{flushleft}
 	\begin{minipage}[t]{.3 \linewidth}
 		\begin{haskellcode}
@@ -369,7 +392,7 @@ _ ? y = y
 \noindent
 The function \texttt{head} returns the first element of a list, but in this case the list is empty. Therefore, the computation fails and KICS2 returns an exclamation mark. Nevertheless, it is possible to apply the \texttt{?} operator that represents a non-deterministic choice between the arguments to both the failed computation and the number 8. Since only one argument contains a value, the expression evaluates to 8.
 \par
-In some situations deterministic programs are inevitable, for example when working with IO actions. While it may not seem import if a function prints an 'a' or 'b' to the terminal, writing a file of non-deterministic size to the hard drive can cause severe problems. Fortunately, Curry enforces determinism when using IO actions. If one needs a more Haskell-esque evaluation of multiple patterns, the \texttt{case} expression applies:
+In some situations deterministic programs are strictly necessary, for example when working with IO actions. While it may not seem import if a function prints an 'a' or 'b' to the terminal, writing a file of non-deterministic size to the hard drive can cause severe problems. Fortunately, Curry enforces determinism when using IO actions. If one needs a more Haskell-esque evaluation of multiple patterns, the \texttt{case} expression applies:
 \begin{flushleft}
 	\begin{minipage}[t]{.3 \linewidth}
 		\begin{haskellcode}
@@ -404,11 +427,16 @@ maybeNotCase b =
 		\end{haskellcode}
 	\end{minipage}
 \end{flushleft}
-Pattern matching in a function can be transformed to a corresponding case expression by replacing the pattern with a variable and creating a branch for every rule. The difference is that case expressions evaluate only the first matching branch. Thus, the second and fourth branch of \texttt{caseNot} are not reachable and the function is deterministic. If nondeterminism is needed in a \texttt{case} expression, the \texttt{?} operator is necessary.\\
-\par\noindent
-Variables that are not bound to an expression are called \textit{free variables}. They are declared by adding \texttt{where} $v_1\dots v_n$ \texttt{free} to a term containing free variables $v_1 \dots v_n$. To evaluate such a term, the variables are instantiated with a value of appropriate type, for example \texttt{False \&\& x where x free}, that is, the boolean conjunction of \texttt{False} and a free variable, evaluates to \texttt{\{x = \_x0\} False}. The value of \texttt{x} is another free variable because the expression is false for every possible value of \texttt{x}.
+Pattern matching in a function can be transformed to a corresponding case expression by replacing the pattern with a variable and creating a branch for every rule. The difference is that case expressions evaluate only the first matching branch. Thus, the second and fourth branch of \texttt{caseNot} are not reachable and the function is deterministic. If nondeterminism is needed in a \texttt{case} expression, the \texttt{?} operator is necessary, as shown in the function \texttt{maybeNotCase}.
+\paragraph{Free Variables}
+Unknown values are represented in Curry by free variables, that is, variables that are not bound to an expression. They are declared by adding \texttt{where} $v_1\dots v_n$ \texttt{free} to a term containing free variables $v_1 \dots v_n$. To evaluate such a term, the variables are instantiated with a value of appropriate type.
+\begin{haskellcode}
+> False && x where x free
+{x = _x0} False
+\end{haskellcode}
+In the above example, the boolean conjunction of \texttt{False} and a free variable evaluates to another free variable \texttt{\_x0} because the expression is false for every possible value of \texttt{x}.
 \par
-Free variables can be used to compute the possible values of an expression, but there are more sophisticated applications: Curry can solve \textit{constraints}, for example the equation \texttt{1 + 1 = x where x free}. Solving the expression results in multiple values for \texttt{x} and corresponding the value of the equation:
+Free variables can be used to compute the possible values of an expression, but there are more sophisticated applications: Curry can solve \textit{constraints}, for example the equation \texttt{1 + 1 = x where x free}. Solving the expression results in multiple values for \texttt{x} and the corresponding value of the equation:
 \begin{haskellcode}
 {x = (-_x2)} False
 {x = 0} False
@@ -420,13 +448,16 @@ Free variables can be used to compute the possible values of an expression, but 
 \end{haskellcode}
 Curry solves the equation by using \textit{narrowing}, that is, guessing values that could satisfy the constraints. Since the sum of two positive numbers cannot be negative, only positive numbers are potential solutions. 2 fulfills the equation, but there could be more solutions. Therefore, odd numbers and even numbers greater than 2 are checked, both of which cannot satisfy the constraint. Since this includes all possible integer values, 2 remains the only solution. Free variables with non-basic types are evaluated similarly by trying every possible constructor.
 \par 
-An alternative approach to solving constraints is \textit{residuation}: If an expression cannot be solved because of an unknown free variable, the evaluation is suspended until its value is known from evaluating other expressions. It is possible that there is not enough information to determine the variable's value, in which case the evaluation fails.
+An alternative approach to solving constraints is \textit{residuation}: If an expression cannot be solved because of an unknown free variable, the evaluation is suspended until its value is known from evaluating other expressions. It is possible that there is not enough information to determine the variable's value, in which case the evaluation fails. \\
+\par \noindent
+In summary, we looked at the basic structure of a Curry program and function definitions. Regarding functions, we discussed lazy evaluation and non-determinism as well as its consequences when evaluating functions. Finally, we used free variables and learned about the different approaches to evaluating such expressions: narrowing and residuation.
 \section{Theory}
 \label{theory}
+In this section we will discuss the theoretical basics of the following chapters. First and foremost, what is typing?
 In functional languages a data type is a classification of applicable operators and properties of its members. There are base types that store a single date and more complex types that may have multiple constructors and type variables. Typing describes the process of assigning an expression to a corresponding type in order to avoid programming errors, for example calling an arithmetic function with a character.
-\par
-Typing an expression requires a context that contains data type definitions, function declarations and a map that assigns types to variables.  Without a context, expressions do not have any useful meaning -- \coqinline{42} could be typed as a number, the character 'B', a string or the answer to everything. The majority of information in a context can be extracted from the source code of a program and is continually updated while typing expressions.
-\par
+\par \noindent
+Typing an expression requires a context that contains data type definitions, function declarations and a map that assigns types to variables. Without a context, expressions do not have any useful meaning -- \coqinline{A 42} could be typed as a character and a number, the application of a function \coqinline{A} to 42, a variable, etc. The majority of information in a context can be extracted from the source code of a program and is continually updated while typing expressions.
+\par \noindent
 In the following chapters we are going to formalize the typing systems of two representations of Curry programs. This process consists of:
 \begin{enumerate}
 	\item Creating \begin{itemize}
@@ -437,7 +468,7 @@ In the following chapters we are going to formalize the typing systems of two re
 	\item Transferring programs into Coq syntax and using typing rules to prove propositions about the program.
 \end{enumerate}
 \paragraph{Representation}
-To represent a program in Coq, we need to list all elements it can possibly contain and link them together in a meaningful way. In case of CuMin this is relatively easy; a program consists of function declarations, which have a signature and a body. Signatures combine quantifiers and type variables, while the body contains variables and expressions. The resulting typing rules are basic, because types and expressions are very specific and some procedures are simplified, for example it is not allowed to supply more than one argument to a function at a time. 
+To represent a program in Coq, we need to list all elements it can possibly contain and link them together in a meaningful way. In case of CuMin this is relatively easy; a program consists of function declarations, which have a signature and a body. Signatures combine quantifiers and type variables, while the body contains variables and expressions. The resulting typing rules are simple because types and expressions are very specific and some procedures are simplified, for example it is not allowed to supply more than one argument to a function at a time. 
 \par
 While FlatCurry is designed to accurately represent Curry code and therefore has a more abstract program structure, the basic layout is similar. A program consists of a name, imported modules and declarations of functions, data types and operators. The latter two are not present in CuMin, but function declarations have a similar structure with additional information, such as the function's arity and visibility.
 \par
@@ -448,8 +479,8 @@ Both CuMin and FlatCurry need a context that maps keys to values, that is, varia
 Definition total_map   (K V : Type) := K -> V.
 Definition partial_map (K V : Type) := total_map K (option V).
 \end{coqcode}
-A total map is a function that takes a key value of type \texttt{K} and returns a value of type \texttt{V}. Because we define maps for arbitrary keys and values, the same definition can be used for CuMin and FlatCurry. A context contains only information about certain variables or functions, not for every possible key value. Thus, we define a partial map by adding an \texttt{option} to the value, that is, known keys yield a \texttt{Some v} and other keys a \texttt{None}.
-\par
+A total map is a function that takes a key value of type \texttt{K} and returns a value of type \texttt{V}. Because we define maps for arbitrary keys and values, the same definition can be used for CuMin and FlatCurry. A context contains only information about certain variables or functions, not for every possible key value. Thus, we define a partial map by adding an \texttt{option} to the value, that is, known keys yield \texttt{Some v} and others \texttt{None}.\\
+\par \noindent
 An empty total map is a function that returns the same value \texttt{v}  for every key. In case of the partial map, the default value is \texttt{None}.
 \begin{coqcode}
 Definition emptytmap {K V : Type} (v : V) : total_map K V := (fun _ => v).
@@ -465,14 +496,19 @@ Definition update {K V : Type} (beq : K -> K -> bool) (m : partial_map K V)
 The result of \texttt{t\_update} is a function that takes a key \texttt{k'} and applies \texttt{beq} to \texttt{k'} and \texttt{k}. If the keys are equal, the value is returned, otherwise the key is applied to the map \texttt{m}. 
 \begin{coqcode}
 pmap = update beq_nat 1 Int emptymap
--- fun k' => if (beq_nat 1 k') then (Some Int) else (emptymap k')
+--> fun k' => if (beq_nat 1 k') then (Some Int) else (emptymap k')
 pmap2 = update beq_nat 2 Char pmap
--- fun k' => if (beq_nat 2 k') then (Some Char) else (pmap k')   
+--> fun k' => if (beq_nat 2 k') then (Some Char) else (pmap k')   
 \end{coqcode}
 This implementation of a map is constructed by linking multiple functions together. Each function compares the supplied key with its key and if they differ, passes it to the next function. When looking up a key in a map, the key is compared to the last added entry first. An unknown key is checked by every function until finally \texttt{emptymap} returns \texttt{None}.
 \paragraph{Inference rules}
 In the following chapters we will work with typing rules, that is, a rule that states conditions which need to be satisfied in order for an expression to have a certain type. In Coq we use such rules as part of an inductively defined proposition, but this usually includes implementation-specific details. Therefore, we use a more formal notation: \textit{inference rules}.\label{infrules} An inference rule consists of an optional list of premises that needs to be fulfilled in order for the conclusion below the line to hold, similar to an implication.
-We can describe the inductively defined proposition \coqinline{In} we used in \autoref{In} to describe the occurrence of an element in a list with two inference rules as shown in \autoref{InInfR}.
+\begin{coqcode}
+Inductive InInd : nat -> list nat -> Prop :=
+  | gead : forall n l, InInd n (n :: l)
+  | tail : forall n l e, InInd n l -> InInd n (e :: l).
+\end{coqcode}
+We can describe the inductively defined proposition \coqinline{InInd} we used in \autoref{In} that represents the occurrence of an element in a list with two inference rules as shown in \autoref{InInfR}.
 \begin{figure}[H]
 	\begin{center}
 		\begin{minipage}{.45 \linewidth}
@@ -486,9 +522,10 @@ We can describe the inductively defined proposition \coqinline{In} we used in \a
 	\caption{Inference rules for occurrence of an element in a list}
 	\label{InInfR}
 \end{figure} \noindent
-\texttt{In\_H} does not have a premise because a list's head is always an element of the list. Thus, the line can be omitted. The rule \texttt{In\_T} states that if the premise \texttt{In n l} is true, then the conclusion \texttt{In n (e :: l)} holds. Inference rules can have multiple premises $p_1 \dots p_n$ that are treated as multiple implications $p_1 \rightarrow \dots \rightarrow p_n \rightarrow c$ with the conclusion $c$.
+\texttt{In\_H} does not have a premise because a list's head is always an element of the list. Thus, the line can be omitted. The rule \texttt{In\_T} states that if the premise \texttt{In n l} is true, then the conclusion \texttt{In n (e $::$ l)} holds.
+Inference rules can have multiple premises $p_1 \dots p_n$ that are treated as multiple implications $p_1 \rightarrow \dots \rightarrow p_n \rightarrow c$ with the conclusion $c$.
 \par
-Even though the line may imply that premises and the conclusion are independent from each other, this is not necessarily the case. Additionally, there is no chronological order, which means that the premises can contain variables that are bound to a value only after evaluating the conclusion.
+Even though the line may imply that premises and the conclusion are independent from each other or that there is a chronological order, this is not necessarily the case. The premises can contain variables that are bound to a value only after evaluating the conclusion. \todo{Beispiel}
 \chapter{CuMin}
 \label{cumin}
 CuMin (for \textit{Curry Minor}) is a simplified sublanguage of Curry introduced by \citet{p19mehner}. The syntax of CuMin is restricted and thus, allows more concrete types and typing rules, compared to FlatCurry. Although it requires some transformations to substitute missing constructs, CuMin can express the majority of Curry programs. In the following sections we will take a look at CuMin's syntax, create a suitable context and discuss data types, followed by the formal definition and implementation of typing rules as well as some examples. In the concluding section of this chapter we will see some more advanced tactics that are able to fully automate simple proofs.
