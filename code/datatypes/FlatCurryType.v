@@ -212,7 +212,7 @@ Section TypingHelper.
 
   (* Default values for failed computations. *)
   Definition noType := TCons ("Coq", "NoType") [].
-  Definition defaultTyVars := (noType, @nil TVarIndex).
+  Definition failType := (noType, @nil TVarIndex).
 
 
   Fixpoint funcTyList' (l : TypeExpr) : (list TypeExpr * TypeExpr) :=
@@ -258,18 +258,18 @@ Section Typing.
                       Gamma |- (Lit l) ::: T
 
     | T_Comb :      forall Gamma qname exprs cType substTypes T,
-                      let funcT := fromOption defaultTyVars ((combCon cType Gamma) qname) in
+                      let funcT := fromOption failType ((combCon cType Gamma) qname) in
                       let specT := multiTypeSubst (snd funcT) substTypes (fst funcT)
                        in funcPart specT None = T ->
                           Forall2 (hasType Gamma) exprs (fst (funcTyList specT)) ->
                       Gamma |- (Comb cType qname exprs) ::: T
 
     | T_Comb_Part : forall Gamma qname exprs substTypes cType T,
-                      let funcT := fromOption defaultTyVars ((combCon cType Gamma) qname) in
+                      let funcT := fromOption failType ((combCon cType Gamma) qname) in
                       let specT := multiTypeSubst (snd funcT) substTypes (fst funcT) in
-                      let     n := funcArgCnt (fst funcT) - (partCombArgs cType) in
+                      let     k := funcArgCnt (fst funcT) - (partCombArgs cType) in
                       let argTs := firstn (@length Expr exprs) (fst (funcTyList specT))
-                       in funcPart specT (Some n) = T ->
+                       in funcPart specT (Some k) = T ->
                           Forall2 (hasType Gamma) exprs argTs ->
                       Gamma |- (Comb cType qname exprs) ::: T
 
@@ -295,9 +295,9 @@ Section Typing.
     | T_Case :      forall Gamma ctype e substTypes T Tc p vis brexprs',
                       let  brexprs := Branch p vis :: brexprs' in
                       let   pattps := (map pattSplit (brexprsToPatterns brexprs)) in
-                      let contyvis := map (compose (fromOption defaultTyVars) (cCon Gamma))
+                      let contyvis := map (compose (fromOption failType) (cCon Gamma))
                                           (map fst pattps) in
-                      let     tvis := snd (fromOption defaultTyVars (cCon Gamma (fst (pattSplit p)))) in
+                      let     tvis := snd (fromOption failType (cCon Gamma (fst (pattSplit p)))) in
                       let   specTs := map (multiTypeSubst tvis substTypes)
                                           (map fst contyvis) in
                       let  vistysl := zip (map snd pattps)
@@ -608,6 +608,7 @@ Qed.
                    in if (beq_type type1 type2) then type1 else noType
     | _ => noType
     end.
+
   Theorem typeInference : forall Gamma e, Gamma |- e ::: inferType Gamma e.
   Admitted.
 

@@ -154,7 +154,7 @@ Definition isEmpty {X : Type} (l : list X) : bool :=
   | cons _ _ => false
   end.
 \end{coqcode}
-Function definitions begin with the keyword \coqinline{Definition}. \coqinline{isEmpty} takes an (implicit) type and a list and returns a boolean value. To distinguish empty from non-empty lists, pattern matching can be used on $n$ arguments by writing \coqinline{match} $x_{0},...,x_{m}$ \coqinline{with} $b$ \coqinline{end.} where $m < n$ and $b$ is a list of branches. Because the arguments need to be explicitly stated in order to be pattern matched, it is possible to use pattern matching only on a subset of the arguments. Multiple patterns are separated by commas and thus patterns do not need to be enclosed in brackets.
+Function definitions begin with the keyword \coqinline{Definition}. \coqinline{isEmpty} takes an (implicit) type and a list and returns a boolean value. To distinguish empty from non-empty lists, pattern matching can be used on $n$ arguments by writing \coqinline{match} $x_{0},...,x_{m}$ \coqinline{with} $b$ \coqinline{end.} where $m < n$ and $b$ is a list of branches. Because the arguments need to be explicitly stated in order to be pattern matched, it is possible to use pattern matching only on a subset of the arguments. Multiple patterns are separated by commas and thus, patterns do not need to be enclosed in brackets.
 \par
 A branch contains a pattern and an expression. Multiple branches are separated by vertical lines and need to be exhaustive, that is, cover every constructor of the argument. If there are overlapping patterns, Coq prints an error message stating that the respective clause is redundant.
 \par
@@ -166,7 +166,7 @@ Fixpoint app {X : Type} (l1 l2 : list X) : (list X) :=
   | cons h t => cons h (app t l2)
   end.
 \end{coqcode}
-In this case $l_{1}$ gets shorter with every iteration and thus the function terminates after a finite number of recursions. 
+In this case $l_{1}$ gets shorter with every iteration and thus, the function terminates after a finite number of recursions. 
 
 Coq allows us to define notations for functions and constructors by using the keyword \coqinline{Notation}, followed by the desired syntax and the expression. Sometimes it is necessary to state the level, that is, the priority when used with other notations, and associativity of the notation.
 \begin{coqcode}
@@ -393,6 +393,7 @@ _ ? y = y
 The function \texttt{head} returns the first element of a list, but in this case the list is empty. Therefore, the computation fails and KICS2 returns an exclamation mark. Nevertheless, it is possible to apply the \texttt{?} operator that represents a non-deterministic choice between the arguments to both the failed computation and the number 8. Since only one argument contains a value, the expression evaluates to 8.
 \par
 In some situations deterministic programs are strictly necessary, for example when working with IO actions. While it may not seem import if a function prints an 'a' or 'b' to the terminal, writing a file of non-deterministic size to the hard drive can cause severe problems. Fortunately, Curry enforces determinism when using IO actions. If one needs a more Haskell-esque evaluation of multiple patterns, the \texttt{case} expression applies:
+\label{currycase}
 \begin{flushleft}
 	\begin{minipage}[t]{.3 \linewidth}
 		\begin{haskellcode}
@@ -446,7 +447,8 @@ Free variables can be used to compute the possible values of an expression, but 
 {x = (4 * _x4)} False
 {x = (4 * _x4 + 2)} False
 \end{haskellcode}
-Curry solves the equation by using \textit{narrowing}, that is, guessing values that could satisfy the constraints. Since the sum of two positive numbers cannot be negative, only positive numbers are potential solutions. 2 fulfills the equation, but there could be more solutions. Therefore, odd numbers and even numbers greater than 2 are checked, both of which cannot satisfy the constraint. Since this includes all possible integer values, 2 remains the only solution. Free variables with non-basic types are evaluated similarly by trying every possible constructor.
+\label{narrowing}
+Curry solves the equation by using \textit{narrowing}, that is, guessing values that could satisfy the constraints\citep{Hanus13}. Since the sum of two positive numbers cannot be negative, only positive numbers are potential solutions. 2 fulfills the equation, but there could be more solutions. Therefore, odd numbers and even numbers greater than 2 are checked, both of which cannot satisfy the constraint. Since this includes all possible integer values, 2 remains the only solution. Free variables with non-basic types are evaluated similarly by trying every possible constructor.
 \par 
 An alternative approach to solving constraints is \textit{residuation}: If an expression cannot be solved because of an unknown free variable, the evaluation is suspended until its value is known from evaluating other expressions. It is possible that there is not enough information to determine the variable's value, in which case the evaluation fails. \\
 \par \noindent
@@ -468,11 +470,11 @@ In the following chapters we are going to formalize the typing systems of two re
 	\item Transferring programs into Coq syntax and using typing rules to prove propositions about the program.
 \end{enumerate}
 \paragraph{Representation}
-To represent a program in Coq, we need to list all elements it can possibly contain and link them together in a meaningful way. In case of CuMin this is relatively easy; a program consists of function declarations, which have a signature and a body. Signatures combine quantifiers and type variables, while the body contains variables and expressions. The resulting typing rules are simple because types and expressions are very specific and some procedures are simplified, for example it is not allowed to supply more than one argument to a function at a time. 
+To represent a program in Coq, we need to list all elements it can possibly contain and link them together in a meaningful way. In case of CuMin this is relatively easy; a program consists of function declarations, which have a signature and a body. Signatures combine quantifiers and type variables, while the body contains variables and expressions. The resulting typing rules are simple because types and expressions are very specific and some procedures are simplified, for example, it is not allowed to supply more than one argument to a function at a time. 
 \par
 While FlatCurry is designed to accurately represent Curry code and therefore has a more abstract program structure, the basic layout is similar. A program consists of a name, imported modules and declarations of functions, data types and operators. The latter two are not present in CuMin, but function declarations have a similar structure with additional information, such as the function's arity and visibility.
 \par
-Types and expressions in FlatCurry are not as specific as in CuMin, for example CuMin has an explicitly defined data type \texttt{Bool} with a \texttt{case} expression that works with \texttt{Bool} values only, while FlatCurry uses the data type constructor to represent the \texttt{Bool} type. FlatCurry's \texttt{case} expression works with arbitrary values and therefore the typing rules are more complex.\\
+Types and expressions in FlatCurry are not as specific as in CuMin, for example, CuMin has an explicitly defined data type \texttt{Bool} with a \texttt{case} expression that works with \texttt{Bool} values only, while FlatCurry uses the data type constructor to represent the \texttt{Bool} type. FlatCurry's \texttt{case} expression works with arbitrary values and therefore the typing rules are more complex.\\
 \paragraph{Context}
 Both CuMin and FlatCurry need a context that maps keys to values, that is, variables to types or names to declarations. There are many options to implement a map, such as a list of pairs, but we will use functions instead because it resembles the formal notation we will use later more closely.
 \begin{coqcode}
@@ -528,7 +530,7 @@ Inference rules can have multiple premises $p_1 \dots p_n$ that are treated as m
 Even though the line may imply that premises and the conclusion are independent from each other or that there is a chronological order, this is not necessarily the case. The premises can contain variables that are bound to a value only after evaluating the conclusion. \todo{Beispiel}
 \chapter{CuMin}
 \label{cumin}
-CuMin (for \textit{Curry Minor}) is a simplified sublanguage of Curry introduced by \citet{p19mehner}. The syntax of CuMin is restricted and thus, allows more concrete types and typing rules, compared to FlatCurry. Although it requires some transformations to substitute missing constructs, CuMin can express the majority of Curry programs. In the following sections we will take a look at CuMin's syntax, create a suitable context and discuss data types, followed by the formal definition and implementation of typing rules as well as some examples. In the concluding section of this chapter we will see some more advanced tactics that are able to fully automate simple proofs.
+CuMin (for \textit{Curry Minor}) is a simplified sublanguage of Curry introduced by \citet{p19mehner}. The syntax of CuMin is restricted and thus allows more concrete types and typing rules, compared to FlatCurry. Although it requires some transformations to substitute missing constructs, CuMin can express the majority of Curry programs. In the following sections we will take a look at CuMin's syntax, create a suitable context and discuss data types, followed by the formal definition and implementation of typing rules as well as some examples. In the concluding section of this chapter we will see some more advanced tactics that are able to fully automate simple proofs.
 \section{Syntax}
 The Backus–Naur Form (BNF) is a formalism to describe context-free grammars and languages like CuMin. A BNF definition is a set of derivation rules $S ::= A_{1} | \dots | A_{n} $ where $S$ is a \textit{nonterminal}, that is, a symbol that can be replaced by any of the $n$ sequences $A_{i}$ on the right-hand side. A sequence is a combination of symbols and other characters that form an expression. If a symbol occurs only on the right-hand side of a rule, it is called a \textit{terminal} because it cannot be replaced. Figure \ref{cumin:syntax} shows the \mbox{syntax of CuMin in BNF.}
 \vspace*{-1em}
@@ -658,7 +660,7 @@ Section Map.
     end.
 End Map.
 \end{coqcode}
-Even though \coqinline{A} and \coqinline{B} are not introduced as types in the signature, they can be used to parametrize lists. Likewise, \coqinline{f} can be applied to arguments despite the missing function argument \coqinline{map} usually has. Although functions containing variables can be \textit{defined} this way, they are only usable outside of the own section because variables have a type but no value. Outside of the section all variables used in a definition are appended to the type, for example the type of \texttt{map} has additional type and function arguments outside of the section \texttt{Map}.
+Even though \coqinline{A} and \coqinline{B} are not introduced as types in the signature, they can be used to parametrize lists. Likewise, \coqinline{f} can be applied to arguments despite the missing function argument \coqinline{map} usually has. Although functions containing variables can be \textit{defined} this way, they are only usable outside of the own section because variables have a type but no value. Outside of the section all variables used in a definition are appended to the type, for example, the type of \texttt{map} has additional type and function arguments outside of the section \texttt{Map}.
 \begin{coqcode}
 > Check map. (* inside section *)
 map : list A -> list B
@@ -858,7 +860,7 @@ T_App : forall Gamma e1 e2 T1 T2,
           Gamma |- e1 ::: (TFun T1 T2) -> Gamma |- e2 ::: T1 ->
           Gamma |- (tapp e1 e2) ::: T2
 \end{coqcode}
-The \coqinline{tlet} expression has three arguments: an ID that represents the variable bound to the expression $e_{1}$ in $e_{2}$. Because we introduce a new variable $x$ that occurs in $e_{2}$, we need to update $\Gamma$ with the type of $e_{1}$ bound to $x$, for instance the expression \coqinline{tlet (Id 0) 4 (tadd (tvar (Id 0) 8))} is only typeable if $\Gamma \:(\text{Id}\: 0) = \text{TNat}$.
+The \coqinline{tlet} expression has three arguments: an ID that represents the variable bound to the expression $e_{1}$ in $e_{2}$. Because we introduce a new variable $x$ that occurs in $e_{2}$, we need to update $\Gamma$ with the type of $e_{1}$ bound to $x$, for instance, the expression \coqinline{tlet (Id 0) 4 (tadd (tvar (Id 0) 8))} is only typeable if $\Gamma \:(\text{Id}\: 0) = \text{TNat}$.
 \begin{coqcode}
 T_Let : forall Gamma e1 e2 x T1 T2,
           Gamma |- e1 ::: T1 -> (type_update Gamma x T1) |- e2 ::: T2 ->
@@ -916,7 +918,7 @@ Definition multi_ty_subst (qtys : list (quantifier * ty)) (t : ty) : ty :=
                            end)
               t qtys.
 \end{coqcode}
-Technically, the substitution can produce invalid types since variables are replaced, regardless of their tag. While this could be checked by \texttt{ty\_subst}, we use a more explicit way in the last condition of the rule, that is, a \coqinline{Forall} construct. We need to check that every type in \coqinline{tys} is a data type if its quantifier has a star-tag. The function \coqinline{fd_to_star_tys} takes a function declaration plus a list of types and returns the types whose matching quantifiers have a star-tag, for example $[\forall^{\epsilon}\alpha, \forall^{*}\beta]$ and [Int, Bool] would result in the list [Bool] because only $\beta$ has a star-tag. 
+Technically, the substitution can produce invalid types since variables are replaced, regardless of their tag. While this could be checked by \texttt{ty\_subst}, we use a more explicit way in the last condition of the rule, that is, a \coqinline{Forall} construct. We need to check that every type in \coqinline{tys} is a data type if its quantifier has a star-tag. The function \coqinline{fd_to_star_tys} takes a function declaration plus a list of types and returns the types whose matching quantifiers have a star-tag, for example, $[\forall^{\epsilon}\alpha, \forall^{*}\beta]$ and [Int, Bool] would result in the list [Bool] because only $\beta$ has a star-tag. 
 \par
 To check the data type property, we use \coqinline{Forall} with \coqinline{is_data_type Gamma}, that is, a function \coqinline{ty -> Prop}. Every element of the list of \texttt{ty} is applied to the property by \coqinline{Forall}; the returned propositions need do be proven when using this rule.
 \paragraph{Exporting Notations}
@@ -938,7 +940,7 @@ End TypingNotation.
 Import TypingNotation. Open Scope typing_scope.
 Section Examples. ...
 \end{coqcode}
-This combination of sections, modules and scopes works the following way: The module \texttt{TypingNotation} is outside of \coqinline{has_type}'s section and thus \coqinline{has_type} has an additional \coqinline{program} argument. A new notation, similar to the original one with a new program parameter, is defined, followed by the definition of a \coqinline{typing_scope}.
+This combination of sections, modules and scopes works the following way: The module \texttt{TypingNotation} is outside of \coqinline{has_type}'s section and thus, \coqinline{has_type} has an additional \coqinline{program} argument. A new notation, similar to the original one with a new program parameter, is defined, followed by the definition of a \coqinline{typing_scope}.
 The notation can now be imported and used in other sections or programs. \\
 This concludes the segment about typing rules in CuMin. The following section will demonstrate the usage in proofs based on a few examples.
 \section{Examples}
@@ -1079,34 +1081,51 @@ This results in a fully automated, single-line proof and shows a small part of t
 Summarizing this chapter, we began by transferring the formal definition of CuMin's syntax to Coq, followed by the definition of a context that contains variable bindings and tag information to enable typing of expressions. We used inductively defined propositions to describe data types and created a proposition that maps expressions to types with respect to a context. In the final sections we proved some examples and had a more detailed look at how proofs in Coq work and how they can be automated.
 \chapter{FlatCurry}
 \label{flatcurry}
-\todo{> Bei Ergebnissen}
-FlatCurry is a flat representation of Curry code that enables meta-programming, that is, the transformation of Curry programs in Curry.\cite{kics2manual} Since we want to reason about Curry programs in Coq, the respective module \texttt{FlatCurry.Types} will be the foundation of the Coq implementation. The generation of FlatCurry code involves two transformations: Firstly, lambda lifting is applied, that is, local function definitions, for example introduced by \texttt{where} or \texttt{let} clauses, are replaced by top-level definitions. Secondly, pattern matching is substituted by case and or expressions, the latter in case of overlapping patterns.
-\par
-\todo{Kapitelüberblick}
+FlatCurry\footnote{https://www.informatik.uni-kiel.de/~curry/flat/} is an intermediate representation of Curry code that is used by compilers like KICS2 and enables meta-programming, that is, the transformation of Curry programs in Curry. Since we want to reason about Curry programs in Coq, the respective module \texttt{FlatCurry.Types} will be the foundation of the Coq implementation. Generating FlatCurry code involves two transformations. Firstly, lambda lifting is applied, that is, local function definitions, for example introduced by \texttt{where} or \texttt{let} clauses, are replaced by top-level definitions.
+\begin{flushleft}
+\begin{minipage}{.3\linewidth}
+\begin{haskellcode}
+addTwo n = addOne (addOne n)
+  where addOne m = m + 1
+\end{haskellcode}
+\end{minipage}
+\hfill
+\vrule
+\hspace{.5em}
+\begin{minipage}{.6\linewidth}
+\begin{haskellcode}
+addTwo n = addOne (addOne n)
+addTwo.addOne m = m + 1
+\end{haskellcode}
+\end{minipage}
+\end{flushleft}
+Secondly, pattern matching is substituted by \texttt{case} and \texttt{or} expressions, the latter in case of overlapping patterns. We already discussed this transformation in \autoref{currycase}.\\
+\par \noindent
+In this chapter we pursue the same approach used with CuMin, that is, implementing FlatCurry's syntax, a context and typing rules. Some aspects of the FlatCurry implementation are similar to CuMin and therefore will not be described as detailed as before, instead we discuss additional possibilities like automatically creating and parsing FlatCurry programs.
 \section{Syntax}
 \label{flatcurrysyntax}
-The syntax we use in Coq is similar to the Curry code\footnote{https://www-ps.informatik.uni-kiel.de/kics2/lib/FlatCurry.Types.html} and thus we discuss the Coq implementation only. Generally, Curry allows data types and constructors to have identical names, which is not possible in Coq; likewise \texttt{Type} is a reserved keyword, as we have seen multiple times.
-\par
-There are three type synonyms that identify variables and other names, for example functions:
+The syntax we use in Coq is similar to the Curry code\footnote{https://www-ps.informatik.uni-kiel.de/kics2/lib/FlatCurry.Types.html} and thus, we discuss the Coq implementation only. Generally, Curry allows data types and constructors to have identical names, which is not possible in Coq; likewise \texttt{Type} is a reserved keyword, as we have seen multiple times. Thus, these limitations need to be considered when transforming the syntax.
+\par \noindent
+There are three type synonyms that identify variables and other named entities, for example functions:
 \begin{itemize}
 	\item \coqinline{VarIndex}: Variables in expressions are represented by a \coqinline{nat}.
 	\item \coqinline{TVarIndex}: Type variables in type expressions are also represented by a \coqinline{nat} but have a different name. The distinction between the two variable types is useful to prevent mistakes.
-	\item \coqinline{QName}: A qualified name is a pair of strings: the module name and the name the function, data type, etc. Thus, the same name can occur in multiple modules and still be uniquely addressable.
+	\item \coqinline{QName}: A qualified name is a pair of strings: the module name and the name of the function, data type, etc. Thus, the same name can occur in multiple modules and still be uniquely addressable.
 \end{itemize}
-We will discuss the relevant elements of the FlatCurry syntax in a top-down approach, beginning with a program. Besides its name, a program contains a list of imports and lists for type, function and operator declarations. Imports need to be handled manually when working with multiple modules. \todo{Verlinkung praktische Nutzung}
+We will discuss the relevant elements of the FlatCurry syntax in a top-down approach, beginning with a program. Besides its name, a program contains a list of imports and lists for type, function and operator declarations. Imports need to be handled manually when working with multiple modules.
 \begin{coqcode}
 Inductive TProg : Type := 
-| Prog : string -> list string ->
-         list TypeDecl -> list FuncDecl -> list OpDecl -> TProg.
+  | Prog : string -> list string ->
+           list TypeDecl -> list FuncDecl -> list OpDecl -> TProg.
 \end{coqcode}
-Types in FlatCurry are more abstract compared to CuMin, but there are similar elements: Type variables and function types are almost the same, except the index of the variable. We do not distinguish types and data types as we did before, therefore there is no need for an \texttt{is\_data\_type} property or a context that maps types to tags.
+Types in FlatCurry are more abstract compared to CuMin, but there are similar elements: type variables and function types are almost the same, except the index of variable is a \texttt{TVarIndex} instead of an ID. We do not distinguish types and data types as we did before, therefore there is no need for an \texttt{is\_data\_type} property or a context that maps types to tags.
 \begin{coqcode}
 Inductive TypeExpr : Type :=
   | TVar     : TVarIndex -> TypeExpr
   | FuncType : TypeExpr  -> TypeExpr      -> TypeExpr
   | TCons    : QName     -> list TypeExpr -> TypeExpr.
 \end{coqcode}
-The big difference is the absence of explicit types, for example \texttt{Nat} or \texttt{Bool}.  Every type is represented by a \coqinline{TCons} construct, which consists of a qualified name and a list of types. The latter contains type parameters, for example the expression \texttt{Left 42} has the type \texttt{Either Int a}, which is represented in FlatCurry by the qualified name \texttt{("Prelude", "Either")} and a list containing \texttt{Int} plus a type variable. Base types like \texttt{Int} do not have type parameters,  hence the empty list.
+The big difference is the absence of explicit types, for example \texttt{Nat} or \texttt{Bool}.  Every type is represented by a \coqinline{TCons} construct, which consists of a qualified name and a list of types. The latter contains type parameters, for example, the expression \texttt{Left 42} has the type \texttt{Either Int a}, which is represented in FlatCurry by the qualified name \texttt{("Prelude", "Either")} and a list containing \texttt{Int} as well as a type variable \texttt{TVar x}. Base types like \texttt{Int} do not have type parameters, as shown in the example below.
 \begin{coqcode}
 (TCons ("Prelude","Either") [(TCons ("Prelude","Int") [] ), (TVar 0)])
 \end{coqcode}
@@ -1122,19 +1141,18 @@ Inductive TypeDecl : Type :=
 Inductive ConsDecl : Type :=
   | Cons :  QName -> nat -> Visibility -> list TypeExpr -> ConsDecl.
 \end{coqcode}
-Type declarations are a new construct since it is not possible to define data types in CuMin. There are two constructors: type synonyms, for example \texttt{type IntL = [Int]}, and constructor to create new types. While both have a list of type variables, the synonym takes a type expression and the new type a list of constructor declarations.
+Type declarations are a new construct since CuMin does not have user-defined data types. There are two constructors: type synonyms, for example \texttt{type IntL = [Int]}, and a constructor to create new types. While both have a list of type variables, \texttt{TypeSyn} has a type expression and the \texttt{Typec} a list of constructor declarations. The following example shows the FlatCurry representation of binary trees in Curry, that is, a data type \texttt{BTree} with two constructors: a \texttt{Leaf} without further arguments and a \texttt{Branch} with a \textit{decoration} of some type as well as two binary trees.
 \begin{coqcode}
-data BTree a = Leaf | Branch a (BTree a) (BTree a)
-
 Typec ("MyProg","BTree") Public  [0]  
-[(Cons ("MyProg","Leaf") 0 Public  [] ), (Cons ("MyProg","Branch") 3 Public
-                                           [(TVar 0), 
-                                            (TCons ("MyProg","BTree") [(TVar 0)] ), 
-                                            (TCons ("MyProg","BTree") [(TVar 0)] )])]
+  [(Cons ("MyProg","Leaf") 0 Public  [] ),
+   (Cons ("MyProg","Branch") 3 Public
+     [(TVar 0), 
+      (TCons ("MyProg","BTree") [(TVar 0)] ), 
+      (TCons ("MyProg","BTree") [(TVar 0)] )])]
 \end{coqcode}
-The definition of binary trees has a type variable $a$ that is represented by the number nil. The list of constructor declarations contains \texttt{Leaf}, a constructor without any arguments, and a constructor \texttt{Branch} that takes a decoration of type $a$ and two subtrees, both of type \texttt{BTree a}.\\
-\par
-FlatCurry expressions share some common elements with the CuMin definition: There are expressions for variables and literals, let and case constructs, the application of functions and a way to express nondeterminism. Nevertheless, most expressions are more abstract and require more complex typing rules, for example, there is only one generic case expression instead of a specific definition for every type.
+The definition of binary trees has a type variable with the index \texttt{0}, which is used in place of the decoration's type and supplied to the subtrees in order to allow polymorphism.\\
+\par \noindent
+FlatCurry expressions share some common elements with the CuMin definition: There are expressions for variables and literals, let and case constructs, the application of functions and a way to express nondeterminism. Nevertheless, most expressions are more abstract and require more complex typing rules than in CuMin, for example, there is only one generic case expression instead of a specific definition for every type.
 \begin{coqcode}
 Inductive Expr : Type := 
   | Var   : VarIndex -> Expr
@@ -1149,27 +1167,26 @@ Inductive Expr : Type :=
 \paragraph{Literals}
 Integers, characters or floating point numbers can be literals. While there is a \texttt{nat} type in Coq, the other types cannot be represented that easily. The module \texttt{Ascii} contains data structures and notations for characters, but it is not possible to use escaped symbols like \texttt{\textbackslash n} without converting them to a decimal, three digit representation, in this case 010. Similarly, the module \texttt{Reals} can represent floats, but the dot notation that FlatCurry uses (for example $1.2$) is not available, instead numbers need to be written as fractions. Because we are mainly interested in typing expressions, we avoid this problem by using strings to represent chars and floats. That is not to say that an accurate representation is not feasible, but rather that it adds few value in the context of typing expressions. 
 \paragraph{Function application}
-\coqinline{Comb} represents the application of functions and constructors. Its first argument is a \coqinline{CombType}, which is either a function/constructor call with all arguments provided (\coqinline{FuncCall/ConsCall}) or a partial call (FuncPartCall/ConsPartCall). The latter has an integer value that is the number of missing arguments. The other arguments of \coqinline{Comb} are a qualified name of a function or constructor and a list of expressions, that it is applied to.
+\coqinline{Comb} represents the application of functions and constructors. Its first argument is a \coqinline{CombType}, which is either a function/constructor call with all arguments supplied (\coqinline{FuncCall/ConsCall}) or a partial call (\coqinline{FuncPartCall/ConsPartCall}). The latter has an integer value that is the number of missing arguments. The other arguments of \coqinline{Comb} are a qualified name of a function or constructor as well as a list of expressions, that the function is applied to.
 \begin{coqcode}
 Comb FuncCall ("Prelude","map") 
      [(Comb (FuncPartCall 1) ("MyProg","double") []),
       (Comb ConsCall ("Prelude",":") [(Lit (Intc 1)),
                                       (Comb ConsCall ("Prelude","[]") [] )] )]
 \end{coqcode}
-The application of \texttt{map} to \texttt{double} and \texttt{[1]} results in a complete function call of map, since all necessary arguments have been provided. Because \texttt{double} is missing its argument, the function call is partial with one argument remaining. The list \texttt{[1]} is represented by the application of \texttt{cons} to the integer literal 1 and the empty list, which is a constructor without arguments.
+The application of \texttt{map} to \texttt{double} and \texttt{[1]} results in a full function call of map since all arguments have been supplied. Because \texttt{double} is missing its argument, the function call is partial with one argument remaining. The list \texttt{[1]} is represented by the application of \texttt{cons} to the integer literal 1 and the empty list, which is a constructor without arguments.
 \paragraph{Let}
-While CuMin allows only one binding in a \texttt{let} expression, this limitation is not present in FlatCurry. Multiple bindings are represented by a list of (\coqinline{VarIndex}, \coqinline{Expr}) pairs that bind a variable to an expression, the last argument is the expression that the bindings occur in. The expression \texttt{let} $x = y + 1,\: y = z + 2,\: z = 3$ in $x + y$ results in the following code:
+While CuMin allows only one binding in a \texttt{let} expression, this limitation is not present in FlatCurry. Multiple bindings are represented by a list of (\coqinline{VarIndex}, \coqinline{Expr}) pairs that bind a variable to an expression. The last argument of a let expression is the term that the bindings occur in. The following example shows the expression \mbox{\texttt{let} $x = y + 1,\: y = z + 2,\: z = 3$ in $x + y$} in FlatCurry syntax.
 \begin{coqcode}
 Let [(1,(Comb FuncCall ("Prelude","+") [(Lit (Intc 3)), (Lit (Intc 2))] )),
      (2,(Comb FuncCall ("Prelude","+") [(Var 1),(Lit (Intc 1))] ))]
     (Comb FuncCall ("Prelude","+") [(Var 2),(Var 1)] )
 \end{coqcode}
-FlatCurry misses unnecessary variables and bindings are sorted hierarchically, that is, if a variable occurs in another binding, its position in the list is ahead of the binding.
+FlatCurry replaces unnecessary variables like $z$ with its value. Bindings are sorted hierarchically, that is, if a variable occurs in another binding, its position in the list is ahead of the binding that references the variable.
 \paragraph{Case}
-There are two instances that result in a case expression in FlatCurry: An explicit case expression and pattern matching, for example in functions. The \coqinline{CaseType} is either \coqinline{rigid}, in case of an explicit case, or \coqinline{flexible} for transformed pattern matching. It modifies the evaluation strategy of free variables in the case expression; flexible cases use \textit{narrowing}, which evaluates function calls with unknown arguments non-deterministically, while rigid cases delay function calls if they cannot be evaluated deterministically, which is called \textit{residuation}.\cite{Hanus13} \todo{Stimmt das?}
-The evaluation strategy does not affect the result's type. Hence, we do not need to distinguish both cases.
+There are two instances that result in a case expression in FlatCurry: explicit case expressions and pattern matching, for example in functions. The \coqinline{CaseType} is either \coqinline{rigid}, in case of an explicit case, or \coqinline{flexible}, for transformed pattern matching. It modifies the evaluation strategy of free variables in the case expression; flexible cases use narrowing while rigid cases are evaluated by residuation, as we discussed in \autoref{narrowing}. As the evaluation strategy does not affect the result's type, we do not need to distinguish both cases.
 \par
-The two remaining arguments are an expression that determines the branch to be taken and a list of \coqinline{BranchExpr}, which consist of a pattern and an expression. Patterns may be literals or a constructor and a list of variables, as shown in the following example. The original function \texttt{fromMaybe} is transformed to a case expression in order eliminate pattern matching.\\
+The two remaining arguments are the expression that determines the branch to be taken and a list of \coqinline{BranchExpr}, which consist of a pattern and an expression. Patterns may be literals or a constructor and a list of variables, as shown in the following example. The original function \texttt{fromMaybe} is transformed to a case expression in order eliminate pattern matching.\\
 \par
 \begin{minipage}[t]{.5\linewidth}
 \begin{haskellcode}
@@ -1191,13 +1208,13 @@ Case Flex (Var 2) [(Branch (Pattern ("Prelude","Just") [3] )(Var 3)),
                    (Branch (Pattern ("Prelude","Nothing") [] )(Var 1))]
 \end{coqcode}
 The resulting FlatCurry code looks nearly identical for both definitions, only the \coqinline{CaseType} differs because \texttt{fromMaybeCase} is an explicit case expression instead of a transformation. Unlike CuMin's \texttt{case}, this definition can be used with every type. Hence, typing a \texttt{case} expression is more complex in FlatCurry.\\
-\par
-The remaining expressions work as expected: \texttt{Free} introduces a list of free variables in an expression, \texttt{Or} returns one of the two expressions supplied and \texttt{Typed} assigns a type to an expression. \todo{Weglassen?}
+\par \noindent
+The remaining expressions are simple: \texttt{Free} has a list of variables indexes that represent free variables, which can be used in the supplied expression in place of variables or values. \texttt{Or} represents the non-deterministic choice between two expressions, similar to the \texttt{?} operator. Lastly, \texttt{Typed} explicitly assigns a type to an expression, for example \mbox{\texttt{2 $::$ Int}}.
 \section{Context}
 \label{context}
-The context we use for typing FlatCurry contains the familiar partial map from \coqinline{VarIndex} to \coqinline{TypeExpr} but is missing the \coqinline{tag} map, since we do not have data types anymore. In addition to the information about variables, the context contains function and constructor declarations in form of two partial maps that map a qualified name to a pair of the full type and a list of type variables, for example \texttt{Just} has the entry ($a \rightarrow$ Maybe $a$, [$a$]). The list of type variables simplifies specializing a function because every type variable needs to be substituted with a concrete type. To work with contexts there are selectors \coqinline{vCon}, \coqinline{fCon} and \coqinline{cCon} to access the respective contexts and update functions to add values, similar to the CuMin context.\\
-\par
-We want to be able to work with possibly large Curry programs. Hence, we need to create a parser that extracts the required information from a FlatCurry program and adds it to a context. Parsing function declarations is simple because it contains the function's type explicitly and we need to extract the type variables only.
+The context we use for typing FlatCurry contains the familiar partial map from \coqinline{VarIndex} to \coqinline{TypeExpr} but is missing the \coqinline{tag} map since we do not have data types anymore. In addition to the information about variables, the context contains function and constructor declarations in form of two partial maps that map a qualified name to a pair of the full type and a list of type variables, for example, \texttt{Just} has the entry ($a \rightarrow$ Maybe $a$, [$a$]). The list of type variables simplifies specializing a function because every type variable needs to be substituted with a concrete type. To work with contexts there are selectors \coqinline{vCon}, \coqinline{fCon} and \coqinline{cCon} to access the respective variable, function or constructor context and update functions to add values, similar to the CuMin context.\\
+\par \noindent
+We want to be able to work with possibly large Curry programs. Hence, we need to create a parser that extracts the required information from a FlatCurry program and adds it to a context. Parsing function declarations is simple because a declaration contains the function's type explicitly and we only need to extract the type variables.
 \begin{coqcode}
 Fixpoint extractTVars (t : TypeExpr) : list TVarIndex :=
   match t with
@@ -1206,9 +1223,13 @@ Fixpoint extractTVars (t : TypeExpr) : list TVarIndex :=
   | FuncType argT retT => (extractTVars argT) ++ (extractTVars retT)
   end.
 \end{coqcode}
-Because \coqinline{extractTVars} lists every occurrence of a type variable, the result needs to be deduplicated. Together with the function type the pair is added to the context. By using \coqinline{fold_right}, a list of function declarations is added to the same context.
-\par
-Parsing a constructor declaration is more complicated because the type is not as easily accessible. Additionally, the declarations are contained in a type declaration and we need do incorporate this information in the constructor's type. We begin by parsing the list with the data type supplied as an additional parameter, for example \texttt{Maybe} $a$ for the declaration of \texttt{Just}. Unfortunately the type parameters of a constructor are stored as a list, therefore we need a function that transforms a list of types to a function type, for example \texttt{[Int, Bool, Int]} to \texttt{Int -> Bool -> Int}.
+\coqinline{extractTVars} works by recursively concatenating the indexes of a type expression. Because the function lists every occurrence of a type variable, the result needs to be deduplicated. Together with the function type, the list of type variables is added to the context by the function \texttt{addFunc}. To add a list of function declarations to the same context, \texttt{parseFuncs} uses \coqinline{fold_right}.
+\begin{coqcode}
+Definition parseFuncs (con : context) (fdecls : list FuncDecl) : context :=
+  fold_right (fun f c => addFunc c f) con fdecls.
+\end{coqcode}
+\par \noindent
+Parsing a constructor declaration is more complicated because the type is not as easily accessible. Additionally, the declarations are contained in a type declaration and we need to incorporate this information in the constructor's type. We begin by parsing the list of constructor declarations and pass the data type as an additional parameter to the processing functions, for example \texttt{Maybe} $a$ for the declaration of \texttt{Just}. Unfortunately the type parameters of a constructor are stored as a list, therefore we need a function that transforms a list of types to a function type, for example \texttt{[Int, Bool, Int]} to \mbox{\texttt{Int $\rightarrow$ Bool $\rightarrow$ Int}}.
 \begin{coqcode}
 Fixpoint tyListFunc (tys : list TypeExpr) : TypeExpr :=
   match tys with
@@ -1217,20 +1238,22 @@ Fixpoint tyListFunc (tys : list TypeExpr) : TypeExpr :=
   | []      => TCons ("Coq","NoType") []
   end.
 \end{coqcode}
-The function \coqinline{tyListFunc} recursively creates function types and adds the supplied types until the list contains only one type, which is the return type of the function. In case of an empty list we need a default type because Coq enforces exhaustive pattern matching. Now we can use \coqinline{tyListFunc} to assemble the full type:
+The function \coqinline{tyListFunc} recursively creates function types by adding the supplied types until the list contains only one type, which is the return type of the function. In case of an empty list we need a default type because Coq enforces exhaustive pattern matching, even though this situation cannot occur normally because the type of a constructor contains a least the data type, for example \texttt{Nothing $::$ Maybe a}. Now we can use \coqinline{tyListFunc} to assemble the full type of a constructor.
 \begin{coqcode}
 tyListFunc (args ++ [TCons tqn (map TVar vis)])
 \end{coqcode}
-The information obtained from the type declaration is its qualified name \texttt{tqn} and type variables \texttt{vis}. By constructing a \coqinline{TypeExpr} with \coqinline{TCons} and concatenating it to the list of type variables \texttt{args} of the constructor, we get the full type by applying \coqinline{tyListFunc} to it.
+The information obtained from the type declaration is the qualified name \texttt{tqn} and type variables \texttt{vis}. By constructing a \coqinline{TypeExpr} with \coqinline{TCons} and concatenating it to the list of type variables \texttt{args} of the constructor, we get the full type by applying \coqinline{tyListFunc} to it.
 \begin{coqcode}
 tyListFunc ([TVar 0] ++ [TCons ("Prelude", "Maybe") (map TVar [0])])
 \end{coqcode} 
 In case of \texttt{Just} this results in the type $a \rightarrow$ Maybe $a$, which is added to the context together with the list of type variables of the data type. This procedure is applied to every constructor declaration and, together with the parsed function declarations, results in a context that contains the full type and a list of type variables for every function and constructor.
-\section{Typing}\todo{:: durch $\mapsto$ bei CuMin ersetzen?}
-The FlatCurry typing rules are expand the concepts we discussed in the previous chapter. Functions can be applied to multiple arguments at once, there are user-defined data types, generic \texttt{case} expressions and \texttt{let} expressions with multiple bindings. This results in more complex typing rules, because conditions need to hold for multiple elements, instead of one, and are not restricted to a specific data type.
+\section{Typing}
+The FlatCurry typing rules expand concepts we discussed in the previous chapter. Functions can be applied to multiple arguments at the same time, there are user-defined data types, generic \texttt{case} expressions and \texttt{let} expressions with multiple bindings. This results in more complex typing rules because conditions need to hold for multiple elements, instead of one, and are not restricted to a specific data type.
 \par 
-We begin by defining names for common types, for example \texttt{Int}, \texttt{Char} and \texttt{Float}, which represent \coqinline{TCons ("Prelude", "Int") []} for the respective type.
-In the following rules the same syntax $\Gamma \vdash e :: \tau$ as before is used to express that in a context $\Gamma$ the expression $e$ has the type $\tau$. We will discuss inference rules and, if not easily transferable, the implementation for FlatCurry expressions.
+We begin by defining names for common types, for example \texttt{Int}, \texttt{Char} and \texttt{Float}, which are represented by a type constructor call \texttt{TCons ("Prelude", "Int") []} for the respective type.
+In the following rules the same syntax $\Gamma \vdash e :: \tau$ is used as before to express that in a context $\Gamma$ the expression $e$ has the type $\tau$. We will discuss the different inference rules and, if not easily transferable, the FlatCurry implementation of the rule.
+\paragraph{Literals and Variables}
+FlatCurry does have fewer literals than CuMin, all of which are contained in the \texttt{Lit} expression. Therefore, the type of a literal depends on the constructor of its argument.
 \begin{figure}[H]
 \begin{subfigure}{.3 \linewidth}
 	\centering
@@ -1259,8 +1282,11 @@ In the following rules the same syntax $\Gamma \vdash e :: \tau$ as before is us
 \end{subfigure}
 \caption{Typing rules for literals and variables}
 \end{figure}
-FlatCurry does have fewer literals than CuMin; the type of a literal depends on its argument. The other literals we defined explicitly in CuMin are replaced by \coqinline{TCons} constructs, for example \coqinline{TCons ("Prelude", "[]") []} represents the empty list. Typing variables works as before: If the context $\Gamma$ has an entry for a variable, its type is the value returned by $\Gamma$.
-\par
+\vspace*{-.5em}
+\noindent
+The other literals we defined explicitly in CuMin are replaced by \coqinline{TCons} constructs, for example, \texttt{TCons ("Prelude", "[]") []} represents the empty list. Typing variables works as before: If the context $\Gamma$ has an entry for a variable, its type is the value \mbox{returned by $\Gamma$.}
+\paragraph{Function Application}
+Applying a function $f$ to $n$ arguments $e_{1} \dots e_{n}$ with types $\tau_{1} \dots \tau_{n}$ requires the types to match the argument types in the function type returned by the context. Looking up the function $f$, denoted by curly brackets, yields the pair $(\tau_1 \rightarrow \dots \rightarrow \tau_n \rightarrow \tau, \overline{x_k})$ where the first component is the type of $f$ and the second is a list of type variables, as defined in \autoref{context}. 
 \begin{figure}[H]
 	\begin{prooftree}
 		\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_k \mapsto t_k}~]$}
@@ -1270,39 +1296,44 @@ FlatCurry does have fewer literals than CuMin; the type of a literal depends on 
 			\dots \rightarrow \tau_n \rightarrow \tau, \overline{x_k})\} \vdash \text{$f$ } e_1
 			\dots e_n :: \tau[~\overline{x_k \mapsto t_k}~]$}
 	\end{prooftree}
+\vspace*{-1em}
 \caption{Typing rule for function applications}
 \label{typingfunc}
+\vspace*{-.5em}
+\end{figure} \noindent
+The notation $[~\overline{x_{k} \mapsto t_{k}}~]$ represents a type substitution of the type variable $x_{i}$ with the type $t_{i}$. The types $t_{i}$ need to be supplied explicitly, because there is no type inference. For instance, the application \texttt{app = map IntToChar [1,2,3]} with an arbitrary function \texttt{IntToChar $::$ (Int $\rightarrow$ Char)} would result in the typing rule below.
+\begin{figure}[H]
+	\begin{prooftree}
+		\AxiomC{$\Gamma \vdash \texttt{IntToChar} :: (a \rightarrow b)[a \mapsto t_1, b \mapsto t_2]$}
+		\AxiomC{$\Gamma \vdash [1,2,3] :: [a][a \mapsto t_1, b \mapsto t_2]$}
+		\BinaryInfC{$\Gamma, \{ \texttt{map} \mapsto ((a \rightarrow b) \rightarrow [a] \rightarrow [b], [a,b])\} \vdash \texttt{app} :: [b][a \mapsto t_1, b \mapsto t_2]$}
+	\end{prooftree}
+	\vspace*{-1em}
+	\caption{Typing rule for \texttt{map IntToChar [1,2,3]}}
 \end{figure}
-\todo{CuMin Vergleich}
-\todo{Überschriften?}
-Applying a function $f$ to $n$ arguments $e_{1} \dots e_{n}$ requires the arguments to have types $\tau_{1} \dots \tau_{n}$ that match the types in the function type returned by the context. Looking up the function $f$, denoted by curly brackets, yields the pair $(\tau_1 \rightarrow \dots \rightarrow \tau_n \rightarrow \tau, \overline{x_k})$ where the first component is the type of $f$ and the second is a list of type variables, as defined in \autoref{context}. The notation $[~\overline{x_{k} \mapsto t_{k}}~]$ represents a type substitution of the type variable $x_{i}$ with the type $t_{i}$. The types $t_{i}$ need to be supplied explicitly, because there is no type inference. For instance, the application of \texttt{map} to \texttt{IntToChar} and \texttt{[1,2,3]} yields the pair $((a \rightarrow b) \rightarrow [a] \rightarrow [b], [a,b])$ from the context, which results in the premises $\Gamma \vdash \texttt{IntToChar} :: (a \rightarrow b)[a \mapsto \texttt{Int}, b \mapsto \texttt{Char}]$ and $\Gamma \vdash [1,2,3] :: [a][a \mapsto \texttt{Int}, b \mapsto \texttt{Char}]$.\todo{Grafik statt inline Code?}\\
+\vspace*{-.5em}
+\noindent
+In this example the $\overline{x_i}$ are instantiated with $a$ and $b$ by looking up \texttt{map} in the context. The type information obtained from the context is divided into the types of the respective arguments. Since these types can still contain type variables, the substitution types $t_1$ and $t_2$ need to be instantiated appropriately, in this case with \texttt{Int} and \texttt{Char}, in order satisfy the premises of the rule.\\
 \par \noindent
-\todo{Neue Versionen von Comb einpflegen}
-The implementation is a set of rules in an inductively defined proposition, as before: 
+Similar to CuMin, we use the inductively defined proposition \texttt{hasType} to describe typing rules. The respective types are adapted to reflect the FlatCurry syntax, but apart from this change, the proposition works the same. The implementation of function applications is shown below.
 \begin{coqcode}
 Inductive hasType : context -> Expr -> TypeExpr -> Prop :=
-  T_Comb_Fun : forall Gamma qname exprs substTypes T,
-                 let funcT := fromOption defaultTyVars ((fCon Gamma) qname) in
-                 let specT := multiTypeSubst (snd funcT) substTypes (fst funcT)
-                  in funcPart specT None = T ->
-                     Forall2 (hasType Gamma) exprs (fst (funcTyList specT)) ->
-               Gamma |- (Comb FuncCall qname exprs) ::: T
+T_Comb : forall Gamma qname exprs cType substTypes T,
+           let funcT := fromOption failType ((combCon cType Gamma) qname) in
+           let specT := multiTypeSubst (snd funcT) substTypes (fst funcT)
+            in funcPart specT None = T ->
+               Forall2 (hasType Gamma) exprs (fst (funcTyList specT)) ->
+           Gamma |- (Comb cType qname exprs) ::: T
 \end{coqcode}
-Firstly, the qualified name of the function is looked up in the function context and the \coqinline{option} removed, which yields the pair \coqinline{funcT}. The variable \coqinline{substTypes}, that is, a list of types that replace the type variables, is supplied by the user when using the rule. It is used to replace the type variables in the function type, which yields the specialized type \coqinline{specT}. Now we need to determine the type $T$ of the function application, which is computed by \coqinline{funcPart}. It takes a function type plus an optional number and yields the return type of the function if no number is supplied. Otherwise \coqinline{funcPart} removes the first $n$ types of the function, for example \texttt{funcPart (Some 2) (a -> b -> c)} yields \texttt{c}. This is useful for computing the type of partial applications, in this case we need only the return type, since all arguments are supplied.
+The rule \texttt{T\_Comb} can type full function and constructor applications since the only difference is the context that the function or constructor is looked up in, which is decided by \texttt{combCon} depending on the supplied \texttt{combType}. The result is \texttt{funcT}, a pair of the function's type and type variables. 
+\par
+Next, the variable \texttt{substTypes} (the specialization types supplied by the user) is used to replace the type variables in the function type with \texttt{multiTypeSubst}, which yields the specialized type \coqinline{specT} the same way the function works in the CuMin implementation.
+\par
+Now we need to determine the type \texttt{T} of the function application, which is computed by \coqinline{funcPart}. It takes a function type plus an optional number and yields the return type of the function if no number is supplied. Otherwise \coqinline{funcPart} removes the first $n$ types of the function, for example \texttt{funcPart (Some 2) (a -> b -> c)} yields \texttt{c}. This is useful for computing the type of partial applications. but in this case we need only the return type, since all arguments are supplied.
 \par
 The last premise checks that the expressions have the type of the respective part of the specialized function part by transforming the specialized type into a list of types, minus the return type that is contained in the second part of the pair \texttt{funcTyList} returns. \coqinline{Forall2} checks if the $i$-th element of the expression list has the $i$-th type of the type list, which represents the conditions of the inference rule in \autoref{typingfunc}.
-\begin{figure}[H]
-\begin{prooftree}
-	\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_k \mapsto t_k}~]$}
-	\AxiomC{$\dots$}
-	\AxiomC{$\Gamma \vdash e_n :: \tau_n[~\overline{x_k \mapsto t_k}~]$}
-	\TrinaryInfC{$\Gamma, \{ C \mapsto (\tau_1 \rightarrow
-		\dots \rightarrow \tau_n \rightarrow \tau, \overline{x_k}\} \vdash \text{$C$ } e_1
-		\dots e_n :: \tau[~\overline{x_k \mapsto t_k}~]$}
-\end{prooftree}
-\caption{Typing rule for constructor applications}
-\end{figure}
-The application of a constructor works identical to a function application, which is a consequence of the way we constructed the context and the type transformation associated with adding a constructor. The only difference is the context to look up the constructor because we distinguish between constructors and functions.
+\paragraph{Partial Function Application}
+The partial application of a $n$-ary function $f$ to $k$ arguments works similar to the full application. The type of $f$ returned by $\Gamma$ is diveded into two parts: the first $k$ types are checked against the argument's types and the last $n + 1 - k$ types represent the new type of $f$. 
 \begin{figure}[H]
 \begin{prooftree}
 	\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_i \mapsto t_i}~]$}
@@ -1321,23 +1352,24 @@ $F = \{ \text{$f$} \mapsto (\tau_1 \rightarrow
 \end{center}
 \caption{Typing rule for partial function applications}
 \end{figure}
-\noindent
-The partial application of a $n$-ary function $f$ to $k$ arguments works similar to the full application. The type of $f$ returned by $\Gamma$ is split in two parts: the first $k$ types are checked against the argument's types and the last $n + 1 - k$ types represent the new type of $f$. The substitution types $t_{i}$ need to be specified only for type variables that occur in the supplied arguments, for example a function $f :: a \rightarrow a \rightarrow b$ applied to the number 4 would require the substitution \texttt{[$a \mapsto \text{Int}, b \mapsto b$]}, because we do not want to specialize types of arguments that have not been applied yet.
+The substitution types $t_{i}$ need to be specified only for type variables that occur in the supplied arguments, for example, a function $f :: a \rightarrow a \rightarrow b$ applied to the number 4 would require the substitution \texttt{[$a \mapsto \text{Int}, b \mapsto b$]} because we do not want to specialize types of arguments that have not been applied yet.
 \begin{coqcode}
-T_Comb_PFun : forall Gamma qname exprs substTypes remArg T,
-                let funcT := fromOption defaultTyVars ((fCon Gamma) qname) in
-                let specT := multiTypeSubst (snd funcT) substTypes (fst funcT) in
-                let     k := funcArgCnt (fst funcT) - remArg
-                let argTs := firstn (@length Expr exprs) (fst (funcTyList specT))
-                 in funcPart specT (Some k) = T ->
-                    Forall2 (hasType Gamma) exprs argTs ->
-              Gamma |- (Comb (FuncPartCall remArg) qname exprs) ::: T
+T_Comb_Part: forall Gamma qname exprs substTypes cType T,
+               let funcT := fromOption failType ((combCon cType Gamma) qname) in
+               let specT := multiTypeSubst (snd funcT) substTypes (fst funcT) in
+               let     k := funcArgCnt (fst funcT) - (partCombArgs cType) in
+               let argTs := firstn (@length Expr exprs) (fst (funcTyList specT))
+                in funcPart specT (Some n) = T ->
+                   Forall2 (hasType Gamma) exprs argTs ->
+               Gamma |- (Comb cType qname exprs) ::: T
 \end{coqcode}
-Similarly to the implementation of the full application, we begin with looking up the function type in the context and specializing it with the supplied types. As mentioned above, it is technically necessary to supply type variables in \coqinline{substTypes} for every type variable that is not contained in the argument's types, however, \coqinline{multiTypeSubst} works by using \coqinline{zip} to pair the substitute types and type variables. If \coqinline{zip} is applied to lists of different size, the longer list's tail is discarded, which is, in this case, the list of type variables that we do not want to replace.
+Similarly to the implementation of the full application, we begin with looking up the function type in the context and specializing it with the supplied types. As mentioned above, it is technically necessary to supply type variables in \coqinline{substTypes} for every type variable of the function, however, \coqinline{multiTypeSubst} works by using \coqinline{zip} to pair the substitute types and type variables. If \coqinline{zip} is applied to lists of different size, the longer list's tail is discarded, which is, in this case, the list of type variables that we do not want to replace.
 \par
-To compute the new type of $f$, we need to consider the number of remaining arguments supplied in the partial function call. The function \coqinline{funcArgCnt} yields the number of arguments a function type has, which we subtract the number of remaining arguments from -- this results in the number $k$ of arguments applied to the function. We previously used \coqinline{funcPart} with \coqinline{None} to obtain the return type of a function, now we use it with \coqinline{Some n}. This removes the first $k$ types, that is, the arguments that were supplied to the function, and yields the new type of $f$.
+To compute the new type of $f$, we need to consider the number of remaining arguments supplied in the partial function call. The function \coqinline{funcArgCnt} yields the number of arguments a function type has, of which we subtract \texttt{partCombArgs cType}, that is, the number of remaining arguments contained in the \texttt{combType}. This results in the number \texttt{k} of arguments applied to the function. We previously used \coqinline{funcPart} with \coqinline{None} to obtain the return type of a function, now we use it with \coqinline{Some k}. This removes the first $k$ types, that is, the arguments that were supplied to the function, and yields the new type of $f$.
 \par
-Lastly, we check that the argument's types match the types of the specialized function type. Only the first $k$ types are relevant and thus we use \coqinline{firstn} to discard the other types and use \coqinline{Forall2} with the result and the supplied arguments.
+Lastly, we check that the argument's types match the types of the specialized function type. Only the first $k$ types are relevant and thus, we use \coqinline{firstn} to discard the other types and use \coqinline{Forall2} with the result and the supplied arguments.
+\paragraph{Let Expression}
+Typing \texttt{let} expressions differs, compared to CuMin, in the arbitrary number of bindings allowed. A variable $x$ can occur in other bindings \texttt{(y = x + 1)} or even its own, for example in infinite lists \texttt{(x = [2] ++ x)}. As a consequence, context entries for the variables $x_{1}\dots x_{n}$ are required in order to type the expressions $e_{1} \dots e_{n}$ and $e$. 
 \begin{figure}[H]
 \begin{prooftree}
 	\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto \tau_n \vdash e_1 :: \tau_1$}
@@ -1352,7 +1384,7 @@ Lastly, we check that the argument's types match the types of the specialized fu
 \end{prooftree}
 \caption{Typing rule for let expressions}
 \end{figure}\noindent
-Typing \texttt{let} expressions differs, compared to CuMin, in the arbitrary number of bindings allowed. A variable $x$ can occur in other bindings \texttt{(y = x + 1)} or even its own, for example in infinite lists \texttt{(x = [2] ++ x)}. As a consequence, context entries for the variables $x_{1}\dots x_{n}$ are required in order to type the expressions $e_{1} \dots e_{n}$ and $e$. While it is a syntactically valid to write \texttt{let} expressions without bindings, for example \texttt{one = let in 1}, we require at least one binding because such an occurrence is replaced by its value in FlatCurry.
+While it is a syntactically valid to write \texttt{let} expressions without bindings, for example \texttt{one = let in 1}, we require at least one binding because such an occurrence is replaced by its value in FlatCurry.
 \begin{coqcode}
 T_Let : forall Gamma ve ves tyexprs e T,
           let vexprs   := (ve :: ves) in
@@ -1363,7 +1395,11 @@ T_Let : forall Gamma ve ves tyexprs e T,
               Delta |- e ::: T ->
           Gamma |- (Let (ve :: ves) e) ::: T
 \end{coqcode}
-We use pattern matching to verify that the list of bindings \texttt{vexrps}, that is, pairs of variables and expressions, is not empty. It is possible to use \texttt{length vexrps > 0} instead, but pattern matching has two advantages: The rule fails directly when applied to an empty list and, if this is not the case, the proof is shorter because we do not need to prove the inequality. As before, \texttt{tyexprs} is explicitly supplied and represents the types of the expressions used in the bindings. The function \coqinline{replaceSnd} takes a list of pairs plus another list and replaces the second component of every pair with the corresponding item in the list; in this context we replace expressions with types, resulting in pairs of variables and types, which we can use to create an updated context $\Delta$ with \coqinline{multiTypeUpdate}. Lastly, we check $\Delta \vdash e_{i} :: \tau_{i}$ with \coqinline{Forall2} and the type of the expression $e$, that is, the type of the \texttt{let} expression.
+We use pattern matching to verify that the list of bindings \texttt{vexrps}, that is, pairs of variables and expressions, is not empty. It is possible to use \texttt{length vexrps > 0} instead, but pattern matching has two advantages: The rule fails directly when applied to an empty list and, if this is not the case, the proof is shorter because we do not need to prove the inequality. 
+\par
+The variable \texttt{tyexprs} is explicitly supplied and represents the types of the expressions used in the bindings. The function \coqinline{replaceSnd} takes a list of pairs plus another list and replaces the second component of every pair with the corresponding item in the list; in this context we replace expressions with types, resulting in pairs of variables and types, which we can use to create an updated context $\Delta$ with \coqinline{multiTypeUpdate}. Lastly, we check the types of the expressions used in the bindings with \coqinline{Forall2} and use the updated context to type $e$.
+\paragraph{Case Expression}
+FlatCurry has one generic \texttt{case} expression compared to CuMin's specific versions for every type, which results in the most complex rule so far. The expression $e$ can have any type with an arbitrary number of constructors, all of which need to be looked up in the context and specialized with the supplied types, followed by updating the context with new variables.
 \begin{figure}[H]
 \begin{prooftree}
 	\AxiomC{$\Gamma, \overline{x_i \mapsto \tau_{1_i} [~\overline{v_{j} \mapsto t_{j}}~]} \vdash e_1 :: \tau'$}
@@ -1381,18 +1417,8 @@ $Cs = \{C_1 \mapsto (\tau_{1_1} \rightarrow
 \dots \rightarrow \tau_{k_m} \rightarrow \tau, \overline{v_{i}}) \}$
 \end{flushright}
 \caption{Typing rule for case expressions}
-\end{figure}\noindent
-FlatCurry has one generic \texttt{case} expression compared to CuMin's specific versions for every type, which results in the most complex rule so far. The expression $e$ can have any type with an arbitrary number of constructors, all of which need to be looked up in the context and specialized with the supplied types, followed by updating the context with new variables.
-A clarifying example:
-\begin{coqcode}
-fromMaybeCase d m = case m of
-                      Just x  -> x
-                      Nothing -> d
-example = fromMaybeCase 0 (Just 2)
-\end{coqcode}
-Looking up \texttt{Just} and \texttt{Nothing} yields $(a \rightarrow \text{Maybe}~ a, [a])$ and (Maybe $a$, $[a]$). We called the function with integer values and thus we specialize $a$ in both types with \texttt{Int}, resulting in (Int $\rightarrow$ Maybe Int) and (Maybe Int). In order to type the expression $x$, we need to add $x \mapsto$ Int to $\Gamma$; because we type the case expression only, we can assume $d$ to have an entry in the context. Now both expressions $x$ and $d$ can be typed to $\tau' =$ Int and satisfy the conditions of the rule, that is, ($\Gamma, x \rightarrow a[a \mapsto \text{Int}] \vdash x :: \text{Int}$), ($\Gamma \vdash d :: \text{Int}$) and ($\Gamma \vdash \text{Just}~ 2 :: \text{Maybe} ~a [a \mapsto Int]$).\\
-\par\noindent
-The implementation makes heavy use of pairs and lists. Therefore, many calls of \coqinline{map}, \coqinline{fst} and \coqinline{snd} are necessary. Again, we use pattern matching to ensure that the \texttt{case} expression has a least one branch because, unlike \texttt{let}, the expression would otherwise not be typeable.
+\end{figure}  \noindent
+Because every branch expression needs a context containing the variables of its constructor, there are two options: either every expression is typed in its own context that contains only the relevant variable entries, or all variables are added to the same context that then can type every expression. The latter option is used here because, even if variables are named the same in a Curry program, FlatCurry uses unique variable names and therefore there is no risk of a name clash. Unfortunately, the result of this approach is the rather obscure formal representation with twice overlined expressions.
 \todo{CamelCase im Code}
 \begin{coqcode}
 T_Case : forall Gamma ctype e substTypes T Tc p vis brexprs',
@@ -1400,7 +1426,8 @@ T_Case : forall Gamma ctype e substTypes T Tc p vis brexprs',
            let   pattps := map pattSplit (brexprsToPatterns brexprs) in
            let contyvis := map (compose (fromOption defaultTyVars) (cCon Gamma))
                                (map fst pattps) in
-           let     tvis := snd (fromOption defaultTyVars (cCon Gamma (fst (pattSplit p)))) in
+           let     tvis := snd (fromOption defaultTyVars 
+                                           (cCon Gamma (fst (pattSplit p)))) in
            let   specTs := map (multiTypeSubst tvis substTypes)
                                (map fst contyvis) in
            let  vistysl := zip (map snd pattps)
@@ -1411,7 +1438,25 @@ T_Case : forall Gamma ctype e substTypes T Tc p vis brexprs',
                Gamma |- e ::: Tc ->
          Gamma |- (Case ctype e (Branch p vis :: brexprs')) ::: T
 \end{coqcode}
-The implementation might not be clear at first sight, therefore we will use the example above to illustrate the different steps. We begin with a list of branch expressions \texttt{brexprs}, that is, a pattern and an expression. \texttt{Var 3} represents the variable introduced in the \texttt{Just} pattern and \texttt{Var 1} is the default value $d$.
+Again, we use pattern matching to ensure that the \texttt{case} expression has a least one branch because, unlike \texttt{let}, the expression would otherwise not be typeable. The implementation might not be clear at first sight. Therefore, the example below, that is, a function that retrieves the value of a \texttt{Maybe} or returns a default value, is used to illustrate the computation.
+\begin{flushleft}
+	\begin{minipage}[t]{.45 \linewidth}
+		\begin{coqcode}
+fromMaybeCase d m = case m of
+                      Just x  -> x
+                      Nothing -> d
+		\end{coqcode}
+	\end{minipage}
+	\hfill
+	\vrule
+	\vspace{.5em}
+	\begin{minipage}[t]{.5 \linewidth}
+		\begin{coqcode}
+example = fromMaybeCase 0 (Just 2)
+		\end{coqcode}
+	\end{minipage}
+\end{flushleft}
+We begin with a list of branch expressions \texttt{brexprs}, that is, a pattern and an expression. \texttt{Var 3} represents the variable introduced in the \texttt{Just} pattern and \texttt{Var 1} is the default value $d$.
 \begin{coqcode}
 [(Branch (Pattern ("Prelude","Just")   [3])(Var 3));
  (Branch (Pattern ("Prelude","Nothing") [])(Var 1))]
@@ -1430,52 +1475,53 @@ The type variables are equal for every constructor since they return the same ty
 [FuncType Int (TCons ("test", "Maybe") [Int]);
                TCons ("test", "Maybe") [Int]]
 \end{coqcode}
- To update the variables of the constructors in the context, they are merged with their types by using \texttt{zip}, resulting in the list \texttt{vistysl}. 
+The second component we need in the premises later is \texttt{vistysl}, a list of pairs that assigns all variables used in constructors their type, according to the specialized types.
 \begin{coqcode}
 [([3], [Int]); ([], [])]
 \end{coqcode}
-Lastly, the list of pairs are added to the context by using \coqinline{multiListTypeUpdate}. The function takes a list of pairs of lists, that is, a pair that contains lists of variables and the corresponding types for every constructor, and adds them to the context. The pairs represents \texttt{Just} with its variable $x$ and \texttt{Nothing} without variables.
+The pairs represents \texttt{Just} with its variable $x$ and \texttt{Nothing} without variables.
+Lastly, \texttt{vistysl} is added to the context by using \coqinline{multiListTypeUpdate}. The function takes a list of pairs of lists, that is, a pair that contains lists of variables and the corresponding types for every constructor, and adds them to the context.
+\par
+Now, the computational part of the rule is finished and we can begin to check the premises. The first \texttt{Forall} proposition checks if all branch expressions have the same type \texttt{T}. In this case we would need to check if 0 and 2 are integers, which is obviously true. The next \texttt{Forall} proposition checks if the specialized data type \texttt{Tc} of all constructors matches the case expression's type, that is, \texttt{Maybe Int}, which is also true. Therefore, the case expression has the type \texttt{Tc}.
+\paragraph{Or, Free and Typed}
+The typing rules for \texttt{or} and \texttt{free} expressions are short:
+\begin{itemize}
+	\item The \coqinline{or} expression requires both expressions to have the same type $\tau$, so that the result's type is coherent.
+	\item When introducing free variables $x_1 \dots x_n$ in an expression $e$, the types $\tau_1 \dots \tau_n$ need to be added to the context on order to type $e$.
+\end{itemize}
 \begin{figure}[H]
 	\begin{subfigure}[b]{.3 \linewidth}
 		\centering
 		\begin{prooftree}
 			\AxiomC{$\Gamma \vdash e_1 :: \tau$}
-			\AxiomC{$\Gamma \vdash e_2 :: \tau$}
+			\AxiomC{$\Gamma \vdash e_2 :: \tau$}\LeftLabel{\footnotesize a}
 			\BinaryInfC{$\Gamma \vdash e_1 \text{ or } e_2 :: \tau$}
 		\end{prooftree}
-		\subcaption{}
 	\end{subfigure}
-	\hspace{.02 \linewidth}
+	\hspace{.01 \linewidth}
 	\begin{subfigure}[b]{.38 \linewidth}
 		\centering
 		\begin{prooftree}
 			\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto \tau_n \vdash
-				e :: \tau$}
+				e :: \tau$}\LeftLabel{\footnotesize b}
 			\UnaryInfC{$\Gamma \vdash \text{let } x_1, \dots, x_n \text{ free in } e :: \tau $}
 		\end{prooftree}
-		\subcaption{}
 	\end{subfigure}
-	\hspace{.02 \linewidth}
+	\hspace{.01 \linewidth}
 	\begin{subfigure}[b]{.2 \linewidth}
 		\centering
 		\begin{prooftree}
 			\AxiomC{$\Gamma \vdash e :: T$}
-			\AxiomC{$T \Rightarrow \tau$}
+			\AxiomC{$T \Rightarrow \tau$}\LeftLabel{\footnotesize c}
 			\BinaryInfC{$\Gamma \vdash (e ::: \tau) :: \tau$}
 		\end{prooftree}
-		\subcaption{}
 	\end{subfigure}
 	\caption{Typing rules for (a) or, (b) free and (c) typed expressions}
 \end{figure}
-\todo{Unterschiedliche Höhe...}\noindent
-The typing rules for \texttt{or} and \texttt{free} expressions are short:
-\begin{itemize}
-	\item The \coqinline{or} expression requires both expressions to have the same type $\tau$, so that the result's type is coherent.
-	\item When introducing free variables $x_1 \dots x_n$ in an expression $e$ the types $\tau_1 \dots \tau_n$ need to be added to the context on order to type $e$.
-\end{itemize}
-Typed expressions require that the stated type $\tau$ of the expression $e$ can be specialized to $T$, that is, $\exists t_1 \dots t_n: T[~\overline{x_i \mapsto t_i}~] = \tau$ where $x_1 \dots x_n$ are type variables in $\tau$, notated as $T \Rightarrow \tau$. This requirement is necessary because polymorphic functions, such as \texttt{id :: a $\rightarrow$ a}, can be typed to a more specific type, for example \mbox{\texttt{intId = id :: Int $\rightarrow$ Int}}.
+\noindent
+Typed expressions require that the (polymorphic) type $T$ of the expression $e$ can be specialized to the stated type $\tau$, that is, $\exists t_1 \dots t_n: T[~\overline{x_i \mapsto t_i}~] = \tau$ where $x_1 \dots x_n$ are type variables in $T$, notated as $T \Rightarrow \tau$. This requirement is necessary because polymorphic functions, such as \texttt{id $::$ a $\rightarrow$ a}, can be typed to a more specific type, for example \mbox{\texttt{intId = id $::$ Int $\rightarrow$ Int}}.
 \par
-The Coq equivalent of $\tau \Rightarrow \tau$ is an inductively defined proposition \coqinline{isSpecializableTo} that takes two type expressions and can be used to prove that $T$ is specializable to $\tau$.
+The Coq equivalent of $T \Rightarrow \tau$ is an inductively defined proposition \coqinline{isSpecializableTo} that takes two type expressions and can be used to prove that $T$ is specializable to $\tau$.
 \begin{coqcode}
 Reserved Notation "T '==>' t" (at level 40).
 Inductive isSpecializableTo : TypeExpr -> TypeExpr -> Prop :=
@@ -1485,7 +1531,7 @@ Inductive isSpecializableTo : TypeExpr -> TypeExpr -> Prop :=
                T ==> t
 where "T '==>' t" := (isSpecializableTo T t).
 \end{coqcode}
-\coqinline{T_Eq} states that any type can be "specialized" to itself, which is useful for expressions like \texttt{(42 :: Int)}, where no specialization is necessary. If we want to prove that a type $T$ can be specialized to $\tau$, we need to substitute all type variables in $T$ with explicitly supplied types and the result must be equal to $\tau$.
+\coqinline{T_Eq} states that any type can be "specialized" to itself, which is useful for expressions like \texttt{(42 $::$ Int)}, where no specialization is necessary. If we want to prove that a type $T$ can be specialized to $\tau$, we need to substitute all type variables in $T$ with explicitly supplied types and the result must be equal to $\tau$.
 \section{Conversion of FlatCurry to Coq}
 \label{conversion}
 Reasoning about Curry programs in Coq requires a way to transform a \texttt{.curry} file into the data structure discussed in \autoref{flatcurrysyntax}. The module \texttt{FlatCurry.Files} provides functions to read and transform Curry files, which can be viewed in FlatCurry syntax by using the \texttt{showFlatProg} function of the \texttt{FlatCurry.ShowFlat} module. We modeled the syntax in Coq deliberately as similar as possible to the original syntax to minimize the conversion effort necessary. The differences we need to address are:
@@ -1638,7 +1684,7 @@ replChar a b s = map (\c -> if (c == a) then b else c) s
 
 replChar 'a' b "a -> a" == "B -> B" where b free
 \end{haskellcode}
-The function \texttt{replChar} replaces a character in a string, similar to replacing a type in a larger construct of types. Curry allows us to use a free variable in place of the replacement character and can solve the equation, that is, \texttt{{b = 'B'}}. Coq is able to instantiate variables in such a scenario too, as we saw in \autoref{autoproof}: The equation is simplified until both sides contain similar data structures and then individual components are matched to variables, for example \texttt{?a $\rightarrow$ Int = Char $\rightarrow$ Int} would result in the instantiation of \texttt{?a} with \texttt{Char}.
+The function \texttt{replChar} replaces a character in a string, similar to replacing a type in a larger construct of types. Curry allows us to use a free variable in place of the replacement character and can solve the equation, that is, \texttt{{b = 'B'}}. Coq is able to instantiate variables in such a scenario too, as we saw in \autoref{autoproof}: The equation is simplified until both sides contain similar data structures and then individual components are matched to variables, for example, \texttt{?a $\rightarrow$ Int = Char $\rightarrow$ Int} would result in the instantiation of \texttt{?a} with \texttt{Char}.
 \par
 The actual cause of the problem is the definition of \texttt{multiTypeSubst} or rather that it replaces multiple variables. The above Curry function replaces only one character, a definition equal to \texttt{multiTypeSubst} that replaces multiple characters in a string could look like this:
 \begin{haskellcode}
