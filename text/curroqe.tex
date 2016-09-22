@@ -1538,7 +1538,7 @@ Reasoning about Curry programs in Coq requires a way to transform a \texttt{.cur
 \begin{itemize}
 	\item Type declarations use the constructor \coqinline{Type}, which is a keyword in Coq.
 	\item Floating point number and character notations are not available or different.
-	\item The " character needs to be escaped because characters are enclosed in double quotes themselves.
+	\item The double quote character needs to be escaped because characters are enclosed in " themselves.
 	\item List elements are separated by semicolons instead of commas.
 \end{itemize}
 To accomplish the above conversion one may come up with the idea of parsing the FlatCurry string directly, which requires counting brackets to distinguish list from pair separators and replacing certain substrings and characters in a large case expression. While this is a viable way of achieving the goal, it is neither an easy maintainable nor very elegant solution.
@@ -1551,18 +1551,20 @@ showFlatTypeCoq (Type name vis tpars consdecls) =
                 ++ showFlatList show tpars
                 ++ showFlatList showFlatCons consdecls ++ ")"
 \end{haskellcode}
-The function \texttt{showFlatTypeCoq} returns the string representation of a type declaration by using either \texttt{show} directly or an additional formatting function to transform the values into strings, which are then concatenated and prefixed by a newline and the constructor name. To prevent Coq from mistaking the constructor for a keyword,  we use "Typec" instead of "Type".
+The function \texttt{showFlatTypeCoq} returns the string representation of a type declaration by using either \texttt{show} directly or an additional formatting function to transform the values into strings, which are then concatenated and prefixed by a newline and the constructor name. To prevent Coq from mistaking the constructor for a keyword,  we use "Typec" instead of "Type". 
+\par
+Literals are prefixed by the respective constructor and use \texttt{show} to create the string representing the value. In case of floats, it is sufficient to enclose the value in double quotes since we treat them as strings.
 \begin{haskellcode}
 showFlatLit (Floatc f) = "(Floatc \"" ++ show f ++ "\")"
 showFlatLit (Charc  c) = "(Charc \"" ++ escQuote (filter (/='\'') (show c))
                          ++ "\")"
 \end{haskellcode}
-Literals are prefixed by the respective constructor and use \texttt{show} to create the string representing the value. In case of floats, it is sufficient to enclose the value in double quotes since we treat them as strings. Characters require slightly more effort: \texttt{show} returns a string, for example \texttt{'a'}, that contains single quotes, which we remove by filtering out the character only. Since Curry denotes strings with single quotes, they can contain unescaped double quotes. Hence, we use the function \texttt{escQuote} to escape every occurrence by adding another double quote.\cite{CoqManualV8}
+Characters require slightly more effort: \texttt{show} returns a string, for example \texttt{'a'}, that contains single quotes, which we remove by filtering out the character only. Since Curry denotes strings with single quotes, a string can contain unescaped double quotes. Furthermore, we use the function \texttt{escQuote} to escape double quotes by adding another double quote to it.
 \begin{haskellcode}
 showFlatListElems :: (a->String) -> [a] -> String
 showFlatListElems format elems = concat (intersperse ";" (map format elems))
 \end{haskellcode}
-The first argument of \texttt{showFlatListElems} is a formatting function that prints a specific structure. Thus, \texttt{showFlatListElems} can transform arbitrary lists to strings by mapping the formatting function over it, interspersing a separator and concatenating the resulting list. In accordance with Coq's list notations, we separate the list's elements with semicolons, instead of commas.\\
+The first argument of \texttt{showFlatListElems} is a formatting function that prints a specific structure. Thus, \texttt{showFlatListElems} can transform arbitrary lists to strings by mapping the formatting function over it, interspersing a separator and concatenating the resulting list. In accordance with Coq's list notations, we separate the list's elements with semicolons instead of commas.\\
 \par\noindent
 The above modifications allow us to write a Curry program that transforms \texttt{.curry} files to Coq files. The function \texttt{showFlatCoq} is called with a file path $s$ and returns an IO action that prints the transformed program. 
 \begin{haskellcode}
@@ -1578,7 +1580,7 @@ showFlatCoq s = do flatProg  <- readFlatCurry s
 The supplied file is parsed by \texttt{readFlatCurry}, which results in a \texttt{Prog}, that is, the Curry data structure representing a FlatCurry program. We use a \texttt{let} expression to obtain the program name and apply the modified \texttt{showFlatProgCoq} function to \texttt{flatProg}. Then, the flat program string is concatenated with a header and import string. The imports required are the Coq definition of FlatCurry and \texttt{Lists.List}, that is, a module containing list notations.
 As usual, the program needs a definition and subsequently a name. Thus, we use \texttt{defString} with the \texttt{modname} we got earlier; the result is a string of the form \coqinline{Definition modname_coq :=}. Together with the actual program and a concluding dot, we have all parts of the finished Coq program that can now be imported in other programs.
 \section{Examples}
-In the previous sections we have discussed the FlatCurry syntax, context and typing rules. Additionally, we created a program that transforms Curry programs into a Coq representation; now we will take a look at some examples.
+In the previous sections we have discussed the FlatCurry syntax, context and typing rules. Additionally, we created a program that transforms Curry programs into a Coq representation; now we take a look at some examples.
 \begin{flushleft}
 	\begin{minipage}[t]{.4 \linewidth}
 \begin{haskellcode}
@@ -1635,12 +1637,11 @@ Definition MyProg_coq :=  (Prog "MyProg"
 ]
 [] (* operator declarations *)
 ).
-
 Definition cntxt := parseProgram MyProg_coq.
 \end{coqcode}
-The context is created by applying \texttt{parseProgram} to the program definition, as shown in \autoref{context}. In the following proofs \texttt{exp} variables represent the expression of the respective example's \texttt{Rule}. Unfortunately, the usage of \texttt{let} expressions in the definition of \texttt{hasType}'s rules creates large, flat terms that contribute few to the explanation. Therefore, we will discuss proofs in a more abstract manner.\\ 
-\par
-The proof for \texttt{example1} contains two applications of the rule \texttt{T\_Comb\_Part}: The first is the application of \texttt{map} to \texttt{double}, but \texttt{double} itself is also a partial application, even though no arguments are supplied. A function application without arguments yields the original function and is necessary to supply functional arguments to higher-order functions. \texttt{T\_Comb\_Part} creates two subgoals when applied: Specializing the return type of the function with the supplied \texttt{substTypes}, that is, the types that replace the type variables, needs to match the type supplied in the proposition. The second subgoal requires the arguments to have the corresponding types of the specialized function type.
+The context is created by applying \texttt{parseProgram} to the program definition, as shown in \autoref{context}. In the following proofs \texttt{exp} variables represent the expression of the respective example, that is, the term that is contained in the \texttt{Rule}. Unfortunately, the usage of \texttt{let} expressions in the definition of \texttt{hasType}'s rules creates large, flat terms that contribute few to the explanation. Therefore, we will discuss proofs in a more abstract manner.\\ 
+\par \noindent
+The proof for \texttt{example1} contains two applications of the rule \texttt{T\_Comb\_Part}: The first is the application of \texttt{map} to \texttt{double}, the second \texttt{double} itself, even though no arguments are supplied. A function application without arguments yields the original function and is necessary to supply functional arguments to higher-order functions. \texttt{T\_Comb\_Part} creates two subgoals when applied: Specializing the function type with the supplied \texttt{substTypes} needs to match the type supplied in the proposition. The second subgoal requires the arguments to have the corresponding types of the specialized function type.
 \begin{coqcode}
 Definition example1 : cntxt |- exp1 ::: (FuncType (List Int) (List Int)).
 Proof.
@@ -1653,13 +1654,12 @@ Proof.
     - apply Forall2_nil.
 Qed.
 \end{coqcode}
-The first subgoal is easily proven by applying \texttt{reflexivity}. There is, however, more to it than meets the eye: \texttt{map} is looked up in the context, which yields the polymorphic type \texttt{map :: (a $\rightarrow$ b) $\rightarrow$ [a] $\rightarrow$ [b]}. The specialization \texttt{[a $\mapsto$ Int, b $\mapsto$ Int]} is applied and the first argument type removed, yielding \texttt{[a] $\rightarrow$ [b]}, that is, the expected type.
+The first subgoal is proven by applying \texttt{reflexivity}. However, there is more to it than meets the eye: \texttt{map} is looked up in the context, which yields the polymorphic type \texttt{\mbox{map $::$} (a $\rightarrow$ b) $\rightarrow$ [a] $\rightarrow$ [b]}. The specialization \texttt{[a $\mapsto$ Int, b $\mapsto$ Int]} is applied and the first argument type removed, yielding \texttt{[Int] $\rightarrow$ [Int]}, that is, the expected type.
 \par
-The second subgoal checks if the supplied argument matches the previously removed argument type, that is, if \texttt{double} has the type \texttt{(Int $\rightarrow$ Int)}. In order to do so, we apply \texttt{T\_Comb\_Part} once again, this time without any \texttt{substTypes} since \texttt{double} is not a polymorphic function. The generated subgoals are similar to the first application, with the exception that we can use \texttt{Forall2\_nil} directly since we do not apply any arguments to \texttt{double}. This proves that the first and only argument of \texttt{map} matches its corresponding type. Thus, the proof is finished by applying \texttt{Forall2\_nil}.
-\par
+The second subgoal checks if the supplied argument matches the previously removed argument type, that is, if \texttt{double} has the type \texttt{(Int $\rightarrow$ Int)}. In order to do so, we apply \texttt{T\_Comb\_Part} once again, this time without any \texttt{substTypes} since \texttt{double} is not a polymorphic function. The generated subgoals are similar to the first application with the exception that we can use \texttt{Forall2\_nil} directly because there are no arguments. This proves that the first and only argument of \texttt{map} matches its corresponding type. Thus, the proof is finished by applying \texttt{Forall2\_nil}.
 Proving the full application of functions or constructors works identical because all differences are contained in the computational part that \texttt{reflexivity} solves.\\
 \par\noindent
-In the second example \texttt{id :: (Bool -> Bool)} we take a look at explicitly typed expressions and the proposition \texttt{isSpecializableTo}. 
+In the second example \texttt{id $::$ (Bool -> Bool)} we take a look at explicitly typed expressions and the proposition \texttt{isSpecializableTo}. 
 \begin{coqcode}
 Definition example2 : cntxt |- exp2 ::: FuncType Bool Bool.
 Proof.
@@ -1670,32 +1670,40 @@ Proof.
       reflexivity.
 Qed.
 \end{coqcode}
-We begin with e-applying \texttt{T\_Typed}. Without existential variables, the actual type \texttt{T} of the expression would need to be specified, but in this case it can be inferred from the line \texttt{FuncType (TVar 0) (TVar 0) = ?T} that occurs while typing \texttt{id}. Since we already used \texttt{T\_Comb\_Part} before, we solve the generated subgoals automatically with \texttt{econstructor}. To apply a tactic \texttt{T'} to every subgoal generated by the tactic \texttt{T}, we write \texttt{T; T'}, which avoids repeating tactics for similar subgoals. 
+We begin with e-applying \texttt{T\_Typed}. Without existential variables, the actual type \texttt{T} of the expression would need to be specified, but in this case it can be inferred from the subgoal \texttt{FuncType (TVar 0) (TVar 0) = ?T} that occurs while typing \texttt{id}. Since we already used \texttt{T\_Comb\_Part} before, we solve the generated subgoals automatically with \texttt{econstructor}. To apply a tactic \texttt{T'} to every subgoal generated by the tactic \texttt{T}, we write \texttt{T; T'}, which avoids repeating tactics for similar subgoals. 
 \par
 The second subgoal states that \texttt{(a $\rightarrow$ a) $\Rightarrow$ (Bool $\rightarrow$ Bool)}, that is, the actual type of \texttt{id} can be specialized to the explicitly stated type. We can prove this by applying \texttt{T\_Spec} with a list of specialized types for every type variable. Now, one may ask if it is possible to use this rule without supplying the substitution explicitly since it seems fairly obvious that the type variable \texttt{a} needs to be specialized to \texttt{Bool}. The answer arises from the following situation:
 \begin{coqcode}
 multiTypeSubst (funcTVars (FuncType (TVar 0) (TVar 0))) ?substTypes
 (FuncType (TVar 0) (TVar 0)) = FuncType Bool Bool
 \end{coqcode}
-The rule \texttt{T\_Spec} uses the function \texttt{multiTypeSubst} to specialize the polymorphic type. We do not know the types that replace the type variables, but we know the result. A Curry analogy could look like this:
+The rule \texttt{T\_Spec} uses the function \texttt{multiTypeSubst} to specialize the polymorphic type. We do not know the types that replace the type variables, but we know the result. A Curry analogy could look like this the example below.
 \begin{haskellcode}
 replChar :: Char -> Char -> String -> String
 replChar a b s = map (\c -> if (c == a) then b else c) s
 
-replChar 'a' b "a -> a" == "B -> B" where b free
-\end{haskellcode}
-The function \texttt{replChar} replaces a character in a string, similar to replacing a type in a larger construct of types. Curry allows us to use a free variable in place of the replacement character and can solve the equation, that is, \texttt{{b = 'B'}}. Coq is able to instantiate variables in such a scenario too, as we saw in \autoref{autoproof}: The equation is simplified until both sides contain similar data structures and then individual components are matched to variables, for example, \texttt{?a $\rightarrow$ Int = Char $\rightarrow$ Int} would result in the instantiation of \texttt{?a} with \texttt{Char}.
-\par
-The actual cause of the problem is the definition of \texttt{multiTypeSubst} or rather that it replaces multiple variables. The above Curry function replaces only one character, a definition equal to \texttt{multiTypeSubst} that replaces multiple characters in a string could look like this:
-\begin{haskellcode}
 replChars :: [Char] -> [Char] -> String -> String
 replChars cs ds s =  foldr (\cd t -> case cd of (c,d) -> replChar c d t)
                            s (zip cs ds)
-                    
-replChars ['a', 'b'] cs "a -> b" == "I -> C" where cs free
+> replChar 'a' b "a -> a" == "B -> B" where b free
+{b = 'B'} True
 \end{haskellcode}
-Curry is still able to solve the equation, but the result \texttt{{cs = ('I':'C':\_xk)}} contains a free variable because the substitution discards the remaining tail of the longer list. Therefore, the result is ambiguous! Coq needs to instantiate the variable with a specific value, but since choosing one solution could lead to multiple outcomes depending on the choice, the proof fails. Therefore, we need to supply the \texttt{substTypes} and can finish the proof with \texttt{reflexivity}.\\
-\par
+The function \texttt{replChar} replaces a character in a string, similar to replacing a type in a larger construct of types. Curry allows us to use a free variable in place of the replacement character and can solve the equation. Coq is able to instantiate variables in such a scenario too, as we saw in \autoref{autoproof}: The equation is simplified until both sides contain similar data structures and then individual components are matched to variables, for example, \texttt{FuncType ?a Int = FuncType Char Int} would result in the instantiation of \texttt{?a} with \texttt{Char}.
+\begin{coqcode}
+> replChars ['a', 'b'] cs "a -> b" == "I -> C" where cs free
+{cs = ('I':'C':_xk)} True
+\end{coqcode}
+The actual cause of the problem is the definition of \texttt{multiTypeSubst} or rather that it replaces multiple variables. The above function \texttt{replChars} is similar to the Coq implementation of \texttt{multiTypeSubst} and while Curry is able to find a solution of the equation, Coq cannot instantiate the list \texttt{?substTypes}.
+\begin{coqcode}
+match ?substTypes with
+| [] => FuncType (TVar 0) (TVar 0)
+| t :: _ => FuncType t t
+end = FuncType Bool Bool
+\end{coqcode}
+One possible problem of the Coq implementation is the usage of \texttt{zip} in \texttt{multiTypeSubst} because lists of different length are handled by discarding the longer list's tail. As we can see in Curry's solution, using \texttt{zip} entails that lists of arbitrary length satisfy the equation. However, this behavior is actually quite useful because it allows us to specify types only for supplied arguments in partial a application.
+\par \noindent
+Implementations that consider the lists' length and fail if it differs do not solve this problem either; they are stuck at the same step  as shown above, even though the solution is unique. One probable cause of this is that Coq would need to try every branch of the function and introduce further variables (\texttt{t} in this example), which this tactic is not capable of.\\
+\par \noindent
 The last example, that is, the case expression with a free variable, expands on the usage of automation in proofs. As we already discussed, there are some limitations that require explicitly supplying some values, but the proof is still shortened significantly by using the \texttt{;} and \texttt{econstructor}.
 \begin{coqcode}
 Definition example3 : cntxt |- exp3 ::: Int.
@@ -1706,43 +1714,42 @@ Definition example3 : cntxt |- exp3 ::: Int.
   repeat econstructor.
 Qed.
 \end{coqcode}
-Typing an expression $e$ containing free variables requires explicitly supplying the type of the variables when applying \texttt{T\_Free}. In this case the return type is \texttt{Int} and the \texttt{case} patterns are \texttt{Maybe a} constructors. Hence, the free variable must be of type \texttt{Maybe Int}. In order to type $e$, that is, a \texttt{case} expression, we use \texttt{eapply} with \texttt{T\_Case} which introduces two existential variables \texttt{?substTypes} and \texttt{?Tc}. Although we know that \texttt{?substTypes} needs to be explicitly supplied, it is better to use \texttt{eapply} nevertheless because \texttt{?Tc}, that is, the type of the free variable we already typed above, can be inferred.
+Typing an expression $e$ containing free variables requires explicitly supplying the type of the variables when applying \texttt{T\_Free}. In this case, the free variable has the type \texttt{Maybe Int}. In order to type $e$, that is, a \texttt{case} expression, we use \texttt{eapply} with \texttt{T\_Case} which introduces two existential variables \texttt{?substTypes} and \texttt{?Tc}, the latter being the type of the free variable. Although we know that \texttt{?substTypes} needs to be explicitly supplied, it is preferable to use \texttt{eapply} nevertheless because \texttt{?Tc} can be inferred.
 \par
-Now we need to supply a value for \texttt{?substTypes} after the application of \texttt{T\_Case}. The tactic \texttt{instantiate} instantiates existential variables but works with numbers instead of variable names to simplify automation. The variables are enumerated by their first occurrence from right to left in the expression, which may be hard to perceive in large expressions. Fortunately, the tactic \texttt{Show Existentials} prints a list of all existential variables and the corresponding types.
-\begin{coqcode}
-Existential 1 = ?substTypes : [ |- list TypeExpr] 
-Existential 2 = ?Tc : [ |- TypeExpr] 
-\end{coqcode}
-Thus, we know that \texttt{?substTypes} has the number 1 and can instantiate it with the type \texttt{Int} to specialize \texttt{Maybe a}. We already used \texttt{;} before, but in this case we use it between all tactics. This applies every tactic to all subgoals generated by the previous tactic, which concludes the proof with a single application of \texttt{repeat econstructor}. There are downsides to this approach, however: \texttt{T\_Case} generates three subgoals, all of which \texttt{instantiate} would be applied to. Existential variables are instantiated globally, that is, in all subgoals, and would therefore fail. In cases where a tactic is only useful for some subgoals, \texttt{try} allows the proof to proceed even if the application of the tactic fails.
+In order to further proceed in the proof, we need to supply a value for \texttt{?substTypes}. The tactic \texttt{instantiate} instantiates existential variables but works with numbers, instead of variable names, to simplify automation. The variables are enumerated\footnote{\texttt{Show Existentials} can be used in a proof to list existential variables and the corresponding numbers.} by their first occurrence from right to left in the expression. We instantiate \texttt{?substTypes} with the type \texttt{Int} to specialize \texttt{Maybe a}. 
+\par
+We already used \texttt{;} before, but in this case we use it between \textit{all} tactics. However, there are downsides to this approach: \texttt{T\_Case} generates three subgoals, all of which \texttt{instantiate} would be applied to. Existential variables are instantiated globally, that is, in all subgoals, and would therefore fail. In cases where a tactic is only useful for some subgoals, \texttt{try} allows the proof to proceed even if the application of the tactic fails. Because we accumulated all current subgoals with \texttt{;} and instantiated the existential variables, a single application of \texttt{repeat econstructor} concludes the last proof of the FlatCurry chapter.
 \chapter{Conclusion}
 To conclude this thesis, we begin with recapitulating previous chapters and compare the initial goals with the outcome. Then, we discuss related work as well as future expansions of the implementation.
 \section{Summary and Results}
-The first goal of this thesis was to find an appropriate representation of Curry code in Coq and to implement the type system. After familiarizing us with Coq, Curry and the theoretical basics, we began formalizing CuMin, a minimal representation of Curry. Because of its simplicity, CuMin was a good way to gain a deeper understanding of the structure programming languages and type systems. We transferred CuMin's syntax from a BNF representation to Coq, created a context that stores information about variables and used inductively defined propositions to formalize the inference rules of CuMin's type system. Lastly, we proved some examples and discussed advanced Coq tactics that allowed us to automate proofs in many cases.\\
+The first goal of this thesis was to find an appropriate representation of Curry code in Coq and to implement the type system. After familiarizing us with Coq, Curry and the theoretical basics, we began formalizing CuMin, a minimal representation of Curry. Because of its simplicity, CuMin was a good way to gain a deeper understanding of the structure of programming languages and type systems. We transferred CuMin's syntax from a BNF representation to Coq, created a context that stores information about variables and used inductively defined propositions to formalize the inference rules of CuMin's type system. Lastly, we proved some examples and discussed advanced Coq tactics that allowed us to automate proofs in many cases.\\
 \par \noindent
-Due to CuMin's theoretical nature, the implementation became a precursor of the formalization of FlatCurry, a more practically oriented representation of Curry. We used the same approach as before, beginning with the transfer of the syntax from the Curry implementation to Coq. We added information about function types and type variables to the context and created a parser that extracts this information from a FlatCurry program.
+Due to CuMin's theoretical nature, the implementation became a precursor to the formalization of the more practically oriented language FlatCurry. We used the same approach as with CuMin, beginning with the transfer of the syntax from the Curry implementation to Coq. We added information about function types and type variables to the context and created a parser that extracts this information from a FlatCurry program.
 \par
-The implementation of FlatCurry's typing rules reused some functions and structures from CuMin, but the higher complexity of the rules affected the clarity of the implementation in some places, compared to CuMin. This is particularly apparent in rules with many \texttt{let} expressions, which result in large, flat terms when using the rule in a proof. In contrast, quantified variables would require the user to often explicitly specify redundant information and would add more steps to the proof. These problems might be mitigated by solely using tactics that introduce existential variables, but this compromises the understandability of proofs, especially on paper. Thus, the current implementation favors the understandability of proofs over the readability of the subgoal list.
+The implementation of FlatCurry's typing rules reused some functions and structures from CuMin, but the higher complexity of the rules affected the clarity of the implementation in some places, compared to CuMin. This is particularly apparent in rules with many \texttt{let} expressions, which result in large, flat terms when using the rule in a proof. In contrast, quantified variables would require the user to often explicitly specify redundant information and would add more steps proofs. These problems might be mitigated by solely using tactics that introduce existential variables, but this compromises the understandability of proofs, especially on paper. Thus, the current implementation favors the understandability of proofs over the readability of the subgoal list.
 \par
 In the last sections of the FlatCurry chapter we adapted the \texttt{FlatCurry.Show} module to incorporate some Coq-specific changes. Based on this, we created a program that transforms a Curry file into a FlatCurry definition that can be saved and imported as a Coq file. To conclude the chapter, we transformed a Curry program and proved some examples, supplemented by a short digression about Coq's inference capabilities.\\
 \section{Related and Future Work}
-The second goal of this thesis was to provide a basis for the formalization of further aspects of Curry. While the type system is an important part of a programming language, there are few interesting properties to be proven about specific expressions or functions because the type always remains the same and is checked by the compiler. However, there are other applications like type inference:
+The second goal of this thesis was to provide a basis for the formalization of further aspects of Curry. While the type system is an important part of a programming language, there are few interesting properties to be proven about specific expressions or functions because the type always remains the same and is checked by the compiler. However, there are other applications like type inference, as shown below.
 \begin{coqcode}
-Fixpoint inferType (c : context) (e : Expr) : TypeExpr :=
+Fixpoint inferType (c : context) (e : Expr) : option TypeExpr :=
   match e with
-  | Var i => fromOption noType ((vCon c) i)
-  | Lit l => litType l
+  | Var i => (vCon c) i
+  | Lit l => Some (litType l)
   | ...
   end.
-Theorem typeInference : forall Gamma e, Gamma |- e ::: inferType Gamma e.
+  
+Theorem typeInferenceWorks : forall Gamma e, Gamma |- e ::: inferType Gamma (Some e).
 \end{coqcode}
-The function \texttt{inferType} returns the type of an expression in a context and would work like \texttt{hasType}. One could proof that such a function yields the same types as the inductively defined proposition and improve incorporate it into \texttt{hasType} to remove types that need to be explicitly supplied currently.\\
-\par
-Another interesting aspect to formalize is the evaluation of expressions. 
+The function \texttt{inferType} returns the type of an expression in a context and would work like \texttt{hasType}. One could proof that such a function yields the same types as the inductively defined proposition and incorporate it into \texttt{hasType} to remove types that need to be explicitly supplied currently.\\
+\par \noindent
+Another interesting aspect to formalize is the semantics, that is, rules that determine the evaluation, of Curry. A simple demonstration of the formalization of a toy language has been created by \citet{Pierce:SF}. It involves representing the syntax in Coq and formalizing the semantics in form of inference rules. Together with a formalized type system, one can argue about the \textit{type soundness} of terms. This means that a well-typed term is either a value or can be further evaluated while preserving its type.\\
+\par \noindent
+An approach for imperative languages has been implemented by \citet{2006-Leroy-Blazy-Dargaye}. The paper presents the formal verification of a compiler front-end\footnote{https://github.com/AbsInt/CompCert/tree/master/cfrontend} that translates \textit{Clight}, a subset of the imperative programing language C, into the \textit{Cminor} intermediate language. Clight's syntax is represented in Coq by inductive data types and the semantics and typing rules are transformed into inductively defined propositions to argue about the languages and the translation.\\
+\par \noindent
+In conclusion, there are many more aspects of Curry that could be formalized to expand the functionality of this implementation. 
 % Anhang
 \appendix
-%\chapter{Syntax von Haskell}
-
-%\todo{Fehlt noch!}
 
 % Literatur
 \bibliographystyle{plainnat}
