@@ -1,3 +1,5 @@
+-- This program transforms .curry files to FlatCurry definitions in Coq syntax.
+-- 
 import System
 import FlatCurry.Files
 import FlatCurry.ShowCoq
@@ -5,6 +7,7 @@ import FlatCurry.Types
 import GetOpt
 import Maybe (fromMaybe)
 
+-- Takes a file path to a .curry file and prints a Coq file
 showFlatCoq :: String -> IO ()
 showFlatCoq s = do flatProg  <- readFlatCurry s
                    let (Prog modname _ _ _ _) = flatProg
@@ -18,20 +21,23 @@ headerString = "(* This is an automatically generated Coq source file. It repres
                "   Curry program in modified flatCurry syntax and can be compiled by\n" ++
                "   generating a _CoqProject with '-c'. *)\n\n"
 
-importString = "Require Import CQE.FlatCurry Lists.List.\n" ++
+importString = "Require Export CQE.FlatCurry CQE.FlatCurryType Lists.List.\n" ++
                "Import ListNotations.\n\n"
 
 defString name = "Definition " ++ name ++ "_coq := "
 
+coqProjectImports = "Basics.v\n" ++ "Maps.v\n" ++ "FlatCurry.v\n" ++ "FlatCurryType.v\n"
 coqProjectString name = "# Run 'coq_makefile -f _CoqProject -o Makefile' to generate a Makefile\n" ++
-                        "-Q . CQE\n\n" ++ "FlatCurry.v\n" ++ name ++ "_coq.v\n"
+                        "-Q . CQE\n\n" ++ coqProjectImports ++ name ++ ".v\n"
 
+-- Prints a _CoqProject for a given .curry file
 showCoqProject :: [Prelude.Char] -> Prelude.IO ()
 showCoqProject s = do
       flatProg  <- readFlatCurry s
       let (Prog modname _ _ _ _) = flatProg
        in putStr (coqProjectString modname)
-      
+
+-- Prints either a _CoqProject or FlatCurry file for a given .curry file
 main :: Prelude.IO ()
 main = do
    args <- getArgs
@@ -44,6 +50,7 @@ data Flag = CoqProject
 options :: [OptDescr Flag]
 options = [Option ['c'] ["coqproject"] (NoArg CoqProject) "generate _CoqProject file"]
 
+-- Parses console parameters
 progOpts :: [String] -> IO ([Flag], [String])
 progOpts argv =
        case getOpt Permute options argv of

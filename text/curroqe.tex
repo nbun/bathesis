@@ -1,4 +1,4 @@
-\documentclass[paper = a4, fleqn, abstract=on, twoside]{scrreprt}
+\documentclass[paper = a4, fleqn, twoside]{scrreprt}
 % escapeinside
 %\usepackage[gray]{xcolor}
 \usepackage[T1]{fontenc}        % T1-Fonts
@@ -62,9 +62,17 @@
 	{\large \today\par}
 \end{titlepage}
 
-\begin{abstract}
-	content...
-\end{abstract}
+\chapter*{Erklärung der Urheberschaft}
+\vspace{2cm}
+Ich erkläre hiermit an Eides statt, dass ich die vorliegende Arbeit
+ohne Hilfe Dritter und ohne Benutzung anderer als der angegebenen
+Hilfsmittel angefertigt habe. Aus fremden Quellen direkt oder
+indirekt übernommene Gedanken sind als solche kenntlich gemacht. Die
+Arbeit wurde bisher in gleicher oder ähnlicher Form in keiner anderen
+Prüfungsbehörde vorgelegt und auch noch nicht veröffentlicht.
+
+\vspace{4cm}
+\hspace{1cm} $\overline{~~~~~~~~~~\mbox{Ort, Datum}~~~~~~~~~~}$ \hfill $\overline{~~~~~~~~~~~~~\mbox{Unterschrift}~~~~~~~~~~~~~}$ \hspace{1cm}
 
 % Verzeichnisse
 \renewcommand{\contentsname}{Contents}
@@ -91,26 +99,25 @@ Does a program behave as intended? This question is a fundamental part of the fo
 \label{coqscreen}
 \end{figure}\noindent 
 In the following chapters, we will use Coq to formalize inference systems, particularly type systems for the functional logic programming language Curry. Type systems are an important concept of strongly typed languages like Curry. Every function and expression has a specific type that, if not explicitly stated, is inferred and checked by the compiler.
-The process of typing expressions follows a set of inference rules that define conditions, which need to be met in order for an expression to be of a certain type.\\
+The process of typing expressions follows a set of inference rules that define conditions, which need to be met in order for an expression to be of a certain type. The formalization of these rules is one aspect that is presented in the following chapters. \\
 \par \noindent
 The goal of this thesis is to find an appropriate representation of Curry code in Coq and to implement the inference rules of the type system in order to verify properties of Curry code and to provide a basis for the formalization of further aspects of Curry.\\
 \par \noindent
-This thesis is structured the following way: We begin with the preliminaries in \autoref{preliminiaries}, which includes a basic introduction to Curry and Coq. The last section of this chapter gives a theoretical overview of the approach used in the following chapters.\\
+This thesis is structured the following way: We begin with preliminaries in \autoref{preliminiaries}, which includes a basic introduction to Curry and Coq. The last section of the chapter gives a theoretical overview of the approach used in the following chapters.\\
 \par \noindent
-Both chapters \ref{cumin} and \ref{flatcurry} are structured similarly: \autoref{cumin} features the language CuMin, a minimal representation of Curry mostly used in theoretical contexts, while \autoref{flatcurry} focuses on FlatCurry, a more practical representation that is used as an intermediary language for some Curry compilers.
+Both chapters \ref{cumin} and \ref{flatcurry} are structured similarly: Chapter \ref{cumin} features the language CuMin, a minimal representation of Curry mostly used in theoretical contexts, while \autoref{flatcurry} focuses on FlatCurry, a more practical representation that is used as an intermediary language for some Curry compilers.
 The common approach in these chapters includes discussing and implementing the syntax of both languages and the type system. Chapter \ref{cumin} ends with a few examples and a section about automated proofs, while \autoref{flatcurry} is concluded with a program that transforms Curry programs into a Coq-compatible form.\\
 \par \noindent
-The last chapter presents the results and possible expansions thereof, as well as related work. 
+The last chapter presents the results and possible expansion thereof, as well as related work. 
 \chapter{Preliminaries}
 \label{preliminiaries}
-This chapter introduces the two main programming languages used in this thesis: Coq and Curry. The introduction of Coq is based on \textit{Software Foundations} by \citet{Pierce:SF} and gives an overview of modeling and proving in Coq. In case of Curry, we focus on the extended features compared to Haskell.
-In the last section the approach and languages used in the following chapters are presented.
+This chapter introduces the two main programming languages used in this thesis: Coq and Curry. The introduction of Coq is based on \textit{Software Foundations} by \citet{Pierce:SF} and gives an overview of modeling and proofs in Coq. In case of Curry, we focus on the extended features compared to Haskell.
 \section{Coq}
 The formalization of Curry programs requires a language that allows us to express the code itself and propositions we intend to prove. Coq is an interactive proof management system created by \cite{CoqManualV8} that meets these requirements with its functional modeling language and integrated verification logic.
 \par
 We already saw CoqIde in \autoref{coqscreen}, but this is not the only Coq front-end. There is also the Emacs package \textit{Proof General}\footnote{https://proofgeneral.github.io/} that integrates multiple interactive theorem provers like Coq into the text editor.
 \par 
-Regardless of the interface chosen, the structure is similar to the following: the left-hand side contains the code, while the right-hand side shows information about proofs and error messages. Definitions in Coq are always completed by a dot that marks a segment. Depending on the front-end, there may be buttons or shortcuts to load one segment at a time, multiple segments or the whole file. A loaded segment is usually highlighted green, which means that the definition contains no errors.
+Regardless of the interface chosen, the structure is similar to the following: The left-hand side contains the code, while the right-hand side shows information about proofs and error messages. Definitions in Coq are always completed by a dot that marks a segment. Depending on the front-end, there may be buttons or shortcuts to load one segment at a time, multiple segments or the whole file. A loaded segment is usually highlighted green, which means that the definition contains no errors.
 \par
 Because of this approach, definitions that reference other definitions need to be in the correct order, that is, a function or data structure needs to be defined before it can be used in an expressions.
 \subsection{Data types and functions}
@@ -228,7 +235,7 @@ ______________________________________(1/2)
 ______________________________________(2/2)
 (l :: ls) ++ [ ] = l :: ls
 \end{coqcode}
-Now we need to prove two subgoals: the empty list and a cons construct. The first subgoal does not require any new variable names since \coqinline{l} is replaced by the empty list. Therefore, the first section in the squared brackets is empty. The subgoal easily solved by applying \coqinline{reflexivity} because of the definition of \coqinline{app}.
+Now we need to prove that the proposition holds for two subgoals: the empty list and a cons construct. The first subgoal does not require any new variable names since \coqinline{l} is replaced by the empty list. Therefore, the first section in the squared brackets is empty. The subgoal easily solved by applying \coqinline{reflexivity} because of the definition of \coqinline{app}.
 \par
 The second case requires variables for the list's head and tail, which we call \coqinline{l} and \coqinline{ls} respectively. The variable name \coqinline{IH} identifies the induction hypothesis \coqinline{ls ++ [ ] = ls}, which Coq generates automatically.
 \begin{coqcode}
@@ -293,7 +300,7 @@ Qed.
 \coqinline{Forall} is an inductively defined proposition, which requires \textit{rules} to be applied in order to prove a certain goal. This will be further explained in the next section, for now it sufficient to know that \coqinline{Forall} can be proven by applying the rules \coqinline{Forall_cons} and \coqinline{Forall_nil}, depending on the remaining list. Because we begin with a non-empty list, we have to apply \coqinline{Forall_cons}. The goal changes to \coqinline{2 <> 8}, the head of the list applied to the property. We have already proven this type of inequality before, \coqinline{inversion} is actually able to do most of the work we did manually by itself. Next the same procedure needs to be done for the list's tail \coqinline{[4]}, which works exactly the same as before. To conclude the proof, we need to show that the property is satisfied by the empty list. \coqinline{Forall_nil} covers this case, which is trivially fulfilled.
 \subsection{Inductively defined propositions}
 \label{induprop}
-Properties of a data type can be written in multiple ways, two of which we already discussed: Boolean equations of the form \coqinline{f x = true} and functions that return propositions. For example, the function \coqinline{inB} returns \coqinline{true} if a \coqinline{nat} is contained in a list.
+Properties of a data type can be written in multiple ways, two of which we already discussed: boolean equations of the form \coqinline{f x = true} and functions that return propositions. For example, the function \coqinline{inB} returns \coqinline{true} if a \coqinline{nat} is contained in a list.
 \begin{coqcode}
 Fixpoint inB (x : nat) (l : list nat) : bool :=
   match l with
@@ -358,7 +365,7 @@ To summarize this section, we began with inductive data types that we expanded t
 \section{Curry}
 Curry\citet{report} is a programming language that combines aspects of functional and logical programming. Created by an international initiative, Curry is predominantly aimed at providing a platform for research and teaching. Curry's syntax is similar to the functional programming language Haskell with the addition of nondeterminism, that is, a function can return different values for the same input, and free variables, which allow the systematic search for unknown values.
 \par
-The similarities to Haskell include an (interactive) compiler named KICS2\footnote{https://www-ps.informatik.uni-kiel.de/kics2/} that compiles Curry programs to Haskell code and  an easily searchable\footnote{https://www-ps.informatik.uni-kiel.de/kics2/currygle/}, extensive module system with many predefined data structures and functions. In this short overview we will take a look at some language features that we will work with later, albeit not necessarily in the form of Curry code.\\
+The similarities to Haskell include an (interactive) compiler named KiCS2\footnote{https://www-ps.informatik.uni-kiel.de/kics2/} that compiles Curry programs to Haskell code and  an easily searchable\footnote{https://www-ps.informatik.uni-kiel.de/kics2/currygle/}, extensive module system with many predefined data structures and functions. In this short overview we will take a look at some language features that we will work with later, albeit not necessarily in the form of Curry code.\\
 \par\noindent
 Curry programs have the ending \texttt{.curry} and consist of function and data type declarations. The simplest form of functions, such as \texttt{double x = x + x}, has a name, a possibly empty list of variables and an expression. Although it is not mandatory to explicitly state a function's type, for example \texttt{double $::$ Int $\rightarrow$ Int $\rightarrow$ Int}, every function has a type that describes the arguments and the result of evaluating the function. 
 \par
@@ -390,7 +397,7 @@ _ ? y = y
 	\end{minipage}
 \end{flushleft}
 \noindent
-The function \texttt{head} returns the first element of a list, but in this case the list is empty. Therefore, the computation fails and KICS2 returns an exclamation mark. Nevertheless, it is possible to apply the \texttt{?} operator that represents a non-deterministic choice between the arguments to both the failed computation and the number 8. Since only one argument contains a value, the expression evaluates to 8.
+The function \texttt{head} returns the first element of a list, but in this case the list is empty. Therefore, the computation fails and KiCS2 returns an exclamation mark. Nevertheless, it is possible to apply the \texttt{?} operator that represents a non-deterministic choice between the arguments to both the failed computation and the number 8. Since only one argument contains a value, the expression evaluates to 8.
 \par
 In some situations deterministic programs are strictly necessary, for example when working with IO actions. While it may not seem import if a function prints an 'a' or 'b' to the terminal, writing a file of non-deterministic size to the hard drive can cause severe problems. Fortunately, Curry enforces determinism when using IO actions. If one needs a more Haskell-esque evaluation of multiple patterns, the \texttt{case} expression applies:
 \label{currycase}
@@ -662,10 +669,10 @@ End Map.
 \end{coqcode}
 Even though \coqinline{A} and \coqinline{B} are not introduced as types in the signature, they can be used to parametrize lists. Likewise, \coqinline{f} can be applied to arguments despite the missing function argument \coqinline{map} usually has. Although functions containing variables can be \textit{defined} this way, they are only usable outside of the own section because variables have a type but no value. Outside of the section all variables used in a definition are appended to the type, for example, the type of \texttt{map} has additional type and function arguments outside of the section \texttt{Map}.
 \begin{coqcode}
-> Check map. (* inside section *)
+> Check map. (* inside of section *)
 map : list A -> list B
 
-> Check map. (* outside section *)
+> Check map. (* outside of section *)
 map : forall A B : Type, (A -> B) -> list A -> list B*)
 \end{coqcode}
 \section{Data types}
@@ -700,21 +707,21 @@ map : forall A B : Type, (A -> B) -> list A -> list B*)
 \end{figure}
 CuMin does not allow data type constructs containing functions, for example a list of functions. Instead, data types can be constructed only by combining basic types, polymorphic variables and lists or pairs. There is no syntax for explicitly naming data types or creating new constructors, therefore data types exist only as part of a function signature.
 \begin{coqcode}
-Reserved Notation "Gamma '|-' T '\is_data_type'" (at level 40).
+Reserved Notation "Gamma '|-' T 'in_Data'" (at level 40).
 Inductive is_data_type : context -> ty -> Prop :=
   | D_Var  : forall Gamma n,
                (tag_con Gamma) n  = Some tag_star ->
-               Gamma |- (TVar n) \is_data_type
-  | D_Bool : forall Gamma, Gamma |- TBool \is_data_type
-  | D_Nat  : forall Gamma, Gamma |- TNat \is_data_type
+               Gamma |- (TVar n) in_Data
+  | D_Bool : forall Gamma, Gamma |- TBool in_Data
+  | D_Nat  : forall Gamma, Gamma |- TNat in_Data
   | D_List : forall Gamma T,
-               Gamma |- T \is_data_type ->
-               Gamma |- (TList T) \is_data_type
+               Gamma |- T in_Data ->
+               Gamma |- (TList T) in_Data
   | D_Pair : forall Gamma T T', 
-               Gamma |- T \is_data_type ->
-               Gamma |- T' \is_data_type ->
-               Gamma |- (TPair T T') \is_data_type
-where "Gamma '|-' T '\is_data_type'" := (is_data_type Gamma T).
+               Gamma |- T in_Data ->
+               Gamma |- T' in_Data ->
+               Gamma |- (TPair T T') in_Data
+where "Gamma '|-' T 'in_Data'" := (is_data_type Gamma T).
 \end{coqcode}
 The inductively defined proposition \coqinline{is_data_type} takes a context plus a type and yields a proposition, which can be proven using the provided rules if the type is indeed a data type. Coq allows notations to be introduced before they are actually defined by adding \coqinline{Reserved} to a notation. The definition is specified after the last rule, prefaced by \coqinline{where}. The syntax used is $\Gamma \vdash \tau \: \text{\textbackslash is\_data\_type}$, which means that in the context $\Gamma$ the type $\tau$ is a data type. Rules follow a common structure: First, all occurring variables need to be quantified. Then conditions can be stated, followed by an application of the inductively defined proposition to variables or values.
 \par
@@ -840,7 +847,7 @@ The third row contains arithmetic operations and constructors. Both $+$ and $\ci
 Case expressions have specific properties depending on the type. The first argument has to be of the case's type, for example \texttt{Bool} for the boolean case expressions. Depending on the constructor of the term, the corresponding branch expression is returned. The list case returns either $e_{1}$ if the list is empty or $e_{2}$ otherwise. In the latter case, bindings for the list's head and tail need to be added to the context in order to type $e_{2}$. This is also necessary in the pair case, however, since there is only one constructor, there is no choice of different terms to return. While this may be unusual for case expressions, the construct serves a purpose nevertheless: accessing a pair's individual components. The last case expression for boolean values works like an if-then-else construct; depending on the first argument either $e_{1}$ or $e_{2}$ is returned.
 \par
 Finally, there is a \texttt{failure} of every type, that can be returned in place of a value if the computation fails and an \texttt{anything} of every data type. The restriction of \texttt{anything} to non-functional types is necessary because Curry does not allow free variables in place of functions.\\
-\par
+\par \noindent
 To implement the above rules, we begin by introducing an inductively defined proposition, similar to \texttt{\textbackslash is\_data\_type}, with an additional argument. Since we want to assign types $\tau$ to expressions $e$ within a context $\Gamma$, we use a ternary proposition \coqinline{has_type}$\; \Gamma \; e \; \tau$ that represents the typing relation $\Gamma \vdash e :: \tau$ used above. Since \coqinline{::} is the \coqinline{cons} constructor in Coq, we will use $:::$ instead. Another detail is the usage of a \coqinline{Variable} to represent the program. As mentioned earlier, variables are appended to a definition's type, that is, \coqinline{has_type} has the type \coqinline{program -> context -> tm -> ty -> Prop}, although the below definition is missing the \coqinline{program}.
 \begin{coqcode}
 Variable Prog : program.
@@ -899,7 +906,7 @@ Definition specialize_func (fd : func_decl) (tys : list ty) : option ty :=
                           else None
   end.
 \end{coqcode}
-The substitution \texttt{multi\_ty\_subst} works as follows: for every pair $(\forall^{t}\alpha_{i}, \tau_{i})$ the type variable $\alpha_{i}$ is replaced with $\tau_{i}$ in the function type $\tau$. The substitution \texttt{ty\_subst} is a recursive function that takes an ID, a replacement type $\tau$ and the type $\tau'$. Basic types and type variables with a different ID in $\tau'$ remain unchanged; if the ID of a type variable matches the provided ID, it is replaced by $\tau$. Because types are nested structures, the substitution of functions, lists and pairs is recursively applied to the argument types.
+The substitution \texttt{multi\_ty\_subst} works as follows: For every pair $(\forall^{t}\alpha_{i}, \tau_{i})$ the type variable $\alpha_{i}$ is replaced with $\tau_{i}$ in the function type $\tau$. The substitution \texttt{ty\_subst} is a recursive function that takes an ID, a replacement type $\tau$ and the type $\tau'$. Basic types and type variables with a different ID in $\tau'$ remain unchanged; if the ID of a type variable matches the provided ID, it is replaced by $\tau$. Because types are nested structures, the substitution of functions, lists and pairs is recursively applied to the argument types.
 \begin{coqcode}
 Fixpoint ty_subst (k: id) (t: ty) (t': ty) : ty :=
   match t' with
@@ -984,7 +991,7 @@ ______________________________________(2/2)
 e_prog > type_update empty (Id 5) TNat |- tadd (tsucc tzero) 
                                                (tvar (Id 5)) ::: TNat
 \end{coqcode}
-The application of \texttt{T\_Let} generates two subgoals that we need to prove, that is, show that 0 and $1 + x$ have the type \coqinline{TNat}. We apply \texttt{T\_Zero}, a rule without premises, to directly prove the first goal. The remaining subgoal is the addition $1 + x$, but compared to the first subgoal, the context does contain an entry for the variable with the ID 5. This arises from the definition of the rule: the type we supplied for \texttt{x} and proved to be correct in the first subgoal is now added to the context in order to use the variable in the addition, which requires the application of \texttt{T\_Add}. Two new subgoals are generated:
+The application of \texttt{T\_Let} generates two subgoals that we need to prove, that is, show that 0 and $1 + x$ have the type \coqinline{TNat}. We apply \texttt{T\_Zero}, a rule without premises, to directly prove the first goal. The remaining subgoal is the addition $1 + x$, but compared to the first subgoal, the context does contain an entry for the variable with the ID 5. This arises from the definition of the rule: The type we supplied for \texttt{x} and proved to be correct in the first subgoal is now added to the context in order to use the variable in the addition, which requires the application of \texttt{T\_Add}. Two new subgoals are generated:
 \begin{coqcode}
 ______________________________________(1/2)
 e_prog > type_update empty (Id 5) TNat |- tsucc tzero ::: TNat
@@ -1025,7 +1032,7 @@ Proof.
    * apply T_Var. reflexivity.
 Qed.
 \end{coqcode}
-We begin by applying \coqinline{T_App} twice, once for each of the given arguments. In both cases we need to explicitly supply \coqinline{T1}, that is, the type of the argument applied, for the same reason as in the previous example. The resulting subgoal list has three entries: the specialization of \texttt{union} (with ID 1 in Coq) needs to match both argument's types and the variables must be bound to the correct types in the context. 
+We begin by applying \coqinline{T_App} twice, once for each of the given arguments. In both cases we need to explicitly supply \coqinline{T1}, that is, the type of the argument applied, for the same reason as in the previous example. The resulting subgoal list has three entries: The specialization of \texttt{union} (with ID 1 in Coq) needs to match both argument's types and the variables must be bound to the correct types in the context. 
 \begin{coqcode}
 ______________________________________(1/3)
 prog > cntxt |- tfun (Id 1) [TNat] ::: TFun TNat (TFun TNat TNat)
@@ -1081,7 +1088,7 @@ This results in a fully automated, single-line proof and shows a small part of t
 Summarizing this chapter, we began by transferring the formal definition of CuMin's syntax to Coq, followed by the definition of a context that contains variable bindings and tag information to enable typing of expressions. We used inductively defined propositions to describe data types and created a proposition that maps expressions to types with respect to a context. In the final sections we proved some examples and had a more detailed look at how proofs in Coq work and how they can be automated.
 \chapter{FlatCurry}
 \label{flatcurry}
-FlatCurry\footnote{https://www.informatik.uni-kiel.de/~curry/flat/} is an intermediate representation of Curry code that is used by compilers like KICS2 and enables meta-programming, that is, the transformation of Curry programs in Curry. Since we want to reason about Curry programs in Coq, the respective module \texttt{FlatCurry.Types} will be the foundation of the Coq implementation. Generating FlatCurry code involves two transformations. Firstly, lambda lifting is applied, that is, local function definitions, for example introduced by \texttt{where} or \texttt{let} clauses, are replaced by top-level definitions.
+FlatCurry\footnote{https://www.informatik.uni-kiel.de/~curry/flat/} is an intermediate representation of Curry code that is used by compilers like KiCS2 and enables meta-programming, that is, the transformation of Curry programs in Curry. Since we want to reason about Curry programs in Coq, the respective module \texttt{FlatCurry.Types} will be the foundation of the Coq implementation. Generating FlatCurry code involves two transformations. Firstly, lambda lifting is applied, that is, local function definitions, for example introduced by \texttt{where} or \texttt{let} clauses, are replaced by top-level definitions.
 \begin{flushleft}
 \begin{minipage}{.3\linewidth}
 \begin{haskellcode}
@@ -1118,7 +1125,7 @@ Inductive TProg : Type :=
   | Prog : string -> list string ->
            list TypeDecl -> list FuncDecl -> list OpDecl -> TProg.
 \end{coqcode}
-Types in FlatCurry are more abstract compared to CuMin, but there are similar elements: type variables and function types are almost the same, except the index of variable is a \texttt{TVarIndex} instead of an ID. We do not distinguish types and data types as we did before, therefore there is no need for an \texttt{is\_data\_type} property or a context that maps types to tags.
+Types in FlatCurry are more abstract compared to CuMin, but there are similar elements: Type variables and function types are similar to CuMin, except the index of variable is a \texttt{TVarIndex} instead of an ID. We do not distinguish types and data types as we did before, therefore there is no need for an \texttt{is\_data\_type} property or a context that maps types to tags.
 \begin{coqcode}
 Inductive TypeExpr : Type :=
   | TVar     : TVarIndex -> TypeExpr
@@ -1333,7 +1340,7 @@ Now we need to determine the type \texttt{T} of the function application, which 
 \par
 The last premise checks that the expressions have the type of the respective part of the specialized function part by transforming the specialized type into a list of types, minus the return type that is contained in the second part of the pair \texttt{funcTyList} returns. \coqinline{Forall2} checks if the $i$-th element of the expression list has the $i$-th type of the type list, which represents the conditions of the inference rule in \autoref{typingfunc}.
 \paragraph{Partial Function Application}
-The partial application of a $n$-ary function $f$ to $k$ arguments works similar to the full application. The type of $f$ returned by $\Gamma$ is diveded into two parts: the first $k$ types are checked against the argument's types and the last $n + 1 - k$ types represent the new type of $f$. 
+The partial application of a $n$-ary function $f$ to $k$ arguments works similar to the full application. The type of $f$ returned by $\Gamma$ is divided into two parts: The first $k$ types are checked against the argument's types and the last $n + 1 - k$ types represent the new type of $f$. 
 \begin{figure}[H]
 \begin{prooftree}
 	\AxiomC{$\Gamma \vdash e_1 :: \tau_1[~\overline{x_i \mapsto t_i}~]$}
@@ -1386,12 +1393,12 @@ Typing \texttt{let} expressions differs, compared to CuMin, in the arbitrary num
 \end{figure}\noindent
 While it is a syntactically valid to write \texttt{let} expressions without bindings, for example \texttt{one = let in 1}, we require at least one binding because such an occurrence is replaced by its value in FlatCurry.
 \begin{coqcode}
-T_Let : forall Gamma ve ves tyexprs e T,
-          let vexprs   := (ve :: ves) in
-          let exprs    := map snd vexprs in
-          let vtyexprs := replaceSnd vexprs tyexprs in
-          let Delta    := multiTypeUpdate Gamma vtyexprs
-           in Forall2 (hasType Delta) exprs tyexprs ->
+T_Let : forall Gamma ve ves tyExprs e T,
+          let vExprs := (ve :: ves) in
+          let exprs  := map snd vExprs in
+          let vTys   := replaceSnd vExprs tyexprs in
+          let Delta  := multiTypeUpdate Gamma vTys
+           in Forall2 (hasType Delta) exprs tyExprs ->
               Delta |- e ::: T ->
           Gamma |- (Let (ve :: ves) e) ::: T
 \end{coqcode}
@@ -1421,22 +1428,22 @@ $Cs = \{C_1 \mapsto (\tau_{1_1} \rightarrow
 Because every branch expression needs a context containing the variables of its constructor, there are two options: either every expression is typed in its own context that contains only the relevant variable entries, or all variables are added to the same context that then can type every expression. The latter option is used here because, even if variables are named the same in a Curry program, FlatCurry uses unique variable names and therefore there is no risk of a name clash. Unfortunately, the result of this approach is the rather obscure formal representation with twice overlined expressions.
 \todo{CamelCase im Code}
 \begin{coqcode}
-T_Case : forall Gamma ctype e substTypes T Tc p vis brexprs',
-           let  brexprs := Branch p vis :: brexprs' in
-           let   pattps := map pattSplit (brexprsToPatterns brexprs) in
-           let contyvis := map (compose (fromOption defaultTyVars) (cCon Gamma))
-                               (map fst pattps) in
+T_Case : forall Gamma ctype e substTypes T Tc p vis brExprs',
+           let  brExprs := Branch p vis :: brExprs' in
+           let   patPs  := map pattSplit (brExprsToPatterns brExprs) in
+           let consTvis := map (compose (fromOption defaultTyVars) (cCon Gamma))
+                                (map fst patPs) in
            let     tvis := snd (fromOption defaultTyVars 
                                            (cCon Gamma (fst (pattSplit p)))) in
            let   specTs := map (multiTypeSubst tvis substTypes)
-                               (map fst contyvis) in
-           let  vistysl := zip (map snd pattps)
+                               (map fst consTyVis) in
+           let  visTys  := zip (map snd patPs)
                                (map (compose fst funcTyList) specTs) in
-           let    Delta := multiListTypeUpdate Gamma vistysl
-            in Forall (flip (hasType Delta) T) (brexprsToExprs brexprs) ->
+           let    Delta := multiListTypeUpdate Gamma visTys
+            in Forall (flip (hasType Delta) T) (brExprsToExprs brExprs) ->
                Forall (fun ty => ty = Tc) (map ((flip funcPart) None) specTs) ->
                Gamma |- e ::: Tc ->
-         Gamma |- (Case ctype e (Branch p vis :: brexprs')) ::: T
+         Gamma |- (Case ctype e (Branch p vis :: brExprs')) ::: T
 \end{coqcode}
 Again, we use pattern matching to ensure that the \texttt{case} expression has a least one branch because, unlike \texttt{let}, the expression would otherwise not be typeable. The implementation might not be clear at first sight. Therefore, the example below, that is, a function that retrieves the value of a \texttt{Maybe} or returns a default value, is used to illustrate the computation.
 \begin{flushleft}
@@ -1456,16 +1463,16 @@ example = fromMaybeCase 0 (Just 2)
 		\end{coqcode}
 	\end{minipage}
 \end{flushleft}
-We begin with a list of branch expressions \texttt{brexprs}, that is, a pattern and an expression. \texttt{Var 3} represents the variable introduced in the \texttt{Just} pattern and \texttt{Var 1} is the default value $d$.
+We begin with a list of branch expressions \texttt{brExprs}, that is, a pattern and an expression. \texttt{Var 3} represents the variable introduced in the \texttt{Just} pattern and \texttt{Var 1} is the default value $d$.
 \begin{coqcode}
 [(Branch (Pattern ("Prelude","Just")   [3])(Var 3));
  (Branch (Pattern ("Prelude","Nothing") [])(Var 1))]
 \end{coqcode}
-The function \coqinline{pattSplit} takes a pattern and yields a pair of the qualified name of the constructor and its variables. Applied to the list of patterns, which is returned by \coqinline{brexprsToPatterns}, it returns the list \texttt{pattps} of (\coqinline{QName}, \coqinline{[TVarIndex]}) pairs.
+The function \coqinline{pattSplit} takes a pattern and yields a pair of the qualified name of the constructor and its variables. Applied to the list of patterns, which is returned by \coqinline{brexprsToPatterns}, it returns the list \texttt{patPs} of (\coqinline{QName}, \coqinline{[TVarIndex]}) pairs.
 \begin{coqcode}
 [("Prelude", "Just", [3]); ("Prelude", "Nothing", [])]
 \end{coqcode}
-By composing \coqinline{fromOption} and \coqinline{cCon} we have a function that is applied to every qualified name, that is, constructor name, yielding the list \texttt{contyvis} of types and type variable pairs.
+By composing \coqinline{fromOption} and \coqinline{cCon} we have a function that is applied to every qualified name, that is, constructor name, yielding the list \texttt{consTvis} of types and type variable pairs.
 \begin{coqcode}
 [(FuncType (TVar 0) (TCons ("test", "Maybe") [TVar 0]), [0]);
                     (TCons ("test", "Maybe") [TVar 0],  [0])]
@@ -1475,12 +1482,12 @@ The type variables are equal for every constructor since they return the same ty
 [FuncType Int (TCons ("test", "Maybe") [Int]);
                TCons ("test", "Maybe") [Int]]
 \end{coqcode}
-The second component we need in the premises later is \texttt{vistysl}, a list of pairs that assigns all variables used in constructors their type, according to the specialized types.
+The second component we need in the premises later is \texttt{visTys}, a list of pairs that assigns all variables used in constructors their type, according to the specialized types.
 \begin{coqcode}
 [([3], [Int]); ([], [])]
 \end{coqcode}
 The pairs represents \texttt{Just} with its variable $x$ and \texttt{Nothing} without variables.
-Lastly, \texttt{vistysl} is added to the context by using \coqinline{multiListTypeUpdate}. The function takes a list of pairs of lists, that is, a pair that contains lists of variables and the corresponding types for every constructor, and adds them to the context.
+Lastly, \texttt{visTys} is added to the context by using \coqinline{multiListTypeUpdate}. The function takes a list of pairs of lists, that is, a pair that contains lists of variables and the corresponding types for every constructor, and adds them to the context.
 \par
 Now, the computational part of the rule is finished and we can begin to check the premises. The first \texttt{Forall} proposition checks if all branch expressions have the same type \texttt{T}. In this case we would need to check if 0 and 2 are integers, which is obviously true. The next \texttt{Forall} proposition checks if the specialized data type \texttt{Tc} of all constructors matches the case expression's type, that is, \texttt{Maybe Int}, which is also true. Therefore, the case expression has the type \texttt{Tc}.
 \paragraph{Or, Free and Typed}
@@ -1532,7 +1539,7 @@ Inductive isSpecializableTo : TypeExpr -> TypeExpr -> Prop :=
 where "T '==>' t" := (isSpecializableTo T t).
 \end{coqcode}
 \coqinline{T_Eq} states that any type can be "specialized" to itself, which is useful for expressions like \texttt{(42 $::$ Int)}, where no specialization is necessary. If we want to prove that a type $T$ can be specialized to $\tau$, we need to substitute all type variables in $T$ with explicitly supplied types and the result must be equal to $\tau$.
-\section{Conversion of FlatCurry to Coq}
+\section{Transformation of FlatCurry into Coq}
 \label{conversion}
 Reasoning about Curry programs in Coq requires a way to transform a \texttt{.curry} file into the data structure discussed in \autoref{flatcurrysyntax}. The module \texttt{FlatCurry.Files} provides functions to read and transform Curry files, which can be viewed in FlatCurry syntax by using the \texttt{showFlatProg} function of the \texttt{FlatCurry.ShowFlat} module. We modeled the syntax in Coq deliberately as similar as possible to the original syntax to minimize the conversion effort necessary. The differences we need to address are:
 \begin{itemize}
@@ -1750,7 +1757,66 @@ An approach for imperative languages has been implemented by \citet{2006-Leroy-B
 In conclusion, there are many more aspects of Curry that could be formalized to expand the functionality of this implementation. 
 % Anhang
 \appendix
-
+\chapter{Usage}
+The source code presented in this thesis can be found at \url{https://git.informatik.uni-kiel.de/stu114713/curroqe}. The repository is structured as follows.
+\begin{itemize}
+	\item \textbf{code} contains Coq and Curry source files.
+	\begin{itemize}
+		\item \textbf{typing} contains files regarding CuMin and FlatCurry typing.
+		\begin{itemize}
+			\item \textbf{Basics.v}: General function definitions like \texttt{zip} or \texttt{elem}.
+			\item \textbf{CuMin.v}: CuMin syntax definition and typing rules.
+			\item \textbf{FlatCurry.v}: FlatCurry syntax definition.
+			\item \textbf{FlatCurryType.v}: FlatCurry typing rules.
+			\item \textbf{Maps.v}: Polymorphic maps.
+		\end{itemize}
+		\item \textbf{tools} contains transformation programs.
+		\begin{itemize}
+			\item \textbf{showFlatCoq.curry}: Transforms Curry files to FlatCurry definitions in Coq syntax.
+			\item \textbf{FlatCurry} contains Curry modules.
+			\begin{itemize}
+				\item \textbf{ShowCoq.curry}: Adapted \texttt{Show.curry} module.
+			\end{itemize}
+		\end{itemize}
+		\item \textbf{\_CoqProject}: Used to generate a \texttt{Makefile}.
+	\end{itemize}
+	\item \textbf{text} contains \LaTeX{} files.
+\end{itemize}
+\paragraph{Compilation}
+In order to compile all Coq files of this project, the \texttt{\_CoqProject} file can be used.
+\begin{minted}{bash}
+coq_makefile -f _CoqProject -o Makefile
+\end{minted}
+This generates a \texttt{Makefile} that can be executed with \texttt{make}. The generated \texttt{Makefile} resolves dependencies and calls the Coq compiler \texttt{coqc}. Subsequently, the files can be opened and imported.
+\par \noindent
+The transformation program can be compiled by using KiCS2 in the respective directory:
+\begin{minted}{bash}
+kics2 :load ShowCoq.curry :quit
+kics2 :load showFlatCoq.curry :save :quit
+\end{minted}
+The first command compiles the \texttt{ShowCoq} module, the second generates a binary that can be used with a Curry source file as follows.
+\begin{itemize}
+	\item \mintinline{bash}{./showFlatCoq <name>.curry} prints the transformed FlatCurry program to the terminal. The output can be written to a file by adding \mintinline{bash}{> <name>.v} to the command.
+	\item \mintinline{bash}{./showFlatCoq -c <name>.curry} prints a \texttt{\_CoqProject} file that can be used to compile the transformed FlatCurry definition file. Similarly, the output can be written to a file by adding \mintinline{bash}{> _CoqProject} to the command and then processed by \texttt{coq\_makefile} as shown above.
+\end{itemize}
+\paragraph{Transformation}
+The complete process of transforming a Curry file begins with compiling the program and using \texttt{showFlatCoq} to generate the definition and \coqinline{_CoqProject} files.
+\begin{minted}{bash}
+kics2 :load MyProg.curry :quit
+./showFlatCoq MyProg.curry > MyProg.v
+./showFlatCoq -c MyProg.curry > _CoqProject
+\end{minted}
+If one wants to work in a separate Coq file \texttt{MyProgProofs.v}, the file name needs to be appended to the \texttt{\_CoqProject} file with \texttt{echo "MyProgProofs.v" >{}> \_CoqProject}. Additionally, the FlatCurry definition  and the typing rules needs to be imported with \coqinline{Require Export CQE.MyProg.} in the \texttt{MyProgProofs.v} file. Then, the \texttt{Makefile} can be created and the Coq files are compiled.
+\begin{minted}{bash}
+coq_makefile -f _CoqProject -o Makefile
+make
+\end{minted}
+The new Coq file can now be opened in a Coq front-end. The import of \texttt{CQE.MyProg} loads the definition of the Curry program, which is named after the Curry file with \texttt{\_coq} appended, in this example \texttt{MyProg\_coq}.
+\begin{minted}[style = bw]{coq}
+> Check MyProg_coq.
+MyProg_coq : FlatCurry.TProg
+\end{minted}
+Finally, the definition can be used in the new Coq file, for example with \texttt{parseProgram}.
 % Literatur
 \bibliographystyle{plainnat}
 \bibliography{curroqe} % Datei: seminar.bib

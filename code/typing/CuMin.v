@@ -154,21 +154,21 @@ End Functions.
 Section Typing.
   Variable Prog : program.
   (* Rules for being a data type *)
-  Reserved Notation "Gamma '|-' T '\is_data_type'" (at level 40).
+  Reserved Notation "Gamma '|-' T 'in_Data'" (at level 40).
   Inductive is_data_type : context -> ty -> Prop :=
     | D_Var  : forall Gamma n,
                 (tag_con Gamma) n  = Some tag_star ->
-                Gamma |- (TVar n) \is_data_type
-    | D_Bool : forall Gamma, Gamma |- TBool \is_data_type
-    | D_Nat  : forall Gamma, Gamma |- TNat \is_data_type
+                Gamma |- (TVar n) in_Data
+    | D_Bool : forall Gamma, Gamma |- TBool in_Data
+    | D_Nat  : forall Gamma, Gamma |- TNat in_Data
     | D_List : forall Gamma T,
-                 Gamma |- T \is_data_type ->
-                 Gamma |- (TList T) \is_data_type
+                 Gamma |- T in_Data ->
+                 Gamma |- (TList T) in_Data
     | D_Pair : forall Gamma T T', 
-                 Gamma |- T \is_data_type ->
-                 Gamma |- T' \is_data_type ->
-                 Gamma |- (TPair T T') \is_data_type
-  where "Gamma '|-' T '\is_data_type'" := (is_data_type Gamma T) : typing_scope.
+                 Gamma |- T in_Data ->
+                 Gamma |- T' in_Data ->
+                 Gamma |- (TPair T T') in_Data
+  where "Gamma '|-' T 'in_Data'" := (is_data_type Gamma T) : typing_scope.
 
   (* Typing rules *)
   Reserved Notation "Gamma '|-' t ':::' T" (at level 40).
@@ -234,7 +234,7 @@ Section Typing.
     | T_Fail :   forall Gamma T,
                    Gamma |- (tfail T) ::: T
     | T_Any :    forall Gamma T,
-                   Gamma |- T \is_data_type ->
+                   Gamma |- T in_Data ->
                    Gamma |- (tany T) ::: T
   where "Gamma '|-' t ':::' T" := (has_type Gamma t T) : typing_scope.
 End Typing.
