@@ -119,7 +119,7 @@ We already saw CoqIde in \autoref{coqscreen}, but this is not the only Coq front
 \par 
 Regardless of the interface chosen, the structure is similar to the following: The left-hand side contains the code, while the right-hand side shows information about proofs and error messages. Definitions in Coq are always completed by a dot that marks a segment. Depending on the front-end, there may be buttons or shortcuts to load one segment at a time, multiple segments or the whole file. A loaded segment is usually highlighted green, which means that the definition contains no errors.
 \par
-Because of this approach, definitions that reference other definitions need to be in the correct order, that is, a function or data structure needs to be defined before it can be used in an expressions.
+Because of this approach, definitions that reference other definitions need to be in the correct order, that is, a function or data structure needs to be defined before it can be used in an expression.
 \subsection{Data types and functions}
 Coq's predefined definitions, contrary to e.g. Haskell's Prelude, are rather limited. Nevertheless, being a functional language, there is a powerful mechanism for defining new data types. The following example shows the definition of a polymorphic list.
 \begin{coqcode}
@@ -307,7 +307,7 @@ Fixpoint inB (x : nat) (l : list nat) : bool :=
   | [] => false
   | x' :: l' => if (beq_nat x x') then true else inB x l'
   end.
-Example e5 : InB 42 [1;2;42] = true.
+Example e6 : inB 42 [1;2;42] = true.
 Proof. reflexivity. Qed.
 \end{coqcode}
 Because \coqinline{inB} returns a boolean value, we have to check for equality with \coqinline{true} in order to get a provable proposition. The proof is fairly simple, \coqinline{reflexivity} evaluates the expression and checks the equation, nothing more needs to be done.\\
@@ -319,7 +319,7 @@ Fixpoint In (x : nat) (l : list nat) : Prop :=
   | [] => False
   | x' :: l' => x' = x \/ In x l'
   end.
-Example e6 : In 42 [1;2;42].
+Example e7 : In 42 [1;2;42].
 Proof. 
   simpl. (* 1 = 42 \/ 2 = 42 \/ 42 = 42 \/ False *)
   right.           (* 2 = 42 \/ 42 = 42 \/ False *)
@@ -333,26 +333,26 @@ Proving the same example as before, we need new tactics to work with logical con
 The last option to describe this property is by using inductively defined propositions. As already mentioned before, inductively defined propositions consist of rules that describe how an argument can satisfy the proposition.
 \label{In}
 \begin{coqcode}
-Inductive InInd : nat -> list nat -> Prop :=
-  | head : forall n l, InInd n (n :: l)
-  | tail : forall n l e, InInd n l -> InInd n (e :: l).
+Inductive inInd : nat -> list nat -> Prop :=
+  | head : forall n l, inInd n (n :: l)
+  | tail : forall n l e, inInd n l -> inInd n (e :: l).
 \end{coqcode} 
 The rule \coqinline{head} states that the list's head is an element of the list. The second rule \coqinline{tail} covers the case that if an element is contained in a list, it is also an element of the same list prefixed by another element.
 \begin{coqcode}
-Example e7 : InInd 42 [2;42].
+Example e8 : inInd 42 [2;42].
 Proof. 
-  apply Tail.  (* InInd 42 [42] *)
-  apply Head.
+  apply tail.  (* inInd 42 [42] *)
+  apply head.
 Qed.           
 \end{coqcode}
-The interesting part about this proof is the deductive approach. Previously we started with a proposition and constructed evidence of its truth. In this case we use \coqinline{InInd}'s rules "backwards": because we want to show that \coqinline{42} is an element of \coqinline{[2;42]]}, we need to argue that it is contained within the list's tail. Since it is the head of \coqinline{[42]}, we can then apply \coqinline{head} and conclude that the previous statement must also be true, because we required \coqinline{42} to be contained in the list's tail, which is true.
+The interesting part about this proof is the deductive approach. Previously we started with a proposition and constructed evidence of its truth. In this case we use \coqinline{inInd}'s rules "backwards": because we want to show that \coqinline{42} is an element of \coqinline{[2;42]]}, we need to argue that it is contained within the list's tail. Since it is the head of \coqinline{[42]}, we can then apply \coqinline{head} and conclude that the previous statement must also be true, because we required \coqinline{42} to be contained in the list's tail, which is true.
 \par
 Inductively defined propositions will play an important role in the following chapters, hence some more examples:
 \begin{coqcode}
-Inductive Forall (A : Type) (P : A -> Prop) : list A -> Prop :=
+Inductive Forall {A : Type} (P : A -> Prop) : list A -> Prop :=
   | Forall_nil : Forall P [ ]
   | Forall_cons : forall (x : A) (l : list A), P x -> Forall P l ->
-                    Forall P (x :: l)
+                    Forall P (x :: l).
 \end{coqcode}
 We already used \coqinline{Forall} in the previous section without knowing the exact definition, the rules are fairly intuitive. According to \coqinline{Forall_nil}, a proposition is always true for the empty list. If the list is non-empty, the first element and every element in the list's tail have to satisfy the property, as stated in \coqinline{Forall_cons}, in order for the whole list to satisfy the property.
 \par
@@ -397,9 +397,9 @@ _ ? y = y
 	\end{minipage}
 \end{flushleft}
 \noindent
-The function \texttt{head} returns the first element of a list, but in this case the list is empty. Therefore, the computation fails and KiCS2 returns an exclamation mark. Nevertheless, it is possible to apply the \texttt{?} operator that represents a non-deterministic choice between the arguments to both the failed computation and the number 8. Since only one argument contains a value, the expression evaluates to 8.
+The function \texttt{head} returns the first element of a list, but in this case the list is empty. Therefore, the computation fails and KiCS2 returns an exclamation mark. Nevertheless, it is possible to apply the \texttt{?} operator that represents a nondeterministic choice between the arguments to both the failed computation and the number 8. Since only one argument contains a value, the expression evaluates to 8.
 \par
-In some situations deterministic programs are strictly necessary, for example when working with IO actions. While it may not seem import if a function prints an 'a' or 'b' to the terminal, writing a file of non-deterministic size to the hard drive can cause severe problems. Fortunately, Curry enforces determinism when using IO actions. If one needs a more Haskell-esque evaluation of multiple patterns, the \texttt{case} expression applies:
+In some situations deterministic programs are strictly necessary, for example when working with IO actions. While it may not seem import if a function prints an 'a' or 'b' to the terminal, writing a file of nondeterministic size to the hard drive can cause severe problems. Fortunately, Curry enforces determinism when using IO actions. If one needs a more Haskell-esque evaluation of multiple patterns, the \texttt{case} expression applies:
 \label{currycase}
 \begin{flushleft}
 	\begin{minipage}[t]{.3 \linewidth}
@@ -444,7 +444,7 @@ Unknown values are represented in Curry by free variables, that is, variables th
 \end{haskellcode}
 In the above example, the boolean conjunction of \texttt{False} and a free variable evaluates to another free variable \texttt{\_x0} because the expression is false for every possible value of \texttt{x}.
 \par
-Free variables can be used to compute the possible values of an expression, but there are more sophisticated applications: Curry can solve \textit{constraints}, for example the equation \texttt{1 + 1 = x where x free}. Solving the expression results in multiple values for \texttt{x} and the corresponding value of the equation:
+Free variables can be used to compute the possible values of an expression, but there are more sophisticated applications: Curry can solve \textit{constraints}, for example the equation \texttt{1 + 1 == x where x free}. Solving the expression results in multiple values for \texttt{x} and the corresponding value of the equation:
 \begin{haskellcode}
 {x = (-_x2)} False
 {x = 0} False
@@ -459,7 +459,7 @@ Curry solves the equation by using \textit{narrowing}, that is, guessing values 
 \par 
 An alternative approach to solving constraints is \textit{residuation}: If an expression cannot be solved because of an unknown free variable, the evaluation is suspended until its value is known from evaluating other expressions. It is possible that there is not enough information to determine the variable's value, in which case the evaluation fails. \\
 \par \noindent
-In summary, we looked at the basic structure of a Curry program and function definitions. Regarding functions, we discussed lazy evaluation and non-determinism as well as its consequences when evaluating functions. Finally, we used free variables and learned about the different approaches to evaluating such expressions: narrowing and residuation.
+In summary, we looked at the basic structure of a Curry program and function definitions. Regarding functions, we discussed lazy evaluation and nondeterminism as well as its consequences when evaluating functions. Finally, we used free variables and learned about the different approaches to evaluating such expressions: narrowing and residuation.
 \section{Theory}
 \label{theory}
 In this section we will discuss the theoretical basics of the following chapters. First and foremost, what is typing?
@@ -513,11 +513,11 @@ This implementation of a map is constructed by linking multiple functions togeth
 \paragraph{Inference rules}
 In the following chapters we will work with typing rules, that is, a rule that states conditions which need to be satisfied in order for an expression to have a certain type. In Coq we use such rules as part of an inductively defined proposition, but this usually includes implementation-specific details. Therefore, we use a more formal notation: \textit{inference rules}.\label{infrules} An inference rule consists of an optional list of premises that needs to be fulfilled in order for the conclusion below the line to hold, similar to an implication.
 \begin{coqcode}
-Inductive InInd : nat -> list nat -> Prop :=
-  | gead : forall n l, InInd n (n :: l)
-  | tail : forall n l e, InInd n l -> InInd n (e :: l).
+Inductive inInd : nat -> list nat -> Prop :=
+  | gead : forall n l, inInd n (n :: l)
+  | tail : forall n l e, inInd n l -> inInd n (e :: l).
 \end{coqcode}
-We can describe the inductively defined proposition \coqinline{InInd} we used in \autoref{In} that represents the occurrence of an element in a list with two inference rules as shown in \autoref{InInfR}.
+We can describe the inductively defined proposition \coqinline{inInd} we used in \autoref{In} that represents the occurrence of an element in a list with two inference rules as shown in \autoref{InInfR}.
 \begin{figure}[H]
 	\begin{center}
 		\begin{minipage}{.45 \linewidth}
@@ -532,9 +532,9 @@ We can describe the inductively defined proposition \coqinline{InInd} we used in
 	\label{InInfR}
 \end{figure} \noindent
 \texttt{In\_H} does not have a premise because a list's head is always an element of the list. Thus, the line can be omitted. The rule \texttt{In\_T} states that if the premise \texttt{In n l} is true, then the conclusion \texttt{In n (e $::$ l)} holds.
-Inference rules can have multiple premises $p_1 \dots p_n$ that are treated as multiple implications $p_1 \rightarrow \dots \rightarrow p_n \rightarrow c$ with the conclusion $c$.
-\par
-Even though the line may imply that premises and the conclusion are independent from each other or that there is a chronological order, this is not necessarily the case. The premises can contain variables that are bound to a value only after evaluating the conclusion. \todo{Beispiel}
+Inference rules can have multiple premises $p_1 \dots p_n$ that are treated as multiple implications $p_1 \rightarrow \dots \rightarrow p_n \rightarrow c$ with the conclusion $c$.\\
+\par \noindent
+Even though the line may imply that premises and the conclusion are independent from each other or that there is a chronological order, this is not necessarily the case. The premises can contain variables that are unknown until the conclusion is evaluated, as we will see when typing FlatCurry expressions in \autoref{flatfun}.
 \chapter{CuMin}
 \label{cumin}
 CuMin (for \textit{Curry Minor}) is a simplified sublanguage of Curry introduced by \citet{p19mehner}. The syntax of CuMin is restricted and thus allows more concrete types and typing rules, compared to FlatCurry. Although it requires some transformations to substitute missing constructs, CuMin can express the majority of Curry programs. In the following sections we will take a look at CuMin's syntax, create a suitable context and discuss data types, followed by the formal definition and implementation of typing rules as well as some examples. In the concluding section of this chapter we will see some more advanced tactics that are able to fully automate simple proofs.
@@ -1005,7 +1005,7 @@ The next example demonstrates the application $\text{app} = (\text{union}_{[Nat]
 &\text{union}::\forall^{*}\alpha.(\alpha \rightarrow (\alpha \rightarrow \alpha))\\
 &\text{union}\: x \: y = \text{case}\: \text{anything}_{\text{Bool}} \; \text{of}\: \langle \text{True} \rightarrow x; \text{False} \rightarrow y\rangle
 \end{align*}
-The function \texttt{union} is comparable to Curry's \texttt{?} operator, since anything$_{Bool}$ can be either \texttt{True} or \texttt{False}; the boolean case expression becomes a non-deterministic choice between both arguments. Now we want to prove that applying two \texttt{Nat} expressions to \texttt{union} results in a natural number. 
+The function \texttt{union} is comparable to Curry's \texttt{?} operator, since anything$_{Bool}$ can be either \texttt{True} or \texttt{False}; the boolean case expression becomes a nondeterministic choice between both arguments. Now we want to prove that applying two \texttt{Nat} expressions to \texttt{union} results in a natural number. 
 \begin{coqcode}
 Definition app := tapp
                      (tapp (tfun (Id 1) [TNat])
@@ -1216,7 +1216,7 @@ Case Flex (Var 2) [(Branch (Pattern ("Prelude","Just") [3] )(Var 3)),
 \end{coqcode}
 The resulting FlatCurry code looks nearly identical for both definitions, only the \coqinline{CaseType} differs because \texttt{fromMaybeCase} is an explicit case expression instead of a transformation. Unlike CuMin's \texttt{case}, this definition can be used with every type. Hence, typing a \texttt{case} expression is more complex in FlatCurry.\\
 \par \noindent
-The remaining expressions are simple: \texttt{Free} has a list of variables indexes that represent free variables, which can be used in the supplied expression in place of variables or values. \texttt{Or} represents the non-deterministic choice between two expressions, similar to the \texttt{?} operator. Lastly, \texttt{Typed} explicitly assigns a type to an expression, for example \mbox{\texttt{2 $::$ Int}}.
+The remaining expressions are simple: \texttt{Free} has a list of variables indexes that represent free variables, which can be used in the supplied expression in place of variables or values. \texttt{Or} represents the nondeterministic choice between two expressions, similar to the \texttt{?} operator. Lastly, \texttt{Typed} explicitly assigns a type to an expression, for example \mbox{\texttt{2 $::$ Int}}.
 \section{Context}
 \label{context}
 The context we use for typing FlatCurry contains the familiar partial map from \coqinline{VarIndex} to \coqinline{TypeExpr} but is missing the \coqinline{tag} map since we do not have data types anymore. In addition to the information about variables, the context contains function and constructor declarations in form of two partial maps that map a qualified name to a pair of the full type and a list of type variables, for example, \texttt{Just} has the entry ($a \rightarrow$ Maybe $a$, [$a$]). The list of type variables simplifies specializing a function because every type variable needs to be substituted with a concrete type. To work with contexts there are selectors \coqinline{vCon}, \coqinline{fCon} and \coqinline{cCon} to access the respective variable, function or constructor context and update functions to add values, similar to the CuMin context.\\
@@ -1255,6 +1255,7 @@ tyListFunc ([TVar 0] ++ [TCons ("Prelude", "Maybe") (map TVar [0])])
 \end{coqcode} 
 In case of \texttt{Just} this results in the type $a \rightarrow$ Maybe $a$, which is added to the context together with the list of type variables of the data type. This procedure is applied to every constructor declaration and, together with the parsed function declarations, results in a context that contains the full type and a list of type variables for every function and constructor.
 \section{Typing}
+
 The FlatCurry typing rules expand concepts we discussed in the previous chapter. Functions can be applied to multiple arguments at the same time, there are user-defined data types, generic \texttt{case} expressions and \texttt{let} expressions with multiple bindings. This results in more complex typing rules because conditions need to hold for multiple elements, instead of one, and are not restricted to a specific data type.
 \par 
 We begin by defining names for common types, for example \texttt{Int}, \texttt{Char} and \texttt{Float}, which are represented by a type constructor call \texttt{TCons ("Prelude", "Int") []} for the respective type.
@@ -1293,6 +1294,7 @@ FlatCurry does have fewer literals than CuMin, all of which are contained in the
 \noindent
 The other literals we defined explicitly in CuMin are replaced by \coqinline{TCons} constructs, for example, \texttt{TCons ("Prelude", "[]") []} represents the empty list. Typing variables works as before: If the context $\Gamma$ has an entry for a variable, its type is the value \mbox{returned by $\Gamma$.}
 \paragraph{Function Application}
+\label{flatfun}
 Applying a function $f$ to $n$ arguments $e_{1} \dots e_{n}$ with types $\tau_{1} \dots \tau_{n}$ requires the types to match the argument types in the function type returned by the context. Looking up the function $f$, denoted by curly brackets, yields the pair $(\tau_1 \rightarrow \dots \rightarrow \tau_n \rightarrow \tau, \overline{x_k})$ where the first component is the type of $f$ and the second is a list of type variables, as defined in \autoref{context}. 
 \begin{figure}[H]
 	\begin{prooftree}
@@ -1501,7 +1503,7 @@ The typing rules for \texttt{or} and \texttt{free} expressions are short:
 		\centering
 		\begin{prooftree}
 			\AxiomC{$\Gamma \vdash e_1 :: \tau$}
-			\AxiomC{$\Gamma \vdash e_2 :: \tau$}\LeftLabel{\footnotesize a}
+			\AxiomC{$\Gamma \vdash e_2 :: \tau$}\RightLabel{\footnotesize a}
 			\BinaryInfC{$\Gamma \vdash e_1 \text{ or } e_2 :: \tau$}
 		\end{prooftree}
 	\end{subfigure}
@@ -1510,7 +1512,7 @@ The typing rules for \texttt{or} and \texttt{free} expressions are short:
 		\centering
 		\begin{prooftree}
 			\AxiomC{$\Gamma, x_1 \mapsto \tau_1, \dots, x_n \mapsto \tau_n \vdash
-				e :: \tau$}\LeftLabel{\footnotesize b}
+				e :: \tau$}\RightLabel{\footnotesize b}
 			\UnaryInfC{$\Gamma \vdash \text{let } x_1, \dots, x_n \text{ free in } e :: \tau $}
 		\end{prooftree}
 	\end{subfigure}
@@ -1519,7 +1521,7 @@ The typing rules for \texttt{or} and \texttt{free} expressions are short:
 		\centering
 		\begin{prooftree}
 			\AxiomC{$\Gamma \vdash e :: T$}
-			\AxiomC{$T \Rightarrow \tau$}\LeftLabel{\footnotesize c}
+			\AxiomC{$T \Rightarrow \tau$}\RightLabel{\footnotesize c}
 			\BinaryInfC{$\Gamma \vdash (e ::: \tau) :: \tau$}
 		\end{prooftree}
 	\end{subfigure}
@@ -1709,7 +1711,7 @@ end = FuncType Bool Bool
 \end{coqcode}
 One possible problem of the Coq implementation is the usage of \texttt{zip} in \texttt{multiTypeSubst} because lists of different length are handled by discarding the longer list's tail. As we can see in Curry's solution, using \texttt{zip} entails that lists of arbitrary length satisfy the equation. However, this behavior is actually quite useful because it allows us to specify types only for supplied arguments in partial a application.
 \par \noindent
-Implementations that consider the lists' length and fail if it differs do not solve this problem either; they are stuck at the same step  as shown above, even though the solution is unique. One probable cause of this is that Coq would need to try every branch of the function and introduce further variables (\texttt{t} in this example), which this tactic is not capable of.\\
+Implementations, which consider the lists' length and fail if it differs, do not solve this problem either; they are stuck at the same step  as shown above, even though the solution is unique. One probable cause of this is that Coq would need to try every branch of the function and introduce further variables (\texttt{t} in this example), which this tactic is not capable of.\\
 \par \noindent
 The last example, that is, the case expression with a free variable, expands on the usage of automation in proofs. As we already discussed, there are some limitations that require explicitly supplying some values, but the proof is still shortened significantly by using the \texttt{;} and \texttt{econstructor}.
 \begin{coqcode}
@@ -1758,6 +1760,7 @@ In conclusion, there are many more aspects of Curry that could be formalized to 
 % Anhang
 \appendix
 \chapter{Usage}
+\label{usage}
 The source code presented in this thesis can be found at \url{https://git.informatik.uni-kiel.de/stu114713/curroqe}. The repository is structured as follows.
 \begin{itemize}
 	\item \textbf{code} contains Coq and Curry source files.
@@ -1779,6 +1782,7 @@ The source code presented in this thesis can be found at \url{https://git.inform
 			\end{itemize}
 		\end{itemize}
 		\item \textbf{\_CoqProject}: Used to generate a \texttt{Makefile}.
+		\item \textbf{Thesis.v}: Coq code and examples used in the introduction.
 	\end{itemize}
 	\item \textbf{text} contains \LaTeX{} files.
 \end{itemize}
@@ -1800,7 +1804,7 @@ The first command compiles the \texttt{ShowCoq} module, the second generates a b
 	\item \mintinline{bash}{./showFlatCoq -c <name>.curry} prints a \texttt{\_CoqProject} file that can be used to compile the transformed FlatCurry definition file. Similarly, the output can be written to a file by adding \mintinline{bash}{> _CoqProject} to the command and then processed by \texttt{coq\_makefile} as shown above.
 \end{itemize}
 \paragraph{Transformation}
-The complete process of transforming a Curry file begins with compiling the program and using \texttt{showFlatCoq} to generate the definition and \coqinline{_CoqProject} files.
+The complete process of transforming a Curry file begins with compiling the program and using \texttt{showFlatCoq} to generate the definition and \coqinline{_CoqProject} files. The source files contained in the \texttt{typing} directory are assumed to be in the working directory.
 \begin{minted}{bash}
 kics2 :load MyProg.curry :quit
 ./showFlatCoq MyProg.curry > MyProg.v

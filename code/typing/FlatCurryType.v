@@ -47,15 +47,15 @@ Section Context.
     end.
 
   (* Updates a variable's type in a context. *)
-  Definition varUpdate (Gamma : context) (vi : VarIndex) (t : TypeExpr) : context := 
+  Definition varUpdate Gamma (vi : VarIndex) (t : TypeExpr) : context := 
     Con (update beq_nat (vCon Gamma) vi t) (fCon Gamma) (cCon Gamma).
 
   (* Updates the function entry of a QName. *)
-  Definition funcUpdate (Gamma : context) (qn : QName) (tvis : (TypeExpr * list TVarIndex)) : context :=
+  Definition funcUpdate Gamma (qn : QName) (tvis : (TypeExpr * list TVarIndex)) : context :=
     Con (vCon Gamma) (update beq_qname (fCon Gamma) qn tvis) (cCon Gamma).
 
   (* Updates the constructor entry of a QName. *)
-  Definition consUpdate (Gamma : context) (qn : QName) (tvis : (TypeExpr * list TVarIndex)) :=
+  Definition consUpdate Gamma (qn : QName) (tvis : (TypeExpr * list TVarIndex)) : context :=
     Con (vCon Gamma) (fCon Gamma) (update beq_qname (cCon Gamma) qn tvis).
 
 End Context.
@@ -75,23 +75,24 @@ Section ProgToContext.
      to a function type, the second component of the pair is a list of the
      type variables.
      Example: (Just a) has the entry (a -> Maybe a, [a]) in the context. *)
-  Definition addCons (con : context) (tqn : QName) (vis : list TVarIndex) (c : ConsDecl) : context :=
+  Definition addCons Gamma (tqn : QName) (vis : list TVarIndex) (c : ConsDecl) : context :=
     match c with
-    | Cons qn _ _ args => consUpdate con qn (tyListFunc (args ++ [TCons tqn (map TVar vis)]), vis)
+    | Cons qn _ _ args => let ty := (args ++ [TCons tqn (map TVar vis)])
+                           in consUpdate Gamma qn (tyListFunc ty, vis)
     end.
 
   (* Adds multiple constructors to a context. *)
-  Fixpoint addConsL (con : context) (tqn : QName) (vis : list TVarIndex) (cs : list ConsDecl) : context :=
+  Fixpoint addConsL Gamma (tqn : QName) (vis : list TVarIndex) (cs : list ConsDecl) : context :=
     match cs with
-    | [] => con
-    | c :: cs => addConsL (addCons con tqn vis c) tqn vis cs
+    | [] => Gamma
+    | c :: cs => addConsL (addCons Gamma tqn vis c) tqn vis cs
     end.
 
   (* Extracts constructor entries from type declarations. *)
-  Fixpoint parseTypes (con : context) (tydecls : list TypeDecl) : context :=
+  Fixpoint parseTypes Gamma (tydecls : list TypeDecl) : context :=
     match tydecls with
-    | (Typec qn _ vis cs) :: tydecls => parseTypes (addConsL con qn vis cs) tydecls
-    | _ => con
+    | (Typec qn _ vis cs) :: tydecls => parseTypes (addConsL Gamma qn vis cs) tydecls
+    | _ => Gamma
     end.
 
   (* Extracts indices of type variables from a type, with possibily
@@ -109,14 +110,14 @@ Section ProgToContext.
     rev (Basics.nodup beq_nat (rev (extractTVars t))).
 
   (* Adds a function entry to a context. *)
-  Fixpoint addFunc (con : context) (fdecl : FuncDecl) : context :=
+  Fixpoint addFunc Gamma (fdecl : FuncDecl) : context :=
     match fdecl with
-    | Func qn _ _ ty _ => funcUpdate con qn (ty, funcTVars ty)
+    | Func qn _ _ ty _ => funcUpdate Gamma qn (ty, funcTVars ty)
     end.
 
   (* Adds multiple functions to a context. *)
-  Definition parseFuncs (con : context) (fdecls : list FuncDecl) : context :=
-    fold_right (fun f c => addFunc c f) con fdecls.
+  Definition parseFuncs Gamma (fdecls : list FuncDecl) : context :=
+    fold_right (fun f c => addFunc c f) Gamma fdecls.
 
   (* Adds function and constructor entries to a context. *)
   Definition parseProgram (p : TProg) : context :=
@@ -148,13 +149,15 @@ Section TypingHelper.
     end.
 
   (* Adds multiple variable -> type entries to a context. *)
-  Definition multiTypeUpdate (Gamma : context) (vitys : list (VarIndex * TypeExpr)) : context :=
+  Definition multiTypeUpdate Gamma (vitys : list (VarIndex * TypeExpr)) : context :=
     fold_right (fun vity con => match vity with (vi, ty) => varUpdate con vi ty end)
                Gamma vitys.
 
   (* Adds list of multiple variable -> type entries to a context. *)
-  Definition multiListTypeUpdate (Gamma : context) (vityls : list ((list VarIndex) * (list TypeExpr))) : context :=
-    fold_right (fun vityl con => match vityl with (vil, tyl) => multiTypeUpdate Gamma (zip vil tyl) end)
+  Definition multiListTypeUpdate Gamma (vityls : list ((list VarIndex) * (list TypeExpr))) : context :=
+    fold_right (fun vityl con => match vityl with
+                                 | (vil, tyl) => multiTypeUpdate Gamma (zip vil tyl)
+                                 end)
                Gamma vityls.
 
   (* Returns type of a literal. *)

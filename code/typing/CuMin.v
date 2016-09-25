@@ -103,7 +103,9 @@ Section Functions.
     match fd with
     | FDecl _ [] _ _ _ => []
     | FDecl _ qs _ _ _ =>  map snd 
-                               (filter (fun qty => match qty with (q,ty) => (is_star_tagged q) end)
+                               (filter (fun qty => match qty with
+                                                   | (q,ty) => (is_star_tagged q)
+                                                   end)
                                        (zip qs tys))
     end.
 

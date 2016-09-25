@@ -1,0 +1,228 @@
+\documentclass{beamer}
+\usepackage{ulem}
+\usepackage{proof}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{minted}
+\usemintedstyle[haskell]{trac}
+\newminted{haskell}{fontsize=\small}
+\newminted{coq}{fontsize=\small}
+\setmintedinline{style = bw}
+\newcommand{\coqinline}[1]{\mintinline{coq}{#1}}
+
+\mode<presentation>
+{
+  \usetheme{Antibes}
+  \usecolortheme{lily}
+}
+
+
+\usepackage[english]{babel}
+% or whatever
+
+\usepackage[utf8]{inputenc}
+% or whatever
+
+\usepackage{times}
+\usepackage[T1]{fontenc}
+\setbeamersize{text margin left=1.5em,text margin right=1.5em}
+
+\title{Formalizing inference systems in Coq by means of type systems for Curry}
+
+%\subtitle{Bachelor's Thesis} % (optional)
+
+\author{Niels Bunkenburg}
+
+\institute{ 
+	Programming Languages and Compiler Construction \par
+	Department of Computer Science \par
+	Christian-Albrechts-University of Kiel}
+% - Use the \inst command only if there are several affiliations.
+% - Keep it simple, no one is interested in your street address.
+
+\date[Short Occasion] % (optional)
+{29.09.2016}
+
+\subject{Formalizing inference systems in Coq by means of type systems for Curry}
+% This is only inserted into the PDF information catalog. Can be left
+% out. 
+
+
+
+% If you have a file called "university-logo-filename.xxx", where xxx
+% is a graphic format that can be processed by latex or pdflatex,
+% resp., then you can add a logo as follows:
+
+ %\pgfdeclareimage[height=0.5cm]{university-logo}{../Bilder/cau_siegel.png}
+ %\logo{\pgfuseimage{university-logo}}
+
+
+
+% Delete this, if you do not want the table of contents to pop up at
+% the beginning of each subsection:
+\AtBeginSubsection[]
+{
+  \begin{frame}<beamer>{Outline}
+    \tableofcontents[currentsection,currentsubsection]
+  \end{frame}
+}
+
+
+% If you wish to uncover everything in a step-wise fashion, uncomment
+% the following command: 
+
+%\beamerdefaultoverlayspecification{<+->}
+
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Motivation}
+
+\end{frame}
+\begin{frame}{Outline}
+  \tableofcontents
+  % You might wish to add the option [pausesections]
+\end{frame}
+
+\section{Introduction}
+\subsection{Programming Languages}
+\begin{frame}[fragile]{Coq - Data Types and Functions}
+\begin{itemize}
+\item Inductive definitions
+\begin{coqcode}
+Inductive list {X : Type} : Type :=
+  | nil  : list X
+  | cons : X -> list X -> list X.
+\end{coqcode}
+\vfill
+\pause
+\item (Recursive) functions
+\begin{coqcode}
+Fixpoint app {X: Type} (l1 l2: list X) : (list X) :=
+  match l1 with
+  | nil => l2
+  | cons h t => cons h (app t l2)
+  end.
+\end{coqcode}
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Coq - Propositions}
+\begin{itemize}
+\item Equations
+\begin{coqcode}
+1 + 1 = 2.
+forall (X : Type) (l : list X), l ++ [] = l.
+\end{coqcode}
+\vfill
+\item Inductively Defined Propositions
+\begin{coqcode}
+Inductive inInd : nat -> list nat -> Prop :=
+ | head: forall n l, inInd n (n :: l)
+ | tail: forall n l e, inInd n l -> inInd n (e :: l).
+\end{coqcode}
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Curry}
+\begin{itemize}
+\item Syntax similar to Haskell
+\item Nondeterminism
+\begin{haskellcode}
+(?)   :: a -> a -> a
+x ? _ = x
+_ ? y = y
+\end{haskellcode}
+\item Free variables
+\begin{coqcode}
+1 + 1 == x where x free
+\end{coqcode}
+\end{itemize}
+\end{frame}
+\subsection{Theory}
+\begin{frame}{Typing}
+\end{frame}
+\begin{frame}{Context}
+\end{frame}
+\begin{frame}[fragile]{Inference rules}
+\begin{center}
+	\begin{minipage}{.45 \linewidth}
+		\infer[\text{\texttt{In\_H}}]{\coqinline{In n (n :: l)}}{\phantom{premise}}
+	\end{minipage}
+	\hspace{.1 \linewidth}
+	\begin{minipage}{.45 \linewidth}
+		\infer[\text{\texttt{In\_T}}]{\coqinline{In n (e :: l)}}{\coqinline{In n l}}
+	\end{minipage}
+\end{center}
+\end{frame}
+\section{CuMin}
+\subsection{Modeling}
+\begin{frame}{Syntax - Backus–Naur Form}
+\begin{align*}
+P &::= D;P \:|\:D \\
+D &::= f :: \kappa \tau; f \overline{x_{n}} = e\\
+\kappa &::= \forall^{\epsilon} \alpha.\kappa \:|\: \forall^{*}\alpha.\kappa \:|\: \epsilon \\
+\tau &::= \alpha \:|\: \text{Bool} \:|\: \text{Nat} \:|\: [\tau] \:|\: (\tau,\tau ') \:|\: \tau \rightarrow \tau ' \\
+e &::= x \:|\: f_{\overline{\tau_{m}}} \:|\: e_{1}\: e_{2} \:|\: \text{let}\: x = e_{1} \:\text{in}\: e_{2} \:|\: n \:|\: e_{1} + e_{2} \:|\: e_{1} \circeq e_{2}\\
+&\:|\: (e_{1},e_{2}) \:|\: \text{case}\: e \:\text{of}\: \langle (x,y) \rightarrow e_{1}\rangle\\
+&\:|\: \text{True} \:|\: \text{False} \:|\: \text{case}\: e \:\text{of}\: \langle \text{True} \rightarrow e_{1};\:\text{False} \rightarrow e_{2}\rangle\\
+&\:|\: \text{Nil}_{\tau} \:|\: \text{Cons}(e_{1}, e_{2}) \:|\: \text{case}\: e \:\text{of}\: \langle \text{Nil} \rightarrow e_{1};\:\text{Cons}(x,y) \rightarrow e_{2}\rangle\\
+&\:|\: \text{failure}_{\tau} \:|\: \text{anything}_{\tau}
+\end{align*}
+\end{frame}
+\begin{frame}
+\begin{minipage}{.45 \linewidth}
+	\begin{align*}
+	&\text{fst}::\forall^{*}\alpha.\forall^{*}\beta.(\alpha, \beta) \rightarrow\alpha\\
+	&\text{fst}\: p = \text{case}\: p\: \text{of}\: \langle(u,v) \rightarrow u\rangle
+	\end{align*}
+\end{minipage}
+\begin{minipage}{.45 \linewidth}
+	\begin{align*}
+	&\text{one} :: \text{Nat}\\
+	&\text{one} = \text{fst}_{Nat, Bool} ~ (1, \text{True})
+	\end{align*}
+\end{minipage}
+\end{frame}
+\begin{frame}[fragile]{Syntax - Coq}
+\begin{coqcode}
+Inductive quantifier : Type :=
+  | for_all : id -> tag -> quantifier.
+	
+Inductive ty : Type :=
+  | TVar  : id -> ty
+  | TBool : ty
+  | TNat  : ty
+  | TList : ty -> ty
+  | TPair : ty -> ty -> ty
+  | TFun  : ty -> ty -> ty.
+
+Definition program := list func_decl.
+Inductive func_decl : Type :=
+  | FDecl : id -> list quantifier ->
+	ty -> list id -> tm -> func_decl.
+\end{coqcode}
+\end{frame}
+\begin{frame}{Context}
+\end{frame}
+\subsection{Typing}
+\begin{frame}{Typing rules}
+\end{frame}
+\begin{frame}{Examples}
+\end{frame}
+\section{FlatCurry}
+\subsection{Differences to CuMin}
+\begin{frame}{Syntax}
+\end{frame}
+\subsection{Typing}
+\section{Conclusion}
+\begin{frame}{Summary}
+\end{frame}
+\begin{frame}{Future Work}
+\end{frame}
+
+\end{document}
+
+
