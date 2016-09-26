@@ -5,6 +5,7 @@
 \usepackage{amssymb}
 \usepackage{minted}
 \usepackage{subcaption}
+\usepackage{graphicx}
 \usemintedstyle[haskell]{trac}
 \newminted{haskell}{fontsize=\small}
 \newminted{coq}{fontsize=\small}
@@ -13,64 +14,39 @@
 
 \mode<presentation>
 {
-  \usetheme{Antibes}
-  \usecolortheme{lily}
+  %\usetheme{Antibes}
+  %\usecolortheme{lily}
+  \usetheme{metropolis}
 }
 
 
-\usepackage[english]{babel}
+\usepackage[german]{babel}
 % or whatever
 
 \usepackage[utf8]{inputenc}
 % or whatever
 
-\usepackage{times}
+%\usepackage{times}
 \usepackage[T1]{fontenc}
 \setbeamersize{text margin left=1.5em,text margin right=1.5em}
 
-\title{Formalizing inference systems in Coq by means of type systems for Curry}
+\title{Formalisierung von Inferenzsystemen in Coq am Beispiel von Typsystemen für Curry}
 
 %\subtitle{Bachelor's Thesis} % (optional)
 
 \author{Niels Bunkenburg}
 
 \institute{ 
-	Programming Languages and Compiler Construction \par
-	Department of Computer Science \par
-	Christian-Albrechts-University of Kiel}
+	Arbeitsgruppe für Programmiersprachen und Übersetzerkonstruktion \par
+	Institut für Informatik \par
+	Christian-Albrechts-Universität zu Kiel}
 % - Use the \inst command only if there are several affiliations.
 % - Keep it simple, no one is interested in your street address.
 
 \date[Short Occasion] % (optional)
 {29.09.2016}
 
-\subject{Formalizing inference systems in Coq by means of type systems for Curry}
-% This is only inserted into the PDF information catalog. Can be left
-% out. 
-
-
-
-% If you have a file called "university-logo-filename.xxx", where xxx
-% is a graphic format that can be processed by latex or pdflatex,
-% resp., then you can add a logo as follows:
-
- %\pgfdeclareimage[height=0.5cm]{university-logo}{../Bilder/cau_siegel.png}
- %\logo{\pgfuseimage{university-logo}}
-
-
-
-% Delete this, if you do not want the table of contents to pop up at
-% the beginning of each subsection:
-\AtBeginSubsection[]
-{
-  \begin{frame}<beamer>{Outline}
-    \tableofcontents[currentsection,currentsubsection]
-  \end{frame}
-}
-
-
-% If you wish to uncover everything in a step-wise fashion, uncomment
-% the following command: 
+\subject{Formalisierung von Inferenzsystemen in Coq am Beispiel von Typsystemen für Curry}
 
 %\beamerdefaultoverlayspecification{<+->}
 
@@ -82,60 +58,48 @@
 \end{frame}
 
 \begin{frame}{Motivation}
-
-\end{frame}
-\begin{frame}{Outline}
-  \tableofcontents
-  % You might wish to add the option [pausesections]
+\hfill
+\begin{minipage}[t]{.45 \linewidth}
+	\centering
+	\includegraphics[scale=.5]{images/curry_2.png}\\
+	Curry
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.4 \linewidth}
+	\centering
+	\includegraphics[scale=.8]{images/coq_logo.png}\\
+	Coq
+\end{minipage}
+\hfill
+\par
+\vfill
+\hfill
+\begin{minipage}[t]{.45 \linewidth}
+	\centering
+	\includegraphics[scale=1.2]{images/cumin_resized.jpg}\\
+	CuMin
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.4 \linewidth}
+	\centering
+	\includegraphics[scale=.4]{images/flatcurry_resized.jpg}\\
+	FlatCurry
+\end{minipage}
+\hfill
 \end{frame}
 
 \section{Introduction}
 \subsection{Programming Languages}
-\begin{frame}[fragile]{Coq - Data Types and Functions}
-\begin{itemize}
-\item Inductive definitions
-\begin{coqcode}
-Inductive list {X : Type} : Type :=
-  | nil  : list X
-  | cons : X -> list X -> list X.
-\end{coqcode}
-\vfill
-\item (Recursive) functions
-\begin{coqcode}
-Fixpoint app {X: Type} (l1 l2: list X) : (list X) :=
-  match l1 with
-  | nil => l2
-  | cons h t => cons h (app t l2)
-  end.
-\end{coqcode}
-\end{itemize}
-\end{frame}
-\begin{frame}[fragile]{Coq - Propositions}
-\begin{itemize}
-\item Equations
-\begin{coqcode}
-1 + 1 = 2.
-forall (X : Type) (l : list X), l ++ [] = l.
-\end{coqcode}
-\vfill
-\item Inductively defined propositions
-\begin{coqcode}
-Inductive inInd : nat -> list nat -> Prop :=
- | head: forall n l, inInd n (n :: l)
- | tail: forall n l e, inInd n l -> inInd n (e :: l).
-\end{coqcode}
-\end{itemize}
-\end{frame}
 \begin{frame}[fragile]{Curry}
 \begin{itemize}
-\item Syntax similar to Haskell
-\item Nondeterminism
+\item Syntax ähnlich zu Haskell
+\item Nichtdeterminismus
 \begin{haskellcode}
 (?)   :: a -> a -> a
 x ? _ = x
 _ ? y = y
 \end{haskellcode}
-\item Free variables
+\item Freie Variablen
 \begin{coqcode}
 > 1 + 1 == x where x free
 {x = (-_x2)} False
@@ -144,24 +108,45 @@ _ ? y = y
 {x = 2} True
 {x = (2 * _x3 + 1)} False
 {x = (4 * _x4)} False
-{x = (4 * _x4 + 2)} False
-
+{x = (4 * _x4 + 2)} False		
+\end{coqcode}
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Coq - Aussagen}
+\begin{itemize}
+\item Gleichungen
+\begin{coqcode}
+1 + 1 = 2.
+forall (X : Type) (l : list X), l ++ [] = l.
+\end{coqcode}
+\vfill
+\item Induktiv definierte Aussagen
+\begin{coqcode}
+Inductive inInd : nat -> list nat -> Prop :=
+ | head: forall n l, inInd n (n :: l)
+ | tail: forall n l e, inInd n l -> inInd n (e :: l).
 \end{coqcode}
 \end{itemize}
 \end{frame}
 \subsection{Theory}
-\begin{frame}{Typing}
+\begin{frame}{Was ist Typisierung?}
 \begin{itemize}
-	\item \textbf{Type}: Set of values that determines properties and meaning of its elements. For example \texttt{Int, Maybe} or \texttt{[]}.
-	\item \textbf{Expression}: Combination of literals, variables, operators and functions.  E.g. \texttt{1 + 1} or \texttt{map double [1,2,3]}.
-	\item \textbf{Context}: Contains information about variables and the program.
-	\item \textbf{Typing}: Assigning a type to an expression in a context.
+	\item \textbf{Typ}: Menge von Werten, die Eigenschaften und Bedeutung der Elemente bestimmt, beispielsweise \texttt{Int, Maybe} oder \texttt{[]}.
+	\item \textbf{Ausdruck}: Kombination von Literalen, Variablen, Operatoren und Funktionen, z.B. \texttt{1 + 1} or \texttt{map double}.
+	\item \textbf{Kontext}: Enthält Informationen über Variablen und das Programm.
+	\item \textbf{Typisierung}: In einem Kontext $\Gamma$ wird einem Ausdruck $e$ ein Typ $\tau$ zugewiesen, notiert als $\Gamma \vdash e :: \tau$.
+\end{itemize}
+Beispiele:
+\begin{itemize}
+	\item $\Gamma \vdash 2 :: \texttt{Int}$
+	\item $\Gamma \vdash \texttt{let x = 2 in x + 2} :: \texttt{Int}$
 \end{itemize}
 %todo beispiel
 \end{frame}
-\begin{frame}[fragile]{Inference rules}
-\infer[\text{where $p_i$ are premises and $c$ is the conclusion of the rule.}]{c}{p_1 \dots p_n}}
+\begin{frame}[fragile]{Inferenzregeln}
+\infer[\text{wo $p_i$ Prämissen und $c$ Konklusion der Regel.}]{c}{p_1 \dots p_n}
 \begin{itemize}
+	\item Notation für Implikation $p_1 \rightarrow \dots \rightarrow p_n \rightarrow c$
 	\item Typing: \textbf{If} $p_1\dots p_n$ \textbf{then} $\Gamma e \vdash \tau$
 \end{itemize}
 \begin{center}
@@ -204,10 +189,7 @@ e &::= x \:|\: f_{\overline{\tau_{m}}} \:|\: e_{1}\: e_{2} \:|\: \text{let}\: x 
 \end{minipage}
 \end{frame}
 \begin{frame}[fragile]{Syntax -- Coq}
-\begin{coqcode}
-Inductive quantifier : Type :=
-  | for_all : id -> tag -> quantifier.
-	
+\begin{coqcode}	
 Inductive ty : Type :=
   | TVar  : id -> ty
   | TBool : ty
@@ -226,112 +208,6 @@ Inductive func_decl : Type :=
 \end{frame}
 \subsection{Typing}
 \begin{frame}{Typing rules}
-\begin{figure}[H]
-	\begin{scriptsize}
-		\begin{center}
-			\begin{subfigure}[t]{.19 \textwidth}
-				\centering
-				$\Gamma, \: x \mapsto \tau \vdash x :: \tau$
-			\end{subfigure}
-			\begin{subfigure}[t]{.19 \textwidth}
-				\centering
-				$\Gamma \vdash \text{True} :: \text{Bool}$
-			\end{subfigure}
-			\begin{subfigure}[t]{.19 \textwidth}
-				\centering
-				$\Gamma \vdash \text{False} :: \text{Bool}$
-			\end{subfigure}
-			\begin{subfigure}[t]{.19 \textwidth}
-				\centering
-				$\Gamma \vdash n :: \text{Nat}$
-			\end{subfigure}
-			\begin{subfigure}[t]{.19 \textwidth}
-				\centering
-				$\Gamma \vdash \text{Nil}_{\tau} :: [\tau]$
-			\end{subfigure}\\
-			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-			\vspace*{1em}
-			\mbox{
-				\begin{subfigure}[t]{.3 \linewidth}
-					\centering
-					\infer{\Gamma \vdash e_{1} e_{2} :: \tau_{2} \phantom{\overline{]}}}
-					{\Gamma \vdash e_{1} :: \tau_{1} \rightarrow \tau_{2} & \Gamma \vdash e_{2} :: \tau_{1}}
-				\end{subfigure}
-				\hspace{.02 \linewidth}
-				\begin{subfigure}[t]{.3 \linewidth}
-					\centering
-					\infer{\Gamma \vdash \text{let}\: x = e_{1} \:\text{in}\: e_{2} ::  \tau \phantom{\overline{]}}}
-					{\Gamma \vdash e_{1} :: \tau_{1} & \Gamma, x \mapsto \tau_{1} \vdash e_{2} :: \tau}
-				\end{subfigure}
-				\hspace{.02 \linewidth}
-				\begin{subfigure}[t]{.3 \linewidth}
-					\centering
-					\infer[\bigstar]{\Gamma \vdash f_{\overline{\tau_{m}}} :: \tau      [\overline{\tau_{m}/\alpha_{m}}]}
-					{(f :: \forall^{v_{1}} \alpha_{1}.\dotsb \forall^{v_{m}}\alpha_{m}.\tau; f \overline{x_{n}} = e) \in P}
-				\end{subfigure}}
-				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-				\vspace*{1em}
-				\mbox{
-					\begin{subfigure}[t]{.25 \linewidth}
-						\centering
-						\infer{\Gamma \vdash e_{1} + e_{2} :: \text{Nat}}
-						{\Gamma \vdash e_{1} :: \text{Nat} & \Gamma \vdash e_{2} :: \text{Nat}}
-					\end{subfigure}
-					\hspace{.01 \linewidth}
-					\begin{subfigure}[t]{.25 \linewidth}
-						\centering
-						\infer{\Gamma \vdash e_{1} \circeq e_{2} :: \text{Bool}}
-						{\Gamma \vdash e_{1} :: \text{Nat} & \Gamma \vdash e_{2} :: \text{Nat}}
-					\end{subfigure}
-					\hspace{.01 \linewidth}
-					\begin{subfigure}[t]{.25 \linewidth}
-						\centering
-						\infer{\Gamma \vdash (e_{1}, e_{2}) :: (\tau_{1}, \tau_{2})}
-						{\Gamma \vdash e_{1} :: \tau_{1} & \Gamma \vdash e_{2} :: \tau_{2}}
-					\end{subfigure}
-					\hspace{.01 \linewidth}
-					\begin{subfigure}[t]{.25 \linewidth}
-						\centering
-						\infer{\Gamma \vdash \text{Cons}(e_{1}, e_{2})}
-						{\Gamma \vdash e_{1} :: \tau & \Gamma \vdash e_{2} ::[\tau]}
-					\end{subfigure}}\\
-					%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-					\vspace{1em}
-					\begin{subfigure}[t]{.5 \linewidth}
-						\centering
-						\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle \text{Nil} \rightarrow e_{1}; \text{Cons} (h, t) \rightarrow e_{2} \rangle :: \tau}
-						{\Gamma \vdash e :: [\tau'] & \Gamma \vdash e_{1} :: \tau & \Gamma, h \mapsto \tau', t \mapsto [\tau'] \vdash e_{2} :: \tau}
-					\end{subfigure}
-					\hspace{.02 \linewidth}
-					\begin{subfigure}[t]{.5 \linewidth}
-						\centering
-						\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle (l,r) \rightarrow e_{1} \rangle :: \tau}
-						{\Gamma \vdash e :: (\tau_{1}, \tau_{2}) & \Gamma, l \mapsto \tau_{1}, r \mapsto \tau_{2} \vdash e_{1} :: \tau}
-					\end{subfigure}\\
-					%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-					\vspace{1em}
-					\begin{subfigure}[t]{.33 \linewidth}
-						\centering
-						\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle \text{True} \rightarrow e_{1}; \text{False} \rightarrow e_{2} \rangle :: \tau}
-						{\Gamma \vdash e :: \: \text{Bool} & \Gamma \vdash e_{1} :: \tau & \Gamma \vdash e_{2} :: \tau}
-					\end{subfigure}
-					\begin{subfigure}[t]{.25 \linewidth}
-						\centering
-						$\Gamma \vdash \text{failure}_{\tau} :: \tau$
-					\end{subfigure}
-					\begin{subfigure}[t]{.33 \linewidth}
-						\centering
-						\infer{\Gamma \vdash \text{anything}_{\tau} :: \tau}
-						{\Gamma \vdash \tau \in \text{Data}}
-					\end{subfigure}
-				\end{center}
-				\begin{flushright}
-					$\bigstar$ if for all $i$ with $v_{i} = *$ we have $\Gamma \vdash \tau_{i} \in \text{Data}$
-				\end{flushright}
-			\end{scriptsize}
-			\vspace*{-1em}
-			\caption{Typing rules for CuMin}
-		\end{figure}
 \end{frame}
 \begin{frame}{Examples}
 \end{frame}
