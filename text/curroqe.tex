@@ -251,7 +251,7 @@ The remaining proof is finished by using \coqinline{simpl} and \coqinline{rewrit
  l :: ls  ++ [ ] = l :: ls (* simpl *)
  l :: ls         = l :: ls (* rewrite with IH *)
 \end{coqcode}
-Both sides are equal now and therefore \coqinline{reflexivity} proves the last subgoal.\\
+Both sides are equal now and therefore, \coqinline{reflexivity} proves the last subgoal.\\
 \par \noindent
 Example \coqinline{e4} is different from the other examples, in the sense that one cannot prove a function by itself and that only supplying an argument to the function returns a verifiable inequality. Therefore, we apply the function to 1 and prove that $1 \neq 2$. This proof is not as simple as the other ones, mainly because of the inequality, which is a notation\footnote{It is often useful to be able to look up notations, \coqinline{Locate "<>"} returns the term associated with \coqinline{<>}.} for \coqinline{not (x = y)}. 
 \begin{coqcode}
@@ -463,7 +463,7 @@ In summary, we looked at the basic structure of a Curry program and function def
 \section{Theory}
 \label{theory}
 In this section we will discuss the theoretical basics of the following chapters. First and foremost, what is typing?
-In functional languages a data type is a classification of applicable operators and properties of its members. There are base types that store a single date and more complex types that may have multiple constructors and type variables. Typing describes the process of assigning an expression to a corresponding type in order to avoid programming errors, for example calling an arithmetic function with a character.
+In functional languages a data type is a classification of applicable operators and properties of its members. There are base types that store a single date and more complex types that may have multiple constructors and type variables. Typing describes the process of assigning types to expressions in order to avoid programming errors, for example calling an arithmetic function with a character.
 \par \noindent
 Typing an expression requires a context that contains data type definitions, function declarations and a map that assigns types to variables. Without a context, expressions do not have any useful meaning -- \coqinline{A 42} could be typed as a character and a number, the application of a function \coqinline{A} to 42, a variable, etc. The majority of information in a context can be extracted from the source code of a program and is continually updated while typing expressions.
 \par \noindent
@@ -481,7 +481,7 @@ To represent a program in Coq, we need to list all elements it can possibly cont
 \par
 While FlatCurry is designed to accurately represent Curry code and therefore has a more abstract program structure, the basic layout is similar. A program consists of a name, imported modules and declarations of functions, data types and operators. The latter two are not present in CuMin, but function declarations have a similar structure with additional information, such as the function's arity and visibility.
 \par
-Types and expressions in FlatCurry are not as specific as in CuMin, for example, CuMin has an explicitly defined data type \texttt{Bool} with a \texttt{case} expression that works with \texttt{Bool} values only, while FlatCurry uses the data type constructor to represent the \texttt{Bool} type. FlatCurry's \texttt{case} expression works with arbitrary values and therefore the typing rules are more complex.\\
+Types and expressions in FlatCurry are not as specific as in CuMin, for example, CuMin has an explicitly defined data type \texttt{Bool} with a \texttt{case} expression that works with \texttt{Bool} values only, while FlatCurry uses the data type constructor to represent the \texttt{Bool} type. FlatCurry's \texttt{case} expression works with arbitrary values and therefore, the typing rules are more complex.\\
 \paragraph{Context}
 Both CuMin and FlatCurry need a context that maps keys to values, that is, variables to types or names to declarations. There are many options to implement a map, such as a list of pairs, but we will use functions instead because it resembles the formal notation we will use later more closely.
 \begin{coqcode}
@@ -539,7 +539,7 @@ Even though the line may imply that premises and the conclusion are independent 
 \label{cumin}
 CuMin (for \textit{Curry Minor}) is a simplified sublanguage of Curry introduced by \citet{p19mehner}. The syntax of CuMin is restricted and thus allows more concrete types and typing rules, compared to FlatCurry. Although it requires some transformations to substitute missing constructs, CuMin can express the majority of Curry programs. In the following sections we will take a look at CuMin's syntax, create a suitable context and discuss data types, followed by the formal definition and implementation of typing rules as well as some examples. In the concluding section of this chapter we will see some more advanced tactics that are able to fully automate simple proofs.
 \section{Syntax}
-The Backus–Naur Form (BNF) is a formalism to describe context-free grammars and languages like CuMin. A BNF definition is a set of derivation rules $S ::= A_{1} | \dots | A_{n} $ where $S$ is a \textit{nonterminal}, that is, a symbol that can be replaced by any of the $n$ sequences $A_{i}$ on the right-hand side. A sequence is a combination of symbols and other characters that form an expression. If a symbol occurs only on the right-hand side of a rule, it is called a \textit{terminal} because it cannot be replaced. Figure \ref{cumin:syntax} shows the \mbox{syntax of CuMin in BNF.}
+The Backus-Naur Form (BNF) is a formalism to describe context-free grammars and languages like CuMin. A BNF definition is a set of derivation rules $S ::= A_{1} | \dots | A_{n} $ where $S$ is a \textit{nonterminal}, that is, a symbol that can be replaced by any of the $n$ sequences $A_{i}$ on the right-hand side. A sequence is a combination of symbols and other characters that form an expression. If a symbol occurs only on the right-hand side of a rule, it is called a \textit{terminal} because it cannot be replaced. Figure \ref{cumin:syntax} shows the \mbox{syntax of CuMin in BNF.}
 \vspace*{-1em}
 \begin{figure}[H]
 \begin{align*}
@@ -1041,7 +1041,7 @@ prog > cntxt |- tvar (Id 3) ::: TNat
 ______________________________________(3/3)
 prog > cntxt |- tvar (Id 4) ::: TNat
 \end{coqcode}
-The first subgoal is a \coqinline{tfun} expression and therefore we use \coqinline{T_Fun} and get two additional subgoals to prove, the first of which states that \coqinline{specialize_func} applied to \texttt{union}'s function declaration and \texttt{TNat} must be equal to the arguments supplied. The specialized type is computed by looking up the declaration in the program, removing the \coqinline{option} from the result and substituting $\alpha$ with \coqinline{TNat} in the function type. Since only computable functions are used, \coqinline{reflexivity} solves this goal directly.
+The first subgoal is a \coqinline{tfun} expression. Therefore, we use \coqinline{T_Fun} and get two additional subgoals to prove, the first of which states that \coqinline{specialize_func} applied to \texttt{union}'s function declaration and \texttt{TNat} must be equal to the arguments supplied. The specialized type is computed by looking up the declaration in the program, removing the \coqinline{option} from the result and substituting $\alpha$ with \coqinline{TNat} in the function type. Since only computable functions are used, \coqinline{reflexivity} solves this goal directly.
 \begin{coqcode}
 ______________________________________(1/2)
 specialize_func (fromOption default_fd (lookup_func prog (Id 1))) [TNat] =
@@ -1182,7 +1182,7 @@ Comb FuncCall ("Prelude","map")
                                       (Comb ConsCall ("Prelude","[]") [] )] )]
 \end{coqcode}
 The application of \texttt{map} to \texttt{double} and \texttt{[1]} results in a full function call of map since all arguments have been supplied. Because \texttt{double} is missing its argument, the function call is partial with one argument remaining. The list \texttt{[1]} is represented by the application of \texttt{cons} to the integer literal 1 and the empty list, which is a constructor without arguments.
-\paragraph{Let}
+\paragraph{Let Expression}
 While CuMin allows only one binding in a \texttt{let} expression, this limitation is not present in FlatCurry. Multiple bindings are represented by a list of (\coqinline{VarIndex}, \coqinline{Expr}) pairs that bind a variable to an expression. The last argument of a let expression is the term that the bindings occur in. The following example shows the expression \mbox{\texttt{let} $x = y + 1,\: y = z + 2,\: z = 3$ in $x + y$} in FlatCurry syntax.
 \begin{coqcode}
 Let [(1,(Comb FuncCall ("Prelude","+") [(Lit (Intc 3)), (Lit (Intc 2))] )),
@@ -1190,18 +1190,21 @@ Let [(1,(Comb FuncCall ("Prelude","+") [(Lit (Intc 3)), (Lit (Intc 2))] )),
     (Comb FuncCall ("Prelude","+") [(Var 2),(Var 1)] )
 \end{coqcode}
 FlatCurry replaces unnecessary variables like $z$ with its value. Bindings are sorted hierarchically, that is, if a variable occurs in another binding, its position in the list is ahead of the binding that references the variable.
-\paragraph{Case}
+\paragraph{Case Expression}
 There are two instances that result in a case expression in FlatCurry: explicit case expressions and pattern matching, for example in functions. The \coqinline{CaseType} is either \coqinline{rigid}, in case of an explicit case, or \coqinline{flexible}, for transformed pattern matching. It modifies the evaluation strategy of free variables in the case expression; flexible cases use narrowing while rigid cases are evaluated by residuation, as we discussed in \autoref{narrowing}. As the evaluation strategy does not affect the result's type, we do not need to distinguish both cases.
 \par
 The two remaining arguments are the expression that determines the branch to be taken and a list of \coqinline{BranchExpr}, which consist of a pattern and an expression. Patterns may be literals or a constructor and a list of variables, as shown in the following example. The original function \texttt{fromMaybe} is transformed to a case expression in order eliminate pattern matching.\\
 \par
-\begin{minipage}[t]{.5\linewidth}
+\begin{minipage}[t]{.45\linewidth}
 \begin{haskellcode}
 fromMaybe :: a -> Maybe a -> a
 fromMaybe _ (Just x) = x
 fromMaybe d Nothing  = d
 \end{haskellcode}
 \end{minipage}
+\hfill
+\vrule
+\hspace*{.5em}
 \begin{minipage}[t]{.5\linewidth}
 \begin{haskellcode}
 fromMaybeCase :: a -> Maybe a -> a
@@ -1427,8 +1430,7 @@ $Cs = \{C_1 \mapsto (\tau_{1_1} \rightarrow
 \end{flushright}
 \caption{Typing rule for case expressions}
 \end{figure}  \noindent
-Because every branch expression needs a context containing the variables of its constructor, there are two options: either every expression is typed in its own context that contains only the relevant variable entries, or all variables are added to the same context that then can type every expression. The latter option is used here because, even if variables are named the same in a Curry program, FlatCurry uses unique variable names and therefore there is no risk of a name clash. Unfortunately, the result of this approach is the rather obscure formal representation with twice overlined expressions.
-\todo{CamelCase im Code}
+Because every branch expression needs a context containing the variables of its constructor, there are two options: either every expression is typed in its own context that contains only the relevant variable entries, or all variables are added to the same context that then can type every expression. The latter option is used here because, even if variables are named the same in a Curry program, FlatCurry uses unique variable names and therefore, there is no risk of a name clash. Unfortunately, the result of this approach is the rather obscure formal representation with twice overlined expressions.
 \begin{coqcode}
 T_Case : forall Gamma ctype e substTypes T Tc p vis brExprs',
            let  brExprs := Branch p vis :: brExprs' in
