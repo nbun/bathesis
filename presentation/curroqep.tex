@@ -9,7 +9,6 @@
 \usemintedstyle[haskell]{trac}
 \newminted{haskell}{fontsize=\small}
 \newminted{coq}{fontsize=\small}
-\setmintedinline{style = bw}
 \newcommand{\coqinline}[1]{\mintinline{coq}{#1}}
 
 \mode<presentation>
@@ -71,97 +70,105 @@
 	Coq
 \end{minipage}
 \hfill
-\par
-\vfill
-\hfill
-\begin{minipage}[t]{.45 \linewidth}
-	\centering
-	\includegraphics[scale=1.2]{images/cumin_resized.jpg}\\
-	CuMin
-\end{minipage}
-\hfill
-\begin{minipage}[t]{.4 \linewidth}
-	\centering
-	\includegraphics[scale=.4]{images/flatcurry_resized.jpg}\\
-	FlatCurry
-\end{minipage}
-\hfill
 \end{frame}
 
-\section{Introduction}
-\subsection{Programming Languages}
 \begin{frame}[fragile]{Curry}
 \begin{itemize}
 \item Syntax ähnlich zu Haskell
 \item Nichtdeterminismus
 \begin{haskellcode}
-(?)   :: a -> a -> a
-x ? _ = x
-_ ? y = y
+  (?)   :: a -> a -> a
+  x ? _ = x
+  _ ? y = y
 \end{haskellcode}
 \item Freie Variablen
 \begin{coqcode}
 > 1 + 1 == x where x free
-{x = (-_x2)} False
-{x = 0} False
-{x = 1} False
-{x = 2} True
-{x = (2 * _x3 + 1)} False
-{x = (4 * _x4)} False
-{x = (4 * _x4 + 2)} False		
+  {x = (-_x2)} False
+  {x = 0} False
+  {x = 1} False
+  {x = 2} True
+  {x = (2 * _x3 + 1)} False
+  {x = (4 * _x4)} False
+  {x = (4 * _x4 + 2)} False		
 \end{coqcode}
 \end{itemize}
 \end{frame}
 \begin{frame}[fragile]{Coq - Aussagen}
 \begin{itemize}
-\item Gleichungen
+\item Aussagen in Coq: \coqinline{Prop}
 \begin{coqcode}
-1 + 1 = 2.
-forall (X : Type) (l : list X), l ++ [] = l.
+  1 + 1 = 2
+  False -> False
+  forall (X : Type) (l : list X), [] ++ l = l
+  fun (x : nat) => x <> 2
 \end{coqcode}
-\vfill
+\vspace*{.5em}
 \item Induktiv definierte Aussagen
 \begin{coqcode}
-Inductive inInd : nat -> list nat -> Prop :=
- | head: forall n l, inInd n (n :: l)
- | tail: forall n l e, inInd n l -> inInd n (e :: l).
+  Inductive inInd {X : Type} : X -> list X -> Prop :=
+    | head : forall n l, inInd n (n :: l)
+    | tail : forall n l e, inInd n l -> inInd n (e :: l).
+
+  Example e : inInd 2 [1;2;4].
+  Proof.
+    apply tail. (* inInd 2 [2; 4] *)
+    apply head.
+  Qed.
 \end{coqcode}
 \end{itemize}
 \end{frame}
-\subsection{Theory}
 \begin{frame}{Was ist Typisierung?}
 \begin{itemize}
-	\item \textbf{Typ}: Menge von Werten, die Eigenschaften und Bedeutung der Elemente bestimmt, beispielsweise \texttt{Int, Maybe} oder \texttt{[]}.
-	\item \textbf{Ausdruck}: Kombination von Literalen, Variablen, Operatoren und Funktionen, z.B. \texttt{1 + 1} or \texttt{map double}.
+	\item \textbf{Typ}: Menge von Werten, die Eigenschaften und Bedeutung der Elemente bestimmt.
+	\item \textbf{Ausdruck}: Kombination von Literalen, Variablen, Operatoren und Funktionen.
 	\item \textbf{Kontext}: Enthält Informationen über Variablen und das Programm.
 	\item \textbf{Typisierung}: In einem Kontext $\Gamma$ wird einem Ausdruck $e$ ein Typ $\tau$ zugewiesen, notiert als $\Gamma \vdash e :: \tau$.
 \end{itemize}
 Beispiele:
 \begin{itemize}
 	\item $\Gamma \vdash 2 :: \texttt{Int}$
-	\item $\Gamma \vdash \texttt{let x = 2 in x + 2} :: \texttt{Int}$
+	\item $\Gamma, x \mapsto \texttt{Int}  \vdash \texttt{x + 2} :: \texttt{Int}$
 \end{itemize}
 %todo beispiel
 \end{frame}
-\begin{frame}[fragile]{Inferenzregeln}
-\infer[\text{wo $p_i$ Prämissen und $c$ Konklusion der Regel.}]{c}{p_1 \dots p_n}
+\begin{frame}[fragile]{Inferenzsysteme}
 \begin{itemize}
-	\item Notation für Implikation $p_1 \rightarrow \dots \rightarrow p_n \rightarrow c$
-	\item Typing: \textbf{If} $p_1\dots p_n$ \textbf{then} $\Gamma e \vdash \tau$
-\end{itemize}
-\begin{center}
+\item Inferenzsystem: Menge von Inferenzregeln
+\item Inferenzregel: \infer{c}{p_1 \dots p_n} wo $p_i$ Prämissen und $c$ Konklusion
+\item Notation für Implikation $p_1 \rightarrow \dots \rightarrow p_n \rightarrow c$
+\item Darstellung von Inferenzregeln in Coq:
+\vfill
 	\begin{minipage}{.45 \linewidth}
-		\infer[\text{\texttt{In\_H}}]{\coqinline{In n (n :: l)}}{\phantom{premise}}
+		\infer[\text{\texttt{head}}]{\coqinline{In x (x :: l)}}{\phantom{premise}}
 	\end{minipage}
 	\hspace{.1 \linewidth}
 	\begin{minipage}{.45 \linewidth}
-		\infer[\text{\texttt{In\_T}}]{\coqinline{In n (e :: l)}}{\coqinline{In n l}}
+		\infer[\text{\texttt{tail}}]{\coqinline{In x (y :: l)}}{\coqinline{In x l}}
 	\end{minipage}
-\end{center}
+\vfill
+\begin{coqcode}
+Inductive inInd {X : Type} : X -> list X -> Prop :=
+  | head : forall x l, inInd x (x :: l)
+  | tail : forall x y l, inInd x l -> inInd x (y :: l).
+\end{coqcode}
+\end{itemize}
 \end{frame}
-\section{CuMin}
-\subsection{Modeling}
-\begin{frame}{Syntax -- Backus-Naur Form}
+\begin{frame}{Formalisierung von Curry}
+Vorgehensweise:
+\begin{enumerate}
+	\item Syntax und Kontext in Coq darstellen.
+	\item Typisierungsregeln in induktive Aussagen umwandeln.
+	\item Code umwandeln und Eigenschaften beweisen.
+\end{enumerate}
+Sprachen:
+\begin{itemize}
+	\item CuMin (Curry Minor): Vereinfachte Teilsprache von Curry.
+	\item FlatCurry: Zwischensprache, die in Curry Compilern benutzt wird.
+\end{itemize}
+\end{frame}
+\begin{frame}{CuMin -- Syntax in BNF}
+Syntax von CuMin in Backus-Naur-Form:
 \begin{align*}
 P &::= D;P \:|\:D \\
 D &::= f :: \kappa \tau; f \overline{x_{n}} = e\\
@@ -174,21 +181,9 @@ e &::= x \:|\: f_{\overline{\tau_{m}}} \:|\: e_{1}\: e_{2} \:|\: \text{let}\: x 
 &\:|\: \text{failure}_{\tau} \:|\: \text{anything}_{\tau}
 \end{align*}
 \end{frame}
-\begin{frame}
-\begin{minipage}{.45 \linewidth}
-	\begin{align*}
-	&\text{fst}::\forall^{*}\alpha.\forall^{*}\beta.(\alpha, \beta) \rightarrow\alpha\\
-	&\text{fst}\: p = \text{case}\: p\: \text{of}\: \langle(u,v) \rightarrow u\rangle
-	\end{align*}
-\end{minipage}
-\begin{minipage}{.45 \linewidth}
-	\begin{align*}
-	&\text{one} :: \text{Nat}\\
-	&\text{one} = \text{fst}_{Nat, Bool} ~ (1, \text{True})
-	\end{align*}
-\end{minipage}
-\end{frame}
-\begin{frame}[fragile]{Syntax -- Coq}
+
+\begin{frame}[fragile]{CuMin -- Syntax in Coq}
+Darstellung der Syntax von CuMin in Coq:
 \begin{coqcode}	
 Inductive ty : Type :=
   | TVar  : id -> ty
@@ -198,30 +193,169 @@ Inductive ty : Type :=
   | TPair : ty -> ty -> ty
   | TFun  : ty -> ty -> ty.
 
-Definition program := list func_decl.
 Inductive func_decl : Type :=
-  | FDecl : id -> list quantifier ->
-	ty -> list id -> tm -> func_decl.
+  | FDecl : id -> list quantifier -> ty ->
+            list id -> tm -> func_decl.
 \end{coqcode}
 \end{frame}
-\begin{frame}{Context}
-\end{frame}
-\subsection{Typing}
-\begin{frame}{Typing rules}
-\end{frame}
-\begin{frame}{Examples}
-\end{frame}
-\section{FlatCurry}
-\subsection{Differences to CuMin}
-\begin{frame}{Syntax}
-\end{frame}
-\subsection{Typing}
-\section{Conclusion}
-\begin{frame}{Summary}
-\end{frame}
-\begin{frame}{Future Work}
+
+\begin{frame}[fragile]{Beispiel CuMin}
+	Formale Definition:\\
+	\begin{minipage}{.45 \linewidth}
+		\begin{align*}
+		&\text{fst}::\forall^{*}\alpha.\forall^{*}\beta.(\alpha, \beta) \rightarrow\alpha\\
+		&\text{fst}\: p = \text{case}\: p\: \text{of}\: \langle(u,v) \rightarrow u\rangle
+		\end{align*}
+	\end{minipage}
+	\begin{minipage}{.45 \linewidth}
+		\begin{align*}
+		&\text{one} :: \text{Nat}\\
+		&\text{one} = \text{fst}_{Nat, Bool} ~ (1, \text{True})
+		\end{align*}
+	\end{minipage}
+	\vspace*{1em}
+	
+	Coq Definition:
+	\begin{coqcode}
+  Definition fst := FDecl (Id 0)
+    [for_all (Id 1) tag_star; for_all (Id 2) tag_star] 
+    (TFun (TPair (TVar (Id 1)) (TVar (Id 2))) (TVar (Id 1)))
+    [Id 3]
+    (tcasep (tvar (Id 3)) (Id 4) (Id 5) (tvar (Id 4))).
+		
+  Definition one := tapp (tfun (Id 0) [TNat; TBool])
+    (tpair (tsucc tzero) ttrue).
+	\end{coqcode}
 \end{frame}
 
+\begin{frame}[fragile]{CuMin -- Datentypen und Kontext}
+Inferenzregeln für Datentypen:
+\begin{figure}[H]
+	\begin{center}
+		\begin{subfigure}{.3 \linewidth}
+			\centering
+			$\Gamma, \alpha^{*} \vdash \alpha \in$ Data
+		\end{subfigure}
+		\hfill
+		\begin{subfigure}{.3 \linewidth}
+			\centering
+			$\Gamma \vdash$ Bool $\in$ Data
+		\end{subfigure}
+		\hfill
+		\begin{subfigure}{.3 \linewidth}
+			\centering
+			$\Gamma \vdash$ Nat $\in$ Data
+		\end{subfigure}\\
+		\vspace{1em}
+		\begin{subfigure}{.375 \linewidth}
+			\centering
+			\infer{\Gamma \vdash [\tau] \in \text{Data}}
+			{\Gamma \vdash \tau \in \text{Data}}
+		\end{subfigure}
+		\hspace{.1 \linewidth}
+		\begin{subfigure}{.375 \linewidth}
+			\centering
+			\infer{\Gamma \vdash (\tau,\tau') \in \text{Data}}
+			{\Gamma \vdash \tau \in \text{Data} & \Gamma \vdash \tau' \in \text{Data}}
+		\end{subfigure}
+	\end{center}
+\end{figure}
+Informationen, die im Kontext enthalten sind:
+\begin{coqcode}
+  Definition program := list func_decl.
+
+  Inductive context : Type := 
+    | con: (partial_map id tag) -> (partial_map id ty) ->
+            context.
+\end{coqcode}
+\end{frame}
+\begin{frame}{CuMin -- formales Typsystem}
+\begin{figure}[H]
+	\begin{normalsize}
+		\begin{center}
+			\begin{subfigure}[t]{.25 \textwidth}
+				\centering
+				$\Gamma, \: x \mapsto \tau \vdash x :: \tau$
+			\end{subfigure}
+			\hspace*{1em}
+			\begin{subfigure}[t]{.25 \textwidth}
+				\centering
+				$\Gamma \vdash \text{True} :: \text{Bool}$
+			\end{subfigure}\\
+			
+			%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			\vspace*{2em}
+				\begin{subfigure}[t]{.3 \linewidth}
+					\centering
+					\infer{\Gamma \vdash e_{1} ~ e_{2} :: \tau_{2} \phantom{\overline{]}}}
+					{\Gamma \vdash e_{1} :: \tau_{1} \rightarrow \tau_{2} & \Gamma \vdash e_{2} :: \tau_{1}}
+				\end{subfigure}\\
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				\vspace{2em}
+				\hspace{.02 \linewidth}
+				\begin{subfigure}[t]{.5 \linewidth}
+					\centering
+					\infer{\Gamma \vdash \text{case} \: e \: \text{of} \: \langle (l,r) \rightarrow e_{1} \rangle :: \tau}
+					{\Gamma \vdash e :: (\tau_{1}, \tau_{2}) & \Gamma, l \mapsto \tau_{1}, r \mapsto \tau_{2} \vdash e_{1} :: \tau}
+				\end{subfigure}\\
+				%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				\vspace*{2em}
+				\hspace{.02 \linewidth}
+				\begin{subfigure}[t]{.3 \linewidth}
+					\centering
+					\infer[\bigstar]{\Gamma \vdash f_{\overline{\tau_{m}}} :: \tau      [\overline{\tau_{m}/\alpha_{m}}]}
+					{(f :: \forall^{v_{1}} \alpha_{1}.\dotsb \forall^{v_{m}}\alpha_{m}.\tau; f \overline{x_{n}} = e) \in P}
+				\end{subfigure}
+				\vspace*{1em}
+				\begin{flushright}
+					$\bigstar$ Falls für alle $i$ mit $v_{i} = *$ gilt $\Gamma \vdash \tau_{i} \in \text{Data}.$
+				\end{flushright}
+				\end{center}
+			\end{normalsize}
+\end{figure}
+\end{frame}
+
+\begin{frame}[fragile]{CuMin -- Typsystem in Coq}
+\begin{coqcode}
+Reserved Notation "Gamma '|-' t ':::' T" (at level 40).
+Inductive has_type : context -> tm -> ty -> Prop :=
+  | T_Var   : forall Gamma x T,
+               (type_con Gamma) x = Some T ->
+               Gamma |- tvar x ::: T
+  | T_App   : forall Gamma e1 e2 T1 T2,
+                Gamma |- e1 ::: (TFun T1 T2) ->
+                Gamma |- e2 ::: T1 ->
+                Gamma |- (tapp e1 e2) ::: T2
+  | T_CaseP : forall Gamma e e1 l r T T1 T2,
+                Gamma |- e ::: (TPair T1 T2) ->
+                let Omega := (type_update Gamma l T1)
+                in (type_update Omega r T2) |- e1 ::: T ->
+                Gamma |- (tcasep e l r e1) ::: T
+where "Gamma '|-' t ':::' T" := (has_type Gamma t T).
+\end{coqcode}
+\end{frame}
+\begin{frame}[fragile]{CuMin -- Funktionsspezialisierung}
+\begin{coqcode}
+T_Fun: forall Gamma id tys T,
+         let result := lookup_func Prog id in 
+         let fdecl  := fromOption default_fd result in
+         specialize_func fdecl tys = Some T ->
+         Forall (is_data_type Gamma)
+                (fd_to_star_tys fdecl tys) ->
+         Gamma |- (tfun id tys) ::: T
+\end{coqcode}
+\end{frame}
+\begin{frame}{FlatCurry im Vergleich zu CuMin}
+Syntax:
+\begin{itemize}
+	\item Weniger Ausdrücke und Typen, dafür allgemeinere Form
+	\item Applikation von Funktionen auf mehr als ein Argument gleichzeitig
+	\item Let Ausdrücke mit beliebig vielen Bindungen
+\end{itemize}
+$\rightarrow$ Komplexere Typisierungsregeln
+\end{frame}
+\begin{frame}{Zusammenfassung}
+\end{frame}
 \end{document}
 
 
